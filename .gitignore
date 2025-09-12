@@ -1,0 +1,9 @@
+/.venv
+/tmp
+/input
+/output
+/tools
+/gen_requirements.py
+/__pycache__/
+*.pyc
+*.zip
