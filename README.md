@@ -14,7 +14,7 @@
 ## ➤ Utilisateurs (release “portable”)
 
 1. Téléchargez la dernière release **portable** :
-   [![Download latest](https://img.shields.io/github/v/release/jobijoba2000/add_dub?display_name=release&label=Download%20portable)](https://github.com/jobijoba2000/add_dub/releases/latest)
+   [add_dub (Windows) — releases/latest](https://github.com/jobijoba2000/add_dub/releases/latest)
 
 2. Dézippez dans un dossier simple (évitez `C:\Program Files`)
 3. Double-cliquez `start_add_dub.bat`
