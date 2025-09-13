@@ -1,103 +1,75 @@
 # add_dub — doublage TTS basé sur sous-titres (Windows)
 
-**add_dub** prend une vidéo + des sous-titres, génère une piste voix TTS synchronisée, baisse l’audio d’origine pendant les répliques (*ducking*), puis remuxe le tout en **MP4/MKV** avec :
-- Piste audio 1 (par défaut) : **mix TTS + audio d’origine**
-- Piste audio 2 : **audio d’origine**
+**add_dub** prend une vidéo + des sous-titres, génère une voix TTS synchronisée, baisse l’audio d’origine pendant les répliques (*ducking*), puis remuxe en **MP4/MKV** avec :
+- Piste 1 (par défaut) : **mix TTS + audio d’origine**
+- Piste 2 : **audio d’origine**
 - Piste **sous-titres** conservée (non par défaut)
 
-> 🎯 Plateforme : **Windows** (TTS SAPI via `pyttsx3`)  
-> 📦 **Utilisateurs finaux :** téléchargez la **release ZIP “portable” (obligatoire)**  
-> 🛠️ **Ce dépôt GitHub est pour les développeurs** (code uniquement, sans outils)
+> 🎯 **Windows** uniquement (TTS SAPI via `pyttsx3`)  
+> 🔒 100 % local (pas de cloud)
 
 ---
 
-## ➤ Utilisateurs (release “portable”)
+## 🚀 Utilisation (méthode unique)
 
-1. Téléchargez la dernière release **portable** :
-   [add_dub (Windows) — releases/latest](https://github.com/jobijoba2000/add_dub/releases/latest)
+1) **Récupérez le code**  
+   - `git clone https://github.com/jobijoba2000/add_dub.git`.
 
-2. Dézippez dans un dossier simple (évitez `C:\Program Files`)
-3. Double-cliquez `start_add_dub.bat`
-4. Mettez vos vidéos dans `input\` (SRT à côté **ou** MKV avec sous-titres intégrés)
-5. Suivez les questions à l’écran — la sortie est dans `output\`
+2) **Lancez** `start_add_dub.bat`  
+   À la **première exécution**, le script fait tout **automatiquement** :
+   - télécharge la **Toolbox** (Python portable, ffmpeg, MKVToolNix, Subtitle Edit + OCR FR) depuis les *Releases*,
+   - décompresse en temporaire puis **copie uniquement** `tools\` et `licenses\` dans le projet,
+   - crée `input\`, `output\`, `tmp\`,
+   - crée le **venv** et installe les **dépendances Python**.
 
-> La release embarque les outils nécessaires (Python portable, ffmpeg, MKVToolNix, Subtitle Edit + Tesseract FR).  
-> Aucun prérequis à installer.
+3) **Placez vos vidéos dans `input\`**
+   - **MP4** : nécessite un **SRT “sidecar”** (même nom que la vidéo : `film.mp4` + `film.srt`).  
+   - **MKV** : accepte **SRT sidecar** *ou* **sous-titres intégrés** (texte/PGS).
+
+4) **Relancez** `start_add_dub.bat` (ou laissez tourner et répondez aux questions)  
+   Le résultat est écrit dans **`output\`**.
+
+---
+
+## ❓ FAQ rapide
+
+- **Téléchargement Toolbox bloqué (proxy/réseau)**  
+  → Téléchargez manuellement la Toolbox depuis la page **Releases** (**tag `toolbox-vN`**, même **N** que dans `TOOLBOX_REQUIRED.txt`), dézippez **à la racine du projet** (vous devez obtenir `tools\` et `licenses\`), puis mettez `TOOLBOX_VERSION.txt` à `N`. Relancez le .bat.  
+  Releases : <https://github.com/jobijoba2000/add_dub/releases>
+
+- **Mise à jour**  
+  - **Code** : `git pull` (ou retéléchargez le ZIP du dépôt).  
+
+- **Voix FR absente**  
+  → Windows utilisera une voix par défaut. Vous pouvez installer une voix française dans les paramètres Windows.
+
+---
+
+## 📂 Arborescence utile
+
+- `input\` : vos vidéos (+ SRT éventuels, **même nom** que la vidéo)  
+- `output\` : fichiers générés  
+- `tmp\` : zone temporaire (download/unzip Toolbox)  
+- `tools\` : binaires (installés automatiquement)  
+- `licenses\` : licences des outils tiers (copiées avec la Toolbox)
 
 ---
 
 ## ✨ Fonctionnalités
 
-- *Ducking* configurable pendant les répliques (réduction en dB)
-- TTS avec **pyttsx3** (détection automatique d’une voix FR si disponible)
-- Mixage **BG (audio d’origine)** + **TTS** avec niveaux séparés
-- Remux final vidéo + **2 pistes audio** + **sous-titres**
-- Modes **Auto** (batch) ou **Manuel** (avec test 5 min possible)
-
----
-
-## 🛠️ Développeurs (clonage du dépôt)
-
-> ⚠️ Ce repo **ne contient pas** les binaires d’outils.  
-> Pour **utiliser** l’outil, prenez la **release portable**.  
-> Le clonage sert à **lire le code** ou **contribuer**.
-
-### Prérequis (obligatoires côté dev)
-- **Python 3.12** (avec `venv` et `pip`)
-- **ffmpeg + ffprobe** (dans le `PATH` **ou** placés dans `tools\ffmpeg\bin\`)
-- **MKVToolNix** (`mkvmerge.exe`, `mkvextract.exe`)
-- **Subtitle Edit** (pour OCR des sous-titres image/PGS) + **Tesseract** avec **fr.traineddata**
-
-### Installation dev (exemple)
-    git clone https://github.com/jobijoba2000/add_dub.git
-    cd add_dub
-    python -m venv .venv
-    .venv\Scripts\activate
-    python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
-
-Placez les outils soit dans `tools\...`, soit dans le `PATH` :
-- `tools\ffmpeg\bin\ffmpeg.exe` et `ffprobe.exe`
-- `tools\MKVToolNix\mkvmerge.exe` et `mkvextract.exe`
-- `tools\subtitle_edit\SubtitleEdit.exe`
-- `tools\subtitle_edit\Tesseract\tesseract.exe`
-- `tools\subtitle_edit\Tesseract\tessdata\fr.traineddata`
-
-Lancez :
-    start_add_dub.bat
-
----
-
-## 🚀 Utilisation (rappel)
-
-- Déposez vos vidéos dans `input\`
-- **Éligibilité :**
-  - **MKV** : SRT sidecar **ou** sous-titres intégrés
-  - **MP4** : **SRT sidecar obligatoire**
-- Choisissez **Auto** (mêmes réglages pour plusieurs fichiers) ou **Manuel**
-- Le résultat est écrit dans `output\`
-
----
-
-## 🧰 Dépannage rapide
-
-- **“ffmpeg introuvable”** → ajoutez `ffmpeg.exe` + `ffprobe.exe` dans `tools\ffmpeg\bin\` ou installez ffmpeg + PATH
-- **“MKVToolNix absent”** → ajoutez `mkvmerge.exe` + `mkvextract.exe` dans `tools\MKVToolNix\`
-- **“Subtitle Edit/Tesseract manquant”** → `SubtitleEdit.exe` + `Tesseract\tesseract.exe` + `Tesseract\tessdata\fr.traineddata`
-- **Pas de voix FR** → Windows utilisera une voix par défaut ; installez une voix FR si besoin
-
----
-
-## 📌 Roadmap (idées)
-
-- Choix de voix TTS par langue
-- Journal `.log` détaillé
-- Option “garder fichiers intermédiaires”
-- Profils de mix prédéfinis
+- *Ducking* réglable (réduction en dB pendant les répliques)  
+- TTS **pyttsx3** (détection automatique d’une voix FR si dispo)  
+- Mix distinct **BG (audio d’origine)** / **TTS**  
+- Remux final vidéo + **2 pistes audio** + **sous-titres**  
+- Modes **Auto** (batch) et **Manuel** (test 5 min possible)
 
 ---
 
 ## 📄 Licence
 
-- Code de ce dépôt : **MIT** (voir `LICENSE`)
-- Les binaires tiers (ffmpeg, MKVToolNix, Subtitle Edit, Tesseract) **ne sont pas** dans ce repo ; ils sont fournis **uniquement** dans la **release portable** avec leurs licences et liens sources (dossier `licenses\` dans l’archive)
+- Code de ce dépôt : **MIT** (voir `LICENSE`).  
+- Outils tiers (**ffmpeg**, **MKVToolNix**, **Subtitle Edit**, **Tesseract**) fournis via la **Toolbox** et accompagnés de leurs **licences** dans `licenses\`.
+
+---
+
+*Si quelque chose coince, ouvrez une issue en indiquant votre version de Windows, le type de vidéo et de sous-titres.*

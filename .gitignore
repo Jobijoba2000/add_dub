@@ -1,11 +1,28 @@
-/.venv
-/tmp
-/input
-/output
-/tools
-/licenses
-/gen_requirements.py
-/README.txt
-/__pycache__/
+# Environnements / caches
+.venv/
+__pycache__/
 *.pyc
+tmp/
+
+# Dossiers de travail de l’app
+input/
+output/
+tools/
+licenses/
+
+# Fichiers locaux/packaging
+TOOLBOX_VERSION.txt
+gen_requirements.py
+README.txt
 *.zip
+*.lnk
+
+# OS / éditeurs (facultatif)
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# Config locale (si tu en as une)
+config/
+!config/config.example.ini
