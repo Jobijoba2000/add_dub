@@ -13,8 +13,8 @@
 ## 🚀 Utilisation (méthode unique)
 
 1) **Récupérez le code**  
-   - `git clone https://github.com/jobijoba2000/add_dub.git`.
-   - Vous pouvez directement récupérer la release de add_dub tout prête:
+   - `git clone https://github.com/jobijoba2000/add_dub.git`
+   - Vous pouvez directement récupérer la release de add_dub tout prête: <br>  
    [📥 Télécharger la version portable de Add Dub](https://github.com/Jobijoba2000/add_dub/releases/download/v0.1.0/add_dub_portable_v0.1.0_win64.zip)
 				
 2) **Lancez** `start_add_dub.bat`  
