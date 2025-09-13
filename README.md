@@ -13,7 +13,9 @@
 
 ## ➤ Utilisateurs (release “portable”)
 
-1. Téléchargez la dernière release **portable** : `add_dub_portable_x.y.z.zip` (tout inclus)
+1. Téléchargez la dernière release **portable** :
+   [➡️ add_dub (Windows) — releases/latest](https://github.com/jobijoba2000/add_dub/releases/latest)
+
 2. Dézippez dans un dossier simple (évitez `C:\Program Files`)
 3. Double-cliquez `start_add_dub.bat`
 4. Mettez vos vidéos dans `input\` (SRT à côté **ou** MKV avec sous-titres intégrés)

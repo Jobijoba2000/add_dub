@@ -3,7 +3,9 @@
 /input
 /output
 /tools
+/licenses
 /gen_requirements.py
+/README.txt
 /__pycache__/
 *.pyc
 *.zip

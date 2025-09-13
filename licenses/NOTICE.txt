@@ -1,0 +1,24 @@
+NOTICE — composants tiers inclus dans le pack « add_dub » (portable)
+
+Ce pack contient des BINAIRES NON MODIFIÉS des projets suivants :
+    • Python 3.12  — licence : Python Software Foundation License
+    • FFmpeg       — licence : LGPL/GPL (selon le build fourni)
+    • MKVToolNix   — licence : GPL (voir aussi les licences de ses dépendances)
+    • Subtitle Edit— licence : GPL-3.0
+
+Sources correspondantes (projets en amont) :
+    • Python       : https://www.python.org/downloads/source/
+    • FFmpeg       : https://ffmpeg.org/download.html#releases  (sources) / https://ffmpeg.org/
+    • MKVToolNix   : https://mkvtoolnix.download/source.html
+    • Subtitle Edit: https://github.com/SubtitleEdit/subtitleedit
+
+Ce dossier « licenses/ » inclut :
+    • Les fichiers de licence fournis par chaque projet (ex. ffmpeg-LICENSE.txt, python-3.12-LICENSE.txt, Subtitle-edit-LICENSE.txt).
+    • Pour MKVToolNix : sa licence principale (COPYING / LICENSE) et les licences de ses dépendances (ex. dossier MKVToolNix-Licenses/).
+
+Avertissement :
+    • Les noms de produits et marques mentionnés appartiennent à leurs détenteurs respectifs.
+    • Ce fichier NOTICE est informatif et ne remplace aucune licence. Référez-vous toujours aux textes de licence fournis.
+
+Code du projet « add_dub » :
+    • Le code source d’add_dub est distribué sous licence MIT (voir le fichier LICENSE à la racine du dépôt).
