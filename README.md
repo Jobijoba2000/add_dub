@@ -14,8 +14,8 @@
 
 1) **Récupérez le code**  
    - `git clone https://github.com/jobijoba2000/add_dub.git`
-   - Vous pouvez directement récupérer la release de add_dub tout prête: <br>  
-   [📥 Télécharger la version portable de Add Dub](https://github.com/Jobijoba2000/add_dub/archive/refs/tags/v0.1.1.zip)
+   - Vous pouvez directement récupérer la release de add_dub: <br>  
+   [📥 Télécharger la version portable de Add Dub](https://github.com/Jobijoba2000/add_dub/releases/download/v0.1.2/add_dub_v0.1.2_win64.zip)
 				
 2) **Lancez** `start_add_dub.bat`  
    À la **première exécution**, le script fait tout **automatiquement** :
