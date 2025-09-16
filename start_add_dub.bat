@@ -2,6 +2,8 @@
 chcp 65001 >nul
 setlocal EnableExtensions EnableDelayedExpansion
 
+cd /d "%~dp0"
+
 rem ============================================================================
 rem  start_add_dub.bat — lance add_dub et gère/installe la Toolbox en toute sécurité
 rem  · Repo : contient TOOLBOX_REQUIRED.txt  (ex: 1)
@@ -19,7 +21,6 @@ set "REPO=add_dub"
 set "TOOLBOX_ZIP=add_dub_toolbox_win64.zip"
 set "REQ_FILE=TOOLBOX_REQUIRED.txt"
 set "CUR_FILE=TOOLBOX_VERSION.txt"
-set "MAIN_SCRIPT=add_dub.py"
 rem ---------------------------------------------------------------------------
 
 set "ROOT=%~dp0"
@@ -161,8 +162,8 @@ if not exist "%FF_EXE%" (
     pause
     exit /b 1
 )
-if not exist "%ROOT%%MAIN_SCRIPT%" (
-    echo [ERREUR] Script principal introuvable : %MAIN_SCRIPT%
+if not exist "%ROOT%src\add_dub\__main__.py" (
+    echo [ERREUR] Module introuvable : src\add_dub\__main__.py
     pause
     exit /b 1
 )
@@ -181,6 +182,8 @@ if not exist "%ROOT%.venv\Scripts\python.exe" (
 
 call "%ROOT%.venv\Scripts\activate.bat"
 
+set "PYTHONPATH=%ROOT%src;%PYTHONPATH%"
+
 rem --- Dependances ------------------------------------------------------------
 if exist "%ROOT%requirements.txt" (
     if not exist "%ROOT%.venv\.deps_ok" (
@@ -197,8 +200,9 @@ if exist "%ROOT%requirements.txt" (
 rem --- Boucle d'execution -----------------------------------------------------
 :loop
 echo.
-echo → Lancement de %MAIN_SCRIPT%
-python "%ROOT%%MAIN_SCRIPT%"
+echo → Lancement du module add_dub
+python -m add_dub
+
 if errorlevel 1 goto fail
 echo.
 set /p CHOICE=Voulez-vous traiter une autre video ? ^(o/n^) :
