@@ -23,6 +23,3 @@ Desktop.ini
 .vscode/
 .idea/
 
-# Config locale (si tu en as une)
-config/
-!config/config.example.ini
