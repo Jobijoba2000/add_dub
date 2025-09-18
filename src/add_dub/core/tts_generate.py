@@ -1,5 +1,6 @@
 # src/add_dub/core/tts_generate.py
 import os
+import time
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pydub import AudioSegment
@@ -25,7 +26,7 @@ def generate_dub_audio(
     if not subtitles:
         AudioSegment.silent(duration=0).export(output_wav, format="wav")
         return output_wav
-
+    
     # Jobs TTS (un sous-titre => un segment)
     jobs = []
     for idx, (start, end, text) in enumerate(subtitles):
@@ -51,7 +52,7 @@ def generate_dub_audio(
 
     print()  # retour à la ligne après 100%
     print("\rExport en cours...")
-
+    
     # Recomposition de la piste TTS complète
     dub_audio = AudioSegment.empty()
     current_ms = 0
