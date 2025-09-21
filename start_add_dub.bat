@@ -205,8 +205,6 @@ python -m add_dub
 
 if errorlevel 1 goto fail
 echo.
-set /p CHOICE=Voulez-vous traiter une autre video ? ^(o/n^) :
-if /i "!CHOICE!"=="o" goto loop
 
 call "%ROOT%.venv\Scripts\deactivate.bat" 2>nul
 echo Environnement virtuel desactive.

@@ -16,6 +16,7 @@ from add_dub.cli.selectors import (
 from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
 from add_dub.config import cfg
 from add_dub.io.fs import join_input
+import add_dub.helpers.time as htime
 
 def _resolve_srt_for_video_impl(video_fullpath: str, sub_choice: tuple) -> str | None:
     from add_dub.core.subtitles import resolve_srt_for_video
@@ -69,90 +70,40 @@ def build_default_opts() -> DubOptions:
 
 
 def main() -> int:
-    ensure_base_dirs()
+    while True:
+        ensure_base_dirs()
 
-    files = list_input_videos()
-    selected = choose_files(files)
-    if not selected:
-        print("Aucun fichier sélectionné.")
-        return 1
-
-    mode = ask_mode()
-    svcs = build_services()
-
-    if mode.lower().startswith("a"):  # AUTO
-        opts = build_default_opts()
-        first = selected[0]
-        first_full = join_input(first)
-
-        print(f"\n[Auto] Configuration initiale sur : {first}")
-
-        # Choix piste + ST une fois
-        aidx = svcs.choose_audio_track(first_full)
-        sc = svcs.choose_subtitle_source(first_full)
-        if sc is None:
-            print("Aucune source de sous-titres choisie.")
+        files = list_input_videos()
+        selected = choose_files(files)
+        if not selected:
+            print("Aucun fichier sélectionné.")
             return 1
 
-        label = svcs.ask_str("Libellé piste d'origine", opts.orig_audio_name or "Original")
-        db = ask_float("Réduction (ducking) en dB", opts.db_reduct)
-        off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", opts.offset_ms)
-        bg = ask_float("Niveau BG (1.0 = inchangé)", opts.bg_mix)
-        tts = ask_float("Niveau TTS (1.0 = inchangé)", opts.tts_mix)
+        mode = ask_mode()
+        svcs = build_services()
 
-        opts = replace(
-            opts,
-            audio_ffmpeg_index=aidx,
-            sub_choice=sc,
-            orig_audio_name=(label or "Original"),
-            db_reduct=db,
-            offset_ms=off,
-            bg_mix=bg,
-            tts_mix=tts,
-        )
+        if mode.lower().startswith("a"):  # AUTO
+            opts = build_default_opts()
+            first = selected[0]
+            first_full = join_input(first)
 
-        do_test = ask_yes_no("Faire un test de 5 minutes ?", True)
-        if do_test:
-            try:
-                out_test = process_one_video(first, opts, svcs, limit_duration_sec=300, test_prefix="TEST_")
-                if out_test:
-                    print(f"[TEST] OK → {out_test}")
-            except Exception as e:
-                print(f"[TEST] Erreur: {e}")
-                return 1
+            print(f"\n[Auto] Configuration initiale sur : {first}")
 
-        # Traitement de toutes les vidéos avec la même config
-        for v in selected:
-            try:
-                outp = process_one_video(v, opts, svcs)
-                if outp:
-                    print(f"[OK] {v} → {outp}")
-            except Exception as e:
-                print(f"[ERREUR] {v} → {e}")
-
-        print("\nTerminé.")
-        return 0
-
-    else:  # MANUEL
-        for v in selected:
-            print(f"\n[Manuel] Vidéo : {v}")
-            base_opts = build_default_opts()
-
-            v_full = join_input(v)
-            aidx = svcs.choose_audio_track(v_full)
-            sc = svcs.choose_subtitle_source(v_full)
+            # Choix piste + ST une fois
+            aidx = svcs.choose_audio_track(first_full)
+            sc = svcs.choose_subtitle_source(first_full)
             if sc is None:
                 print("Aucune source de sous-titres choisie.")
-                continue
-            label = svcs.ask_str("Libellé piste d'origine", base_opts.orig_audio_name or "Original")
+                return 1
 
-            db = ask_float("Réduction (ducking) en dB", base_opts.db_reduct)
-            off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
-            bg = ask_float("Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
-            tts = ask_float("Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
+            label = svcs.ask_str("Libellé piste d'origine", opts.orig_audio_name or "Original")
+            db = ask_float("Réduction (ducking) en dB", opts.db_reduct)
+            off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", opts.offset_ms)
+            bg = ask_float("Niveau BG (1.0 = inchangé)", opts.bg_mix)
+            tts = ask_float("Niveau TTS (1.0 = inchangé)", opts.tts_mix)
 
-            cur = replace(
-                base_opts,
+            opts = replace(
+                opts,
                 audio_ffmpeg_index=aidx,
                 sub_choice=sc,
                 orig_audio_name=(label or "Original"),
@@ -163,21 +114,79 @@ def main() -> int:
             )
 
             do_test = ask_yes_no("Faire un test de 5 minutes ?", True)
-            try:
-                outp = process_one_video(
-                    v,
-                    cur,
-                    svcs,
-                    limit_duration_sec=(300 if do_test else None),
-                    test_prefix=("TEST_" if do_test else ""),
-                )
-                if outp:
-                    print(f"[OK] {v} → {outp}")
-            except Exception as e:
-                print(f"[ERREUR] {v} → {e}")
+            if do_test:
+                try:
+                    out_test = process_one_video(first, opts, svcs, limit_duration_sec=300, test_prefix="TEST_")
+                    if out_test:
+                        print(f"[TEST] OK → {out_test}")
+                except Exception as e:
+                    print(f"[TEST] Erreur: {e}")
+                    return 1
 
-        print("\nTerminé.")
-        return 0
+            # Traitement de toutes les vidéos avec la même config
+            for v in selected:
+                try:
+                    outp, duration = htime.measure_duration(process_one_video, v, opts, svcs)
+                    print(f"\nVidéo traitée en {duration}")
+                    if outp:
+                        print(f"[OK] {v} → {outp}")
+                except Exception as e:
+                    print(f"[ERREUR] {v} → {e}")
+
+            print("\nTerminé.")
+            
+
+            
+
+        else:  # MANUEL
+            for v in selected:
+                print(f"\n[Manuel] Vidéo : {v}")
+                base_opts = build_default_opts()
+
+                v_full = join_input(v)
+                aidx = svcs.choose_audio_track(v_full)
+                sc = svcs.choose_subtitle_source(v_full)
+                if sc is None:
+                    print("Aucune source de sous-titres choisie.")
+                    continue
+                label = svcs.ask_str("Libellé piste d'origine", base_opts.orig_audio_name or "Original")
+
+                db = ask_float("Réduction (ducking) en dB", base_opts.db_reduct)
+                off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
+                bg = ask_float("Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
+                tts = ask_float("Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
+
+                cur = replace(
+                    base_opts,
+                    audio_ffmpeg_index=aidx,
+                    sub_choice=sc,
+                    orig_audio_name=(label or "Original"),
+                    db_reduct=db,
+                    offset_ms=off,
+                    bg_mix=bg,
+                    tts_mix=tts,
+                )
+
+                do_test = ask_yes_no("Faire un test de 5 minutes ?", True)
+                try:
+                    outp = process_one_video(
+                        v,
+                        cur,
+                        svcs,
+                        limit_duration_sec=(300 if do_test else None),
+                        test_prefix=("TEST_" if do_test else ""),
+                    )
+                    if outp:
+                        print(f"[OK] {v} → {outp}")
+                except Exception as e:
+                    print(f"[ERREUR] {v} → {e}")
+
+            print("\nTerminé.")
+            
+        choix = input("Voulez-vous générer une autre vidéo ? (o/n) : ").strip().lower()
+        if choix != "o":
+            break
+            return 0
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Callable, Optional, Iterable
 
@@ -16,7 +17,7 @@ from add_dub.adapters.ffmpeg import (
     encode_original_audio_to_final_codec,
     merge_to_container,
 )
-
+import add_dub.helpers.time as htime
 
 def _step(msg: str) -> None:
     print("\n" + msg)
@@ -139,7 +140,8 @@ def process_one_video(
     # 8) Génération TTS alignée (WAV)
     tts_wav = join_output(f"{test_prefix}{base}_tts.wav")
     _step("Génération TTS (WAV)...")
-    svcs.generate_dub_audio(
+    result,duration = htime.measure_duration(
+        svcs.generate_dub_audio,
         srt_file=srt_path,
         output_wav=tts_wav,
         voice_id=opts.voice_id,
@@ -147,17 +149,20 @@ def process_one_video(
         target_total_duration_ms=orig_len_ms,
         offset_ms=opts.offset_ms,
     )
+    print(duration)
 
     # 9) Ducking de l'audio d'origine pendant les dialogues
     ducked_wav = join_output(f"{test_prefix}{base}_ducked.wav")
     _step("Ducking de l'audio original pendant les dialogues...")
-    lower_audio_during_subtitles(
+    result, duration = htime.measure_duration(
+        lower_audio_during_subtitles,
         audio_file=orig_wav,
         subtitles=subtitles,
         output_wav=ducked_wav,
         reduction_db=opts.db_reduct,
         offset_ms=opts.offset_ms,
     )
+    print(duration)
 
     # 10) Mix final BG + TTS
     mixed_audio = join_output(f"{test_prefix}{base}_mix{_audio_ext_from_codec_args(opts.audio_codec_args)}")
