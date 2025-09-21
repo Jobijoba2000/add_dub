@@ -1,6 +1,7 @@
 # src/add_dub/core/tts_generate.py
 import os
 import time
+import math
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
 from typing import List, Tuple, Optional
@@ -21,9 +22,8 @@ def _load_segment_as_array(
     target_ms: int,
 ) -> np.ndarray:
     """
-    Charge un segment depuis 'path', convertit au format cible (sr, ch, sw),
-    applique une coupe initiale (trim_lead_ms), puis ajuste strictement à target_ms
-    (coupe si trop long, complète avec silence si trop court). Retourne un np.ndarray int16 shape (n, ch).
+    Charge un segment, le convertit au format cible, applique un trim éventuel,
+    et l'ajuste exactement à target_ms (coupe ou silence). Retourne int16 (n, ch).
     """
     seg = AudioSegment.from_file(path)
     if seg.frame_rate != target_sr:
@@ -42,28 +42,23 @@ def _load_segment_as_array(
         seg = seg + AudioSegment.silent(duration=(target_ms - len(seg)), frame_rate=target_sr)
 
     raw = seg.raw_data
-    dtype = np.int16 if target_sw == 2 else np.int8 if target_sw == 1 else np.int32
+    dtype = np.int16 if target_sw == 2 else (np.int8 if target_sw == 1 else np.int32)
     arr = np.frombuffer(raw, dtype=dtype)
 
-    if target_ch == 2:
-        arr = arr.reshape(-1, 2)
-    else:
-        arr = arr.reshape(-1, 1)
+    arr = arr.reshape(-1, target_ch)
 
-    # On retourne toujours int16 (pcm_s16)
-    if dtype != np.int16:
-        # Normalisation simple vers int16
-        if dtype == np.int8:
-            arr = (arr.astype(np.int16) << 8)
-        elif dtype == np.int32:
-            arr = (arr >> 16).astype(np.int16)
+    # Sortie toujours en int16
+    if dtype == np.int8:
+        arr = (arr.astype(np.int16) << 8)
+    elif dtype == np.int32:
+        arr = (arr >> 16).astype(np.int16)
 
     return arr
 
 
 def _export_int16_wav(array_int16: np.ndarray, sr: int, ch: int, out_path: str) -> None:
     """
-    Exporte un tampon int16 (shape = [n, ch]) en WAV PCM s16le à l'emplacement 'out_path'.
+    Exporte un tampon int16 (n, ch) en WAV PCM s16.
     """
     seg = AudioSegment(
         array_int16.tobytes(),
@@ -84,8 +79,7 @@ def generate_dub_audio(
     offset_ms: int = 0,
 ) -> str:
     """
-    Génère la piste TTS alignée sur le SRT.
-    Retourne le chemin du WAV généré (output_wav).
+    Génère la piste TTS alignée sur le SRT et retourne le chemin du WAV généré.
     """
     subtitles = parse_srt_file(srt_file, duration_limit_sec=duration_limit_sec)
     if not subtitles:
@@ -119,41 +113,37 @@ def generate_dub_audio(
     print("\rExport en cours...")
     t0_export = time.perf_counter()
 
-    # Paramètres cible audio (on prend ceux du premier segment)
-    # On lit UN segment pour récupérer sr/ch/sw, puis on repartira en parallèle
+    # Format cible à partir du premier segment
     first_path, _, _ = results[0]
     first_seg = AudioSegment.from_file(first_path)
     target_sr = first_seg.frame_rate
     target_ch = first_seg.channels
-    target_sw = first_seg.sample_width  # bytes
-    # On force en s16 à l'export pour rester cohérent
+    target_sw = first_seg.sample_width
     if target_sw not in (1, 2, 4):
-        target_sw = 2
+        target_sw = 2  # sécurité
 
-    # Calcul de la durée totale nécessaire
+    # Calcul de la durée finale (ms)
     max_end_ms = 0
-    for (start, end, _text), res in zip(subtitles, results):
-        start_ms = int(start * 1000) + offset_ms
-        end_ms = int(end * 1000) + offset_ms
-
-        if end_ms <= 0:
+    for (start, end, _text), _res in zip(subtitles, results):
+        s = int(start * 1000) + offset_ms
+        e = int(end * 1000) + offset_ms
+        if e <= 0:
             continue
-        if start_ms < 0:
-            start_ms = 0
-        if end_ms <= start_ms:
+        if s < 0:
+            s = 0
+        if e <= s:
             continue
-        if end_ms > max_end_ms:
-            max_end_ms = end_ms
+        if e > max_end_ms:
+            max_end_ms = e
 
     final_ms = target_total_duration_ms if (target_total_duration_ms is not None) else max_end_ms
-    if final_ms is None or final_ms < 0:
-        final_ms = 0
+    final_ms = max(0, int(final_ms))
 
-    # Pré-allocation du tampon final int16
-    samples_total = int((final_ms / 1000.0) * target_sr)
-    if samples_total <= 0:
+    # Pré-allocation du tampon final (ajout d'1 frame de marge pour absorber les arrondis)
+    samples_total = int(math.ceil(final_ms * target_sr / 1000.0)) + 1
+    if samples_total <= 1:
         AudioSegment.silent(duration=0).export(output_wav, format="wav")
-        # Nettoyage des segments
+        # Nettoyage
         for res in results:
             if res:
                 path, _, _ = res
@@ -164,13 +154,12 @@ def generate_dub_audio(
                     pass
         return output_wav
 
-    # Shape [n, ch], int16, initialisé à 0 (silence)
     final_buf = np.zeros((samples_total, target_ch), dtype=np.int16)
 
-    # Préparation des tâches de chargement/décodage (I/O bound → threads)
+    # Tâches de chargement/découpage
     tasks = []
     for (start, end, _text), res in zip(subtitles, results):
-        path, s_ms, e_ms = res  # type: ignore
+        path, _s_ms, _e_ms = res  # type: ignore
         start_ms = int(start * 1000) + offset_ms
         end_ms = int(end * 1000) + offset_ms
 
@@ -186,7 +175,7 @@ def generate_dub_audio(
         target_ms = end_ms - start_ms
         tasks.append((path, start_ms, target_ms, trim_lead))
 
-    # Chargement parallèle des segments, placement dans le tampon
+    # Chargement parallèle des segments et placement sécurisé
     def _worker_load_and_place(args):
         path, start_ms, target_ms, trim_lead = args
         arr = _load_segment_as_array(
@@ -199,15 +188,22 @@ def generate_dub_audio(
         )
         i0 = int((start_ms / 1000.0) * target_sr)
         i1 = i0 + arr.shape[0]
-        # Copie (ou addition si on veut tolérer un éventuel recouvrement)
-        # Ici, on copie (SRT typiques non recouvrants)
-        final_buf[i0:i1, :] = arr
+
+        # Garde-fous indices
+        if i0 >= samples_total:
+            return
+        if i1 > samples_total:
+            arr = arr[: samples_total - i0]
+            i1 = samples_total
+
+        if arr.size > 0:
+            final_buf[i0:i1, :] = arr
 
     max_threads = min(32, max(1, cpu_count() * 2))
     with ThreadPoolExecutor(max_workers=max_threads) as pool:
         list(pool.map(_worker_load_and_place, tasks))
 
-    # Nettoyage des fichiers temporaires
+    # Nettoyage des petits WAV TTS
     for res in results:
         if not res:
             continue
@@ -218,7 +214,7 @@ def generate_dub_audio(
         except Exception:
             pass
 
-    # Export final en WAV pcm_s16le
+    # Export final
     _export_int16_wav(final_buf, target_sr, target_ch, output_wav)
 
     t_export = time.perf_counter() - t0_export
