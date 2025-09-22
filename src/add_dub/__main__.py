@@ -1,9 +1,10 @@
 # src/add_dub/__main__.py
 
+import os
 import sys
 from dataclasses import replace
 
-from add_dub.io.fs import ensure_base_dirs
+from add_dub.io.fs import ensure_base_dirs, join_input
 from add_dub.core.subtitles import list_input_videos
 from add_dub.core.pipeline import DubOptions, Services, process_one_video
 from add_dub.core.tts_generate import generate_dub_audio
@@ -15,8 +16,8 @@ from add_dub.cli.selectors import (
 )
 from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
 from add_dub.config import cfg
-from add_dub.io.fs import join_input
 import add_dub.helpers.time as htime
+
 
 def _resolve_srt_for_video_impl(video_fullpath: str, sub_choice: tuple) -> str | None:
     from add_dub.core.subtitles import resolve_srt_for_video
@@ -53,6 +54,7 @@ def build_services() -> Services:
 
 
 def build_default_opts() -> DubOptions:
+    # Pas de changement côté codecs/containers (gérés ailleurs)
     audio_args = final_audio_codec_args(cfg.AUDIO_CODEC_FINAL, cfg.AUDIO_BITRATE)
     sub_codec = subtitle_codec_for_container(cfg.AUDIO_CODEC_FINAL)
     return DubOptions(
@@ -60,13 +62,67 @@ def build_default_opts() -> DubOptions:
         sub_choice=None,
         orig_audio_name="Original",
         db_reduct=cfg.DB_REDUCT,
-        offset_ms=cfg.OFFSET_STR,
+        offset_ms=cfg.OFFSET_STR,  # laissé tel quel
         bg_mix=cfg.BG_MIX,
         tts_mix=cfg.TTS_MIX,
         voice_id=None,  # voix par défaut système
         audio_codec_args=tuple(audio_args),
         sub_codec=sub_codec,
     )
+
+
+def _ask_config_for_video(
+    *,
+    base_opts: DubOptions,
+    svcs: Services,
+    video_fullpath: str,
+    force_choose_tracks_and_subs: bool = True,
+) -> DubOptions | None:
+    """
+    Pose toutes les questions pour une vidéo :
+      - piste audio (jamais de valeur par défaut)
+      - source sous-titres (jamais de valeur par défaut)
+      - libellé, ducking dB, offset, BG, TTS (défauts = base_opts)
+    Retourne les options complètes, ou None si annulation faute de ST.
+    """
+    aidx = base_opts.audio_ffmpeg_index
+    sc = base_opts.sub_choice
+
+    if force_choose_tracks_and_subs:
+        aidx = svcs.choose_audio_track(video_fullpath)
+        sc = svcs.choose_subtitle_source(video_fullpath)
+        if sc is None:
+            print("Aucune source de sous-titres choisie.")
+            return None
+
+    label = svcs.ask_str("Libellé piste d'origine", base_opts.orig_audio_name or "Original")
+    db = ask_float("Réduction (ducking) en dB", base_opts.db_reduct)
+    off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
+    bg = ask_float("Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
+    tts = ask_float("Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
+
+    return replace(
+        base_opts,
+        audio_ffmpeg_index=aidx,
+        sub_choice=sc,
+        orig_audio_name=(label or "Original"),
+        db_reduct=db,
+        offset_ms=off,
+        bg_mix=bg,
+        tts_mix=tts,
+    )
+
+
+def _cleanup_test_outputs(output_path: str | None) -> None:
+    """Supprime le fichier de sortie de test si présent."""
+    if not output_path:
+        return
+    try:
+        if os.path.isfile(output_path):
+            os.remove(output_path)
+            print(f"[TEST] Fichier supprimé : {output_path}")
+    except Exception as e:
+        print(f"[TEST] Impossible de supprimer le fichier de test ({output_path}) : {e}")
 
 
 def main() -> int:
@@ -79,54 +135,76 @@ def main() -> int:
             print("Aucun fichier sélectionné.")
             return 1
 
-        mode = ask_mode()
+        mode = ask_mode().strip().lower()
         svcs = build_services()
 
-        if mode.lower().startswith("a"):  # AUTO
-            opts = build_default_opts()
+        if mode.startswith("a"):  # AUTO
+            print("\n[Auto] Configuration/test sur la première vidéo, application au lot si validé.")
             first = selected[0]
             first_full = join_input(first)
 
-            print(f"\n[Auto] Configuration initiale sur : {first}")
+            # Base pour paramétrer (servira uniquement d'init pour les champs non audio/ST pendant les re-tests)
+            base_for_tests = build_default_opts()
 
-            # Choix piste + ST une fois
-            aidx = svcs.choose_audio_track(first_full)
-            sc = svcs.choose_subtitle_source(first_full)
-            if sc is None:
-                print("Aucune source de sous-titres choisie.")
-                return 1
+            # Si on choisit de tester, boucle test → question → éventuel re-test
+            validated_opts = None
+            if ask_yes_no("Faire un test de 5 minutes ?", True):
+                while True:
+                    cfg = _ask_config_for_video(
+                        base_opts=base_for_tests,
+                        svcs=svcs,
+                        video_fullpath=first_full,
+                        force_choose_tracks_and_subs=True,  # toujours re-choisir audio/ST sans défaut
+                    )
+                    if cfg is None:
+                        return 1
 
-            label = svcs.ask_str("Libellé piste d'origine", opts.orig_audio_name or "Original")
-            db = ask_float("Réduction (ducking) en dB", opts.db_reduct)
-            off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", opts.offset_ms)
-            bg = ask_float("Niveau BG (1.0 = inchangé)", opts.bg_mix)
-            tts = ask_float("Niveau TTS (1.0 = inchangé)", opts.tts_mix)
+                    out_test = None
+                    try:
+                        out_test = process_one_video(
+                            first,
+                            cfg,
+                            svcs,
+                            limit_duration_sec=300,
+                            test_prefix="TEST_",
+                        )
+                        if out_test:
+                            print(f"[TEST] OK → {out_test}")
+                    except Exception as e:
+                        print(f"[TEST] Erreur: {e}")
 
-            opts = replace(
-                opts,
-                audio_ffmpeg_index=aidx,
-                sub_choice=sc,
-                orig_audio_name=(label or "Original"),
-                db_reduct=db,
-                offset_ms=off,
-                bg_mix=bg,
-                tts_mix=tts,
-            )
+                    test_ok = ask_yes_no("Le test est-il OK et valide les réglages ?", True)
+                    _cleanup_test_outputs(out_test)
 
-            do_test = ask_yes_no("Faire un test de 5 minutes ?", True)
-            if do_test:
-                try:
-                    out_test = process_one_video(first, opts, svcs, limit_duration_sec=300, test_prefix="TEST_")
-                    if out_test:
-                        print(f"[TEST] OK → {out_test}")
-                except Exception as e:
-                    print(f"[TEST] Erreur: {e}")
+                    if test_ok:
+                        validated_opts = cfg
+                        break
+                    else:
+                        # Pour le re-test sur la même vidéo :
+                        #   - audio/ST seront re-demandés sans défaut
+                        #   - les autres champs utiliseront comme défauts ceux de ce test raté
+                        base_for_tests = replace(
+                            cfg,
+                            audio_ffmpeg_index=None,
+                            sub_choice=None,
+                        )
+                        # et on relance la boucle
+            else:
+                # Pas de test : configurer une fois
+                cfg = _ask_config_for_video(
+                    base_opts=base_for_tests,
+                    svcs=svcs,
+                    video_fullpath=first_full,
+                    force_choose_tracks_and_subs=True,
+                )
+                if cfg is None:
                     return 1
+                validated_opts = cfg
 
-            # Traitement de toutes les vidéos avec la même config
+            # Traitement de toutes les vidéos avec les réglages validés
             for v in selected:
                 try:
-                    outp, duration = htime.measure_duration(process_one_video, v, opts, svcs)
+                    outp, duration = htime.measure_duration(process_one_video, v, validated_opts, svcs)
                     print(f"\nVidéo traitée en {duration}")
                     if outp:
                         print(f"[OK] {v} → {outp}")
@@ -134,58 +212,89 @@ def main() -> int:
                     print(f"[ERREUR] {v} → {e}")
 
             print("\nTerminé.")
-            
-
-            
 
         else:  # MANUEL
+            print("\n[Manuel] Chaque vidéo repart de zéro. Les défauts ne sont conservés que pendant les re-tests de la même vidéo (hors audio/ST).")
+
             for v in selected:
                 print(f"\n[Manuel] Vidéo : {v}")
-                base_opts = build_default_opts()
-
                 v_full = join_input(v)
-                aidx = svcs.choose_audio_track(v_full)
-                sc = svcs.choose_subtitle_source(v_full)
-                if sc is None:
-                    print("Aucune source de sous-titres choisie.")
-                    continue
-                label = svcs.ask_str("Libellé piste d'origine", base_opts.orig_audio_name or "Original")
 
-                db = ask_float("Réduction (ducking) en dB", base_opts.db_reduct)
-                off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
-                bg = ask_float("Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
-                tts = ask_float("Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
+                # Base de départ pour cette vidéo : defaults globaux (aucune persistance inter-vidéos)
+                base_for_this_video = build_default_opts()
 
-                cur = replace(
-                    base_opts,
-                    audio_ffmpeg_index=aidx,
-                    sub_choice=sc,
-                    orig_audio_name=(label or "Original"),
-                    db_reduct=db,
-                    offset_ms=off,
-                    bg_mix=bg,
-                    tts_mix=tts,
+                # Configuration initiale (audio/ST re-choisis, sans défaut)
+                cur = _ask_config_for_video(
+                    base_opts=base_for_this_video,
+                    svcs=svcs,
+                    video_fullpath=v_full,
+                    force_choose_tracks_and_subs=True,
                 )
+                if cur is None:
+                    print("Aucune source de sous-titres choisie. Vidéo ignorée.")
+                    continue
 
-                do_test = ask_yes_no("Faire un test de 5 minutes ?", True)
+                # Boucle de test optionnelle pour cette vidéo
+                if ask_yes_no("Faire un test de 5 minutes pour cette vidéo ?", True):
+                    while True:
+                        out_test = None
+                        try:
+                            out_test = process_one_video(
+                                v,
+                                cur,
+                                svcs,
+                                limit_duration_sec=300,
+                                test_prefix="TEST_",
+                            )
+                            if out_test:
+                                print(f"[TEST] OK → {out_test}")
+                        except Exception as e:
+                            print(f"[TEST] Erreur: {e}")
+
+                        test_ok = ask_yes_no("Le test est-il OK et valide les réglages pour cette vidéo ?", True)
+                        _cleanup_test_outputs(out_test)
+
+                        if test_ok:
+                            break
+                        else:
+                            # Re-test : on remet en questions audio/ST (sans défaut),
+                            # et les autres champs prennent pour défauts ceux du test précédent.
+                            base_for_this_video = replace(
+                                cur,
+                                audio_ffmpeg_index=None,
+                                sub_choice=None,
+                            )
+                            maybe = _ask_config_for_video(
+                                base_opts=base_for_this_video,
+                                svcs=svcs,
+                                video_fullpath=v_full,
+                                force_choose_tracks_and_subs=True,
+                            )
+                            if maybe is None:
+                                print("Aucune source de sous-titres choisie. Abandon de cette vidéo.")
+                                cur = None
+                                break
+                            cur = maybe
+                            # et on relance un test
+
+                if cur is None:
+                    print("Configuration annulée pour cette vidéo.")
+                    continue
+
+                # Traitement complet pour cette vidéo
                 try:
-                    outp = process_one_video(
-                        v,
-                        cur,
-                        svcs,
-                        limit_duration_sec=(300 if do_test else None),
-                        test_prefix=("TEST_" if do_test else ""),
-                    )
+                    outp, duration = htime.measure_duration(process_one_video, v, cur, svcs)
+                    print(f"\nVidéo traitée en {duration}")
                     if outp:
                         print(f"[OK] {v} → {outp}")
                 except Exception as e:
                     print(f"[ERREUR] {v} → {e}")
 
             print("\nTerminé.")
-            
+
+        # Fin de cycle : proposer de relancer un lot
         choix = input("Voulez-vous générer une autre vidéo ? (o/n) : ").strip().lower()
-        if choix != "o":
-            break
+        if not choix.startswith("o"):
             return 0
 
 
