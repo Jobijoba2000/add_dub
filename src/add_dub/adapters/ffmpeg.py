@@ -3,6 +3,7 @@ import os
 import json
 import time
 import subprocess
+import add_dub.helpers.number as _n
 
 
 def get_track_info(video_fullpath):
@@ -109,6 +110,7 @@ def merge_to_container(
     output_video_path,
     orig_audio_name_for_title,
     sub_codec,
+    offset_ms,
 ):
     """
     Fusionne :
@@ -118,10 +120,14 @@ def merge_to_container(
       - Piste sous-titres : présente mais non par défaut -> title: "Français"
     Pas de -shortest pour garder toute la durée.
     """
+    
+    offset_s = _n.int_to_scaled_str(offset_ms)
+    
     inputs = [
         "-i", video_fullpath,            # 0
         "-i", mixed_audio_file,          # 1
         "-i", orig_audio_encoded_file,   # 2
+        "-itsoffset", offset_s,
         "-i", subtitle_srt_path,         # 3
     ]
 

@@ -212,6 +212,7 @@ def process_one_video(
         final_video,
         orig_audio_name_for_title=orig_audio_name,
         sub_codec=opts.sub_codec,
+        offset_ms=opts.offset_ms,
     )
 
     # 14) Nettoyage
