@@ -17,12 +17,13 @@ from add_dub.cli.selectors import (
 from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
 from add_dub.config import cfg
 import add_dub.helpers.time as htime
+from add_dub.config.opts_loader import load_options
 
+opts = load_options()
 
 def _resolve_srt_for_video_impl(video_fullpath: str, sub_choice: tuple) -> str | None:
     from add_dub.core.subtitles import resolve_srt_for_video
     return resolve_srt_for_video(video_fullpath, sub_choice)
-
 
 def _generate_dub_audio_impl(
     *,
@@ -42,7 +43,6 @@ def _generate_dub_audio_impl(
         offset_ms=offset_ms,
     )
 
-
 def build_services() -> Services:
     return Services(
         resolve_srt_for_video=_resolve_srt_for_video_impl,
@@ -52,24 +52,55 @@ def build_services() -> Services:
         ask_str=ask_str,
     )
 
-
 def build_default_opts() -> DubOptions:
     # Pas de changement côté codecs/containers (gérés ailleurs)
-    audio_args = final_audio_codec_args(cfg.AUDIO_CODEC_FINAL, cfg.AUDIO_BITRATE)
+    audio_codec=str(opts["audio_codec"].value) if "audio_codec" in opts else cfg.AUDIO_CODEC
+    audio_bitrate=int(opts["audio_bitrate"].value) if "audio_bitrate" in opts else cfg.AUDIO_BITRATE
+    audio_args = final_audio_codec_args(audio_codec, f"{audio_bitrate}k")
     sub_codec = subtitle_codec_for_container(cfg.AUDIO_CODEC_FINAL)
     return DubOptions(
         audio_ffmpeg_index=None,
         sub_choice=None,
         orig_audio_name="Original",
-        db_reduct=cfg.DB_REDUCT,
-        offset_ms=cfg.OFFSET_STR,  # laissé tel quel
-        bg_mix=cfg.BG_MIX,
-        tts_mix=cfg.TTS_MIX,
+        db_reduct=float(opts["db"].value) if "db" in opts else cfg.DB_REDUCT,
+        offset_ms=int(opts["offset"].value) if "offset" in opts else cfg.OFFSET_STR,
+        bg_mix=float(opts["bg"].value) if "bg" in opts else cfg.BG_MIX,
+        tts_mix=float(opts["tts"].value) if "tts" in opts else cfg.TTS_MIX,
+        audio_codec=audio_codec,
+        audio_bitrate=audio_bitrate,
         voice_id=None,  # voix par défaut système
         audio_codec_args=tuple(audio_args),
         sub_codec=sub_codec,
     )
 
+# Helper générique (place-la là où tu appelles ask_float/ask_int/ask_str)
+def ask_option(key: str, opts, kind: str, prompt: str, default):
+    """
+    key   : nom de l’option (ex. "db", "offset", "bg", "tts")
+    opts  : dictionnaire renvoyé par load_options()
+    kind  : "float" | "int" | "str"
+    prompt: texte de la question à afficher si on doit demander
+    default: valeur courante (base_opts.*) à utiliser si on ne pose pas la question,
+             ou comme repli si la clé n'existe pas dans options.conf
+    """
+    entry = opts.get(key)
+
+    # Chemin silencieux : valeur dans options.conf SANS 'd' => on ne demande rien,
+    # on renvoie la valeur de base (default), pour préserver les re-tests.
+    if entry and not entry.display:
+        if kind == "int":
+            return int(default)
+        if kind == "float":
+            return float(default)
+        return str(default)
+
+    # Chemin interactif : on pose la question avec un défaut pertinent
+    
+    if kind == "int":
+        return ask_int(prompt, int(default))
+    if kind == "float":
+        return ask_float(prompt, float(default))
+    return ask_str(prompt, str(default))
 
 def _ask_config_for_video(
     *,
@@ -85,6 +116,7 @@ def _ask_config_for_video(
       - libellé, ducking dB, offset, BG, TTS (défauts = base_opts)
     Retourne les options complètes, ou None si annulation faute de ST.
     """
+    print(f"base option: {base_opts}")
     aidx = base_opts.audio_ffmpeg_index
     sc = base_opts.sub_choice
 
@@ -94,12 +126,14 @@ def _ask_config_for_video(
         if sc is None:
             print("Aucune source de sous-titres choisie.")
             return None
-
+      
     label = svcs.ask_str("Libellé piste d'origine", base_opts.orig_audio_name or "Original")
-    db = ask_float("Réduction (ducking) en dB", base_opts.db_reduct)
-    off = ask_int("Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
-    bg = ask_float("Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
-    tts = ask_float("Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
+    db  = ask_option("db", opts, "float", "Réduction (ducking) en dB", base_opts.db_reduct)
+    off = ask_option("offset", opts, "int",   "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
+    bg  = ask_option("bg", opts, "float",     "Niveau BG (1.0 = inchangé)",               base_opts.bg_mix)
+    tts = ask_option("tts", opts, "float",    "Niveau TTS (1.0 = inchangé)",base_opts.tts_mix)
+    ac = ask_option("audio_codec", opts, "str", "Codec audio", base_opts.audio_codec)
+    ab = ask_option("audio_bitrate", opts, "int", "Bitrate", base_opts.audio_bitrate)
 
     return replace(
         base_opts,
@@ -110,6 +144,9 @@ def _ask_config_for_video(
         offset_ms=off,
         bg_mix=bg,
         tts_mix=tts,
+        audio_codec=ac,
+        audio_bitrate=ab,
+        audio_codec_args=final_audio_codec_args(ac, f"{ab}k"),
     )
 
 
@@ -183,6 +220,7 @@ def main() -> int:
                         # Pour le re-test sur la même vidéo :
                         #   - audio/ST seront re-demandés sans défaut
                         #   - les autres champs utiliseront comme défauts ceux de ce test raté
+                        print(cfg)
                         base_for_tests = replace(
                             cfg,
                             audio_ffmpeg_index=None,

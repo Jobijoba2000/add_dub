@@ -31,6 +31,8 @@ class DubOptions:
     offset_ms: int = 0                                # décalage ST/TTS
     bg_mix: float = 1.0                               # gain BG
     tts_mix: float = 1.0                              # gain TTS
+    audio_codec: str = "ac3"                          # Codec de des pistes audio
+    audio_bitrate: int = 320                          # Bitrate des pistes audio
     voice_id: Optional[str] = None                    # identifiant de voix
     audio_codec_args: Iterable[str] = ()              # args ffmpeg audio final (ex: "-c:a","aac","-b:a","192k")
     sub_codec: str = "srt"                            # "srt" ou "ass"
@@ -52,7 +54,7 @@ def _video_ext_from_codec_args(args: Iterable[str]) -> str:
         if tok == "-c:a" and i + 1 < len(a):
             codec = a[i + 1].lower()
             break
-    return ".mp4" if codec == "aac" else ".mkv"
+    return ".mkv"
 
 
 def _audio_ext_from_codec_args(args: Iterable[str]) -> str:

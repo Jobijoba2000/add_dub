@@ -3,7 +3,7 @@ import os
 import time
 import math
 from multiprocessing import cpu_count
-from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor, wait, FIRST_COMPLETED
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -98,15 +98,50 @@ def generate_dub_audio(
     print(f"\rTTS: 0% [0/{total}]", end="", flush=True)
     t0_tts = time.perf_counter()
 
-    # Synthèse TTS en parallèle (processus)
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        fut_to_idx = {ex.submit(tts_worker, j): j[0] for j in jobs}
-        for fut in as_completed(fut_to_idx):
-            idx, path, s_ms, e_ms = fut.result()
-            results[idx] = (path, s_ms, e_ms)
-            done += 1
-            pct = int(done * 100 / total)
-            print(f"\rTTS: {pct}% [{done}/{total}]", end="", flush=True)
+    # Watchdog + fermeture non bloquante du pool
+    FREEZE_TIMEOUT = 2  # vu ta vitesse par segment
+
+    ex = ProcessPoolExecutor(max_workers=max_workers)
+    try:
+        fut_to_job = {ex.submit(tts_worker, j): j for j in jobs}
+        pending = set(fut_to_job.keys())
+        done = 0
+        total = len(jobs)
+
+        while pending:
+            done_set, pending = wait(pending, timeout=FREEZE_TIMEOUT, return_when=FIRST_COMPLETED)
+
+            if not done_set:
+                print("\n[WARN] Aucune avancée TTS. Relance synchrone des segments restants...")
+                for fut in list(pending):
+                    job = fut_to_job[fut]
+                    try:
+                        fut.cancel()
+                    except Exception:
+                        pass
+                    # Refaire ce job en direct (sans le pool)
+                    idx, path, s_ms, e_ms = tts_worker(job)
+                    results[idx] = (path, s_ms, e_ms)
+                    done += 1
+                    pct = int(done * 100 / total)
+                    print(f"\rTTS: {pct}% [{done}/{total}]", end="", flush=True)
+                pending.clear()
+                break
+
+            for fut in done_set:
+                job = fut_to_job[fut]
+                try:
+                    idx, path, s_ms, e_ms = fut.result()
+                except Exception:
+                    # Si un futur échoue, refaire ce job en direct
+                    idx, path, s_ms, e_ms = tts_worker(job)
+                results[idx] = (path, s_ms, e_ms)
+                done += 1
+                pct = int(done * 100 / total)
+                print(f"\rTTS: {pct}% [{done}/{total}]", end="", flush=True)
+    finally:
+        # clé: NE PAS attendre la fin propre des workers (sinon deadlock)
+        ex.shutdown(wait=False, cancel_futures=True)
 
     print(f"\n{time.perf_counter() - t0_tts:.3f}")
 

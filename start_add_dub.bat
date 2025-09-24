@@ -21,6 +21,8 @@ set "REPO=add_dub"
 set "TOOLBOX_ZIP=add_dub_toolbox_win64.zip"
 set "REQ_FILE=TOOLBOX_REQUIRED.txt"
 set "CUR_FILE=TOOLBOX_VERSION.txt"
+set "ADD_DUB_OPTIONS=%~dp0options.conf"
+
 rem ---------------------------------------------------------------------------
 
 set "ROOT=%~dp0"
