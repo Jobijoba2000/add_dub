@@ -8,7 +8,7 @@ from add_dub.io.fs import ensure_base_dirs, join_input
 from add_dub.core.subtitles import list_input_videos
 from add_dub.core.pipeline import DubOptions, Services, process_one_video
 from add_dub.core.tts_generate import generate_dub_audio
-from add_dub.cli.ui import ask_mode, ask_yes_no, ask_float, ask_int, ask_str
+from add_dub.cli.ui import ask_option, ask_mode, ask_yes_no, ask_float, ask_int, ask_str
 from add_dub.cli.selectors import (
     choose_files,
     choose_audio_track_ffmpeg_index,
@@ -16,7 +16,7 @@ from add_dub.cli.selectors import (
 )
 from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
 from add_dub.config import cfg
-import add_dub.helpers.time as htime
+from add_dub.helpers.time import measure_duration as _md
 from add_dub.config.opts_loader import load_options
 
 opts = load_options()
@@ -49,7 +49,6 @@ def build_services() -> Services:
         generate_dub_audio=_generate_dub_audio_impl,
         choose_audio_track=choose_audio_track_ffmpeg_index,
         choose_subtitle_source=choose_subtitle_source,
-        ask_str=ask_str,
     )
 
 def build_default_opts() -> DubOptions:
@@ -61,7 +60,7 @@ def build_default_opts() -> DubOptions:
     return DubOptions(
         audio_ffmpeg_index=None,
         sub_choice=None,
-        orig_audio_name="Original",
+        orig_audio_lang=opts["orig_audio_lang"].value if "orig_audio_lang" in opts else cfg.ORIG_AUDIO_LANG,
         db_reduct=float(opts["db"].value) if "db" in opts else cfg.DB_REDUCT,
         offset_ms=int(opts["offset"].value) if "offset" in opts else cfg.OFFSET_STR,
         bg_mix=float(opts["bg"].value) if "bg" in opts else cfg.BG_MIX,
@@ -73,34 +72,6 @@ def build_default_opts() -> DubOptions:
         sub_codec=sub_codec,
     )
 
-# Helper générique (place-la là où tu appelles ask_float/ask_int/ask_str)
-def ask_option(key: str, opts, kind: str, prompt: str, default):
-    """
-    key   : nom de l’option (ex. "db", "offset", "bg", "tts")
-    opts  : dictionnaire renvoyé par load_options()
-    kind  : "float" | "int" | "str"
-    prompt: texte de la question à afficher si on doit demander
-    default: valeur courante (base_opts.*) à utiliser si on ne pose pas la question,
-             ou comme repli si la clé n'existe pas dans options.conf
-    """
-    entry = opts.get(key)
-
-    # Chemin silencieux : valeur dans options.conf SANS 'd' => on ne demande rien,
-    # on renvoie la valeur de base (default), pour préserver les re-tests.
-    if entry and not entry.display:
-        if kind == "int":
-            return int(default)
-        if kind == "float":
-            return float(default)
-        return str(default)
-
-    # Chemin interactif : on pose la question avec un défaut pertinent
-    
-    if kind == "int":
-        return ask_int(prompt, int(default))
-    if kind == "float":
-        return ask_float(prompt, float(default))
-    return ask_str(prompt, str(default))
 
 def _ask_config_for_video(
     *,
@@ -116,7 +87,6 @@ def _ask_config_for_video(
       - libellé, ducking dB, offset, BG, TTS (défauts = base_opts)
     Retourne les options complètes, ou None si annulation faute de ST.
     """
-    print(f"base option: {base_opts}")
     aidx = base_opts.audio_ffmpeg_index
     sc = base_opts.sub_choice
 
@@ -127,7 +97,8 @@ def _ask_config_for_video(
             print("Aucune source de sous-titres choisie.")
             return None
       
-    label = svcs.ask_str("Libellé piste d'origine", base_opts.orig_audio_name or "Original")
+    # label = svcs.ask_str("Libellé piste d'origine", base_opts.orig_audio_name or "Original")
+    oal = ask_option("orig_audio_lang", opts, "str", "Langue originale", base_opts.orig_audio_lang)
     db  = ask_option("db", opts, "float", "Réduction (ducking) en dB", base_opts.db_reduct)
     off = ask_option("offset", opts, "int",   "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
     bg  = ask_option("bg", opts, "float",     "Niveau BG (1.0 = inchangé)",               base_opts.bg_mix)
@@ -139,7 +110,7 @@ def _ask_config_for_video(
         base_opts,
         audio_ffmpeg_index=aidx,
         sub_choice=sc,
-        orig_audio_name=(label or "Original"),
+        orig_audio_lang=oal,
         db_reduct=db,
         offset_ms=off,
         bg_mix=bg,
@@ -198,7 +169,8 @@ def main() -> int:
 
                     out_test = None
                     try:
-                        out_test = process_one_video(
+                        out_test = _md(
+                            process_one_video, 
                             first,
                             cfg,
                             svcs,
@@ -242,8 +214,7 @@ def main() -> int:
             # Traitement de toutes les vidéos avec les réglages validés
             for v in selected:
                 try:
-                    outp, duration = htime.measure_duration(process_one_video, v, validated_opts, svcs)
-                    print(f"\nVidéo traitée en {duration}")
+                    outp = _md(process_one_video, v, validated_opts, svcs)
                     if outp:
                         print(f"[OK] {v} → {outp}")
                 except Exception as e:
@@ -277,7 +248,8 @@ def main() -> int:
                     while True:
                         out_test = None
                         try:
-                            out_test = process_one_video(
+                            out_test = _md(
+                                process_one_video, 
                                 v,
                                 cur,
                                 svcs,
@@ -321,8 +293,7 @@ def main() -> int:
 
                 # Traitement complet pour cette vidéo
                 try:
-                    outp, duration = htime.measure_duration(process_one_video, v, cur, svcs)
-                    print(f"\nVidéo traitée en {duration}")
+                    outp = _md(process_one_video, v, cur, svcs)
                     if outp:
                         print(f"[OK] {v} → {outp}")
                 except Exception as e:

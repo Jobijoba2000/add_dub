@@ -17,7 +17,7 @@ from add_dub.adapters.ffmpeg import (
     encode_original_audio_to_final_codec,
     merge_to_container,
 )
-import add_dub.helpers.time as htime
+from add_dub.helpers.time import measure_duration as _md
 
 def _step(msg: str) -> None:
     print("\n" + msg)
@@ -26,7 +26,7 @@ def _step(msg: str) -> None:
 class DubOptions:
     audio_ffmpeg_index: Optional[int] = None          # index de la piste source (ffmpeg)
     sub_choice: Optional[tuple] = None                # ("srt", path) ou ("mkv", idx)
-    orig_audio_name: Optional[str] = None             # libellé de la piste originale dans la sortie
+    orig_audio_lang: Optional[str] = None             # libellé de la piste originale dans la sortie
     db_reduct: float = -5.0                           # ducking en dB
     offset_ms: int = 0                                # décalage ST/TTS
     bg_mix: float = 1.0                               # gain BG
@@ -44,7 +44,6 @@ class Services:
     generate_dub_audio: Callable[..., str]
     choose_audio_track: Callable[[str], int]
     choose_subtitle_source: Callable[[str], Optional[tuple]]
-    ask_str: Callable[[str, str], str]
 
 
 def _video_ext_from_codec_args(args: Iterable[str]) -> str:
@@ -118,15 +117,21 @@ def process_one_video(
     strip_subtitle_tags_inplace(srt_path)
 
     # 5) Libellé de la piste d'origine
-    orig_audio_name = opts.orig_audio_name
-    if not orig_audio_name:
-        orig_audio_name = svcs.ask_str("Nom de la piste d'origine (ex. Japonais)", "Original")
+    orig_audio_lang = opts.orig_audio_lang
+    if not orig_audio_lang:
+        orig_audio_lang = svcs.ask_str("Nom de la piste d'origine (ex. Japonais)", "Original")
 
     # 6) Extraction audio d'origine (WAV PCM)
     orig_wav = join_output(f"{test_prefix}{base}_orig.wav")
     _step("Extraction de l'audio d'origine (WAV PCM)...")
-    extract_audio_track(video_full, audio_idx, orig_wav, duration_sec=limit_duration_sec)
-
+    _md(
+        extract_audio_track, 
+        video_full, 
+        audio_idx, 
+        orig_wav, 
+        duration_sec=limit_duration_sec
+    )
+    
     # Durée cible (utile pour calages éventuels)
     try:
         orig_len_ms = len(AudioSegment.from_file(orig_wav))
@@ -142,7 +147,7 @@ def process_one_video(
     # 8) Génération TTS alignée (WAV)
     tts_wav = join_output(f"{test_prefix}{base}_tts.wav")
     _step("Génération TTS (WAV)...")
-    result,duration = htime.measure_duration(
+    _md(
         svcs.generate_dub_audio,
         srt_file=srt_path,
         output_wav=tts_wav,
@@ -151,12 +156,11 @@ def process_one_video(
         target_total_duration_ms=orig_len_ms,
         offset_ms=opts.offset_ms,
     )
-    print(duration)
 
     # 9) Ducking de l'audio d'origine pendant les dialogues
     ducked_wav = join_output(f"{test_prefix}{base}_ducked.wav")
     _step("Ducking de l'audio original pendant les dialogues...")
-    result, duration = htime.measure_duration(
+    _md(
         lower_audio_during_subtitles,
         audio_file=orig_wav,
         subtitles=subtitles,
@@ -164,12 +168,12 @@ def process_one_video(
         reduction_db=opts.db_reduct,
         offset_ms=opts.offset_ms,
     )
-    print(duration)
 
     # 10) Mix final BG + TTS
     mixed_audio = join_output(f"{test_prefix}{base}_mix{_audio_ext_from_codec_args(opts.audio_codec_args)}")
     _step("Mixage final BG/TTS...")
-    mix_audios(
+    _md(
+        mix_audios, 
         ducked_wav,
         tts_wav,
         mixed_audio,
@@ -181,7 +185,8 @@ def process_one_video(
     # 11) Encodage de la piste originale dans le codec final
     orig_encoded = join_output(f"{test_prefix}{base}_orig_enc{_audio_ext_from_codec_args(opts.audio_codec_args)}")
     _step("Encodage de l'audio d'origine dans le codec final...")
-    encode_original_audio_to_final_codec(
+    _md(
+        encode_original_audio_to_final_codec, 
         orig_wav,
         orig_encoded,
         audio_codec_args=list(opts.audio_codec_args),
@@ -212,7 +217,7 @@ def process_one_video(
         orig_encoded,
         srt_path,
         final_video,
-        orig_audio_name_for_title=orig_audio_name,
+        orig_audio_name_for_title=orig_audio_lang,
         sub_codec=opts.sub_codec,
         offset_ms=opts.offset_ms,
     )

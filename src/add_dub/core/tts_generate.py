@@ -96,7 +96,6 @@ def generate_dub_audio(
     total = len(jobs)
     done = 0
     print(f"\rTTS: 0% [0/{total}]", end="", flush=True)
-    t0_tts = time.perf_counter()
 
     # Watchdog + fermeture non bloquante du pool
     FREEZE_TIMEOUT = 2  # vu ta vitesse par segment
@@ -139,14 +138,12 @@ def generate_dub_audio(
                 done += 1
                 pct = int(done * 100 / total)
                 print(f"\rTTS: {pct}% [{done}/{total}]", end="", flush=True)
+                
     finally:
         # clé: NE PAS attendre la fin propre des workers (sinon deadlock)
         ex.shutdown(wait=False, cancel_futures=True)
 
-    print(f"\n{time.perf_counter() - t0_tts:.3f}")
 
-    print("\rExport en cours...")
-    t0_export = time.perf_counter()
 
     # Format cible à partir du premier segment
     first_path, _, _ = results[0]
@@ -252,8 +249,5 @@ def generate_dub_audio(
     # Export final
     _export_int16_wav(final_buf, target_sr, target_ch, output_wav)
 
-    t_export = time.perf_counter() - t0_export
-    print(f"{t_export:.3f}")
-    print("\rExport terminé")
-
+    print()
     return output_wav

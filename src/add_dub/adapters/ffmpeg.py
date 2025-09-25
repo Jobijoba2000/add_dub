@@ -4,7 +4,40 @@ import json
 import time
 import subprocess
 import add_dub.helpers.number as _n
+import sys
 
+def run_ffmpeg_with_percentage(cmd, duration_source):
+    """
+    cmd : liste FFmpeg déjà contenant -nostats -progress pipe:1
+    duration_source : fichier dont on prend la durée (ex: la vidéo d'entrée)
+    """
+    duration = float(subprocess.check_output(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "default=nw=1:nk=1", duration_source],
+        text=True
+    ).strip())
+
+    p = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,          # flux -progress
+        stderr=subprocess.DEVNULL,
+        text=True,
+        bufsize=1
+    )
+
+    try:
+        for line in p.stdout:
+            if line.startswith("out_time_ms="):
+                ms = float(line.split("=", 1)[1])
+                pct = (ms / (duration * 10000.0))
+                print(f"\r{pct:.0f}%", end="", flush=True)
+            elif line.strip() == "progress=end":
+                print("\r100%")
+                break
+    finally:
+        rc = p.wait()
+        if rc != 0:
+            raise subprocess.CalledProcessError(rc, cmd)
 
 def get_track_info(video_fullpath):
     """
@@ -31,7 +64,8 @@ def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_
     """
     cmd = [
         "ffmpeg", "-y",
-        "-hide_banner", "-loglevel", "error", "-stats",
+        "-hide_banner", "-loglevel", "error", 
+        "-nostats", "-progress", "pipe:1",
         "-i", video_fullpath,
         "-map", f"0:{audio_track_index}",
         "-vn",
@@ -41,10 +75,8 @@ def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_
         cmd.extend(["-t", str(int(duration_sec))])
     cmd.append(output_wav)
 
-    start = time.perf_counter()
-    subprocess.run(cmd, check=True)
-    end = time.perf_counter()
-    print(end - start)
+    # subprocess.run(cmd, check=True)
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
     return output_wav
 
 
@@ -65,7 +97,8 @@ def mix_audios(audio1_wav, audio2_wav, output_file, bg_mix, tts_mix, audio_codec
 
     cmd = [
         "ffmpeg", "-y",
-        "-hide_banner", "-loglevel", "error", "-stats",
+        "-hide_banner", "-loglevel", "error", 
+        "-nostats", "-progress", "pipe:1",
         "-i", audio1_wav,
         "-i", audio2_wav,
         "-filter_complex", filter_str,
@@ -74,10 +107,8 @@ def mix_audios(audio1_wav, audio2_wav, output_file, bg_mix, tts_mix, audio_codec
         output_file
     ]
 
-    start = time.perf_counter()
-    subprocess.run(cmd, check=True)
-    end = time.perf_counter()
-    print(end - start)
+    # subprocess.run(cmd, check=True)
+    run_ffmpeg_with_percentage(cmd, duration_source=audio1_wav)
     return output_file
 
 
@@ -88,17 +119,16 @@ def encode_original_audio_to_final_codec(original_wav, output_audio, audio_codec
     """
     cmd = [
         "ffmpeg", "-y",
-        "-hide_banner", "-loglevel", "error", "-stats",
+        "-hide_banner", "-loglevel", "error",
+        "-nostats", "-progress", "pipe:1",
         "-i", original_wav,
         "-ac", "2",
     ] + list(audio_codec_args) + [
         output_audio
     ]
 
-    start = time.perf_counter()
-    subprocess.run(cmd, check=True)
-    end = time.perf_counter()
-    print(end - start)
+    # subprocess.run(cmd, check=True)
+    run_ffmpeg_with_percentage(cmd, duration_source=original_wav)
     return output_audio
 
 
@@ -137,7 +167,8 @@ def merge_to_container(
 
     cmd = [
         "ffmpeg", "-y",
-        "-hide_banner", "-loglevel", "error", "-stats",
+        "-hide_banner", "-loglevel", "error", 
+        "-nostats", "-progress", "pipe:1", 
     ] + inputs + [
         "-map", "0:v:0",
         "-map", "1:a:0",
@@ -156,8 +187,6 @@ def merge_to_container(
         output_video_path,
     ]
 
-    start = time.perf_counter()
-    subprocess.run(cmd, check=True)
-    end = time.perf_counter()
-    print(end - start)
+    # subprocess.run(cmd, check=True)
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
     return output_video_path

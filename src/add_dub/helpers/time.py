@@ -11,4 +11,5 @@ def measure_duration(func, *args, **kwargs):
     result = func(*args, **kwargs)
     end = time.perf_counter()
     duration = f"{end - start:.3f}s"
-    return result, duration
+    print(duration)
+    return result
