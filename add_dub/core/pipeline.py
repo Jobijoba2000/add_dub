@@ -1,4 +1,4 @@
-# src/add_dub/core/pipeline.py
+# add_dub/core/pipeline.py
 
 import os
 import subprocess

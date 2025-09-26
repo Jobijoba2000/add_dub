@@ -1,4 +1,4 @@
-# src/add_dub/io/fs.py
+# add_dub/io/fs.py
 import os
 
 

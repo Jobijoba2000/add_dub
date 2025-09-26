@@ -1,4 +1,4 @@
-# src/add_dub/workers.py
+# add_dub/workers.py
 import os
 import tempfile
 import uuid

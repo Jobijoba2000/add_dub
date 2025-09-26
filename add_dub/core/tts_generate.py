@@ -1,4 +1,4 @@
-# src/add_dub/core/tts_generate.py
+# add_dub/core/tts_generate.py
 import os
 import time
 import math

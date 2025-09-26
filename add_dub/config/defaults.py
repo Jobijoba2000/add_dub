@@ -1,4 +1,4 @@
-# src/add_dub/config/defaults.py
+# add_dub/config/defaults.py
 
 ORIG_AUDIO_LANG = "Original"
 AUDIO_CODEC_FINAL = "ac3"      # "aac", "mp3", "ac3", "flac", "opus", "vorbis", "pcm_s16le"

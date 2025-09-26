@@ -1,4 +1,4 @@
-# src/add_dub/core/tts.py
+# add_dub/core/tts.py
 import os
 import io
 import uuid

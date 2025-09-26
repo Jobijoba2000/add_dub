@@ -1,4 +1,4 @@
-# src/add_dub/core/subtitles.py
+# add_dub/core/subtitles.py
 import os
 import re
 import html

@@ -1,4 +1,4 @@
-# src/add_dub/cli/ui.py
+# add_dub/cli/ui.py
 def ask_mode():
     ans = input("\nMode (A)uto / (M)anuel ? [A]: ").strip().lower()
     return "manual" if ans.startswith("m") else "auto"

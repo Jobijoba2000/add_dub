@@ -164,8 +164,8 @@ if not exist "%FF_EXE%" (
     pause
     exit /b 1
 )
-if not exist "%ROOT%src\add_dub\__main__.py" (
-    echo [ERREUR] Module introuvable : src\add_dub\__main__.py
+if not exist "%ROOT%add_dub\__main__.py" (
+    echo [ERREUR] Module introuvable : add_dub\__main__.py
     pause
     exit /b 1
 )
@@ -184,7 +184,6 @@ if not exist "%ROOT%.venv\Scripts\python.exe" (
 
 call "%ROOT%.venv\Scripts\activate.bat"
 
-set "PYTHONPATH=%ROOT%src;%PYTHONPATH%"
 
 rem --- Dependances ------------------------------------------------------------
 if exist "%ROOT%requirements.txt" (

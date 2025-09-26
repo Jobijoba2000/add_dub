@@ -1,4 +1,4 @@
-# src/add_dub/adapters/mkvtoolnix.py
+# add_dub/adapters/mkvtoolnix.py
 import os
 import shutil
 import json

@@ -1,4 +1,4 @@
-# src/add_dub/core/ducking.py
+# add_dub/core/ducking.py
 import os
 from pydub import AudioSegment
 from concurrent.futures import ThreadPoolExecutor

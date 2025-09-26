@@ -1,4 +1,4 @@
-# src/add_dub/config/opts_loader.py
+# add_dub/config/opts_loader.py
 from __future__ import annotations
 import os, re
 from dataclasses import dataclass

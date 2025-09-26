@@ -1,4 +1,4 @@
-# src/add_dub/helpers/time.py
+# add_dub/helpers/time.py
 
 import time
 

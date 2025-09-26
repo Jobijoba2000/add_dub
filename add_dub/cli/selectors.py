@@ -1,4 +1,4 @@
-# src/add_dub/cli/selectors.py
+# add_dub/cli/selectors.py
 import os
 import sys
 from add_dub.adapters.ffmpeg import get_track_info

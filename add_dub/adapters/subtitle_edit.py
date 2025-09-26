@@ -1,4 +1,4 @@
-# src/add_dub/adapters/subtitle_edit.py
+# add_dub/adapters/subtitle_edit.py
 import os
 import subprocess
 import shutil

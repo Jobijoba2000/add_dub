@@ -1,4 +1,4 @@
-# src/add_dub/core/codecs.py
+# add_dub/core/codecs.py
 
 def final_audio_ext(audio_codec_final: str) -> str:
     codec = (audio_codec_final or "").lower()

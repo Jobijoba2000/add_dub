@@ -1,4 +1,4 @@
-# src/add_dub/adapters/ffmpeg.py
+# add_dub/adapters/ffmpeg.py
 import os
 import json
 import time

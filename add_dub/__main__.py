@@ -1,4 +1,4 @@
-# src/add_dub/__main__.py
+# add_dub/__main__.py
 
 import os
 import sys
