@@ -183,14 +183,14 @@ def process_one_video(
     )
 
     # 11) Encodage de la piste originale dans le codec final
-    orig_encoded = join_output(f"{test_prefix}{base}_orig_enc{_audio_ext_from_codec_args(opts.audio_codec_args)}")
-    _step("Encodage de l'audio d'origine dans le codec final...")
-    _md(
-        encode_original_audio_to_final_codec, 
-        orig_wav,
-        orig_encoded,
-        audio_codec_args=list(opts.audio_codec_args),
-    )
+    # orig_encoded = join_output(f"{test_prefix}{base}_orig_enc{_audio_ext_from_codec_args(opts.audio_codec_args)}")
+    # _step("Encodage de l'audio d'origine dans le codec final...")
+    # _md(
+        # encode_original_audio_to_final_codec, 
+        # orig_wav,
+        # orig_encoded,
+        # audio_codec_args=list(opts.audio_codec_args),
+    # )
 
     # 12) Clip vidéo si TEST
     video_for_merge = video_full
@@ -209,12 +209,11 @@ def process_one_video(
 
     # 13) Fusion finale (vidéo + 2 audios + ST)
     final_ext = _video_ext_from_codec_args(opts.audio_codec_args)
-    final_video = join_output(f"{test_prefix}dub_{base}{final_ext}")
+    final_video = join_output(f"{test_prefix}{base}[dub-fr]{final_ext}")
     _step("Fusion finale (conteneur)...")
     merge_to_container(
         video_for_merge,
         mixed_audio,
-        orig_encoded,
         srt_path,
         final_video,
         orig_audio_name_for_title=orig_audio_lang,
@@ -223,7 +222,7 @@ def process_one_video(
     )
 
     # 14) Nettoyage
-    for f in (orig_wav, tts_wav, ducked_wav, mixed_audio, orig_encoded):
+    for f in (orig_wav, tts_wav, ducked_wav, mixed_audio):
         try:
             if f and os.path.exists(f):
                 os.remove(f)
@@ -234,5 +233,5 @@ def process_one_video(
             os.remove(tmp_clip)
         except Exception:
             pass
-
+    
     return final_video
