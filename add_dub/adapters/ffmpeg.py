@@ -233,5 +233,5 @@ def merge_to_container(
 
     # Exécution
     # subprocess.run(cmd, check=True)
-    run_ffmpeg_with_percentage(cmd, duration_source=output_video_path)
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
 

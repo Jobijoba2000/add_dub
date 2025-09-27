@@ -233,5 +233,5 @@ def process_one_video(
             os.remove(tmp_clip)
         except Exception:
             pass
-    
+
     return final_video
