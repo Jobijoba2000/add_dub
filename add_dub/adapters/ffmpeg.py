@@ -131,9 +131,62 @@ def encode_original_audio_to_final_codec(original_wav, output_audio, audio_codec
     run_ffmpeg_with_percentage(cmd, duration_source=original_wav)
     return output_audio
 
-
-
 def merge_to_container(
+    video_fullpath,
+    mixed_audio_file,
+    orig_audio_encoded_file,
+    subtitle_srt_path,
+    output_video_path,
+    orig_audio_name_for_title,
+    sub_codec,
+):
+    """
+    Fusionne :
+      - Vidéo originale (copiée)
+      - Piste audio 0 : mix TTS (par défaut)  -> title: "<orig> doublé en Français"
+      - Piste audio 1 : audio original (même codec) -> title: "<orig>"
+      - Piste sous-titres : présente mais non par défaut -> title: "Français"
+    Pas de -shortest pour garder toute la durée.
+    """
+    inputs = [
+        "-i", video_fullpath,            # 0
+        "-i", mixed_audio_file,          # 1
+        "-i", orig_audio_encoded_file,   # 2
+        "-i", subtitle_srt_path,         # 3
+    ]
+
+    dub_title = f"{orig_audio_name_for_title} doublé en Français"
+    orig_title = orig_audio_name_for_title
+    sub_title = "Français"
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-hide_banner", "-loglevel", "error", 
+        "-nostats", "-progress", "pipe:1",
+    ] + inputs + [
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+        "-map", "2:a:0",
+        "-map", "3:0",
+        "-c:v", "copy",
+        "-c:a:0", "copy",
+        "-c:a:1", "copy",
+        "-c:s:0", sub_codec,
+        "-disposition:a:0", "default",
+        "-disposition:a:1", "0",
+        "-disposition:s:0", "0",
+        "-metadata:s:a:0", f"title={dub_title}",
+        "-metadata:s:a:1", f"title={orig_title}",
+        "-metadata:s:s:0", f"title={sub_title}",
+        output_video_path,
+    ]
+
+    # subprocess.run(cmd, check=True)
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
+    return output_video_path
+
+
+def merge_to_container_test(
     video_fullpath,
     mixed_audio_file,
     subtitle_srt_path,
@@ -232,6 +285,6 @@ def merge_to_container(
     cmd += [output_video_path]
 
     # Exécution
-    # subprocess.run(cmd, check=True)
-    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
+    subprocess.run(cmd, check=True)
+    # run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
 
