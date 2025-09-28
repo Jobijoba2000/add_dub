@@ -11,6 +11,32 @@ import pyttsx3  # conservé pour les versions *_old
 from winrt.windows.media.speechsynthesis import SpeechSynthesizer
 from winrt.windows.storage.streams import DataReader
 
+# --------------------------------------------------------------------
+# Cache léger par processus (chaque worker a son propre espace mémoire)
+# --------------------------------------------------------------------
+_SYNTH = None
+_VOICE_LIST = None
+
+
+def _get_synth() -> SpeechSynthesizer:
+    """
+    Retourne un synthétiseur OneCore unique par processus.
+    """
+    global _SYNTH
+    if _SYNTH is None:
+        _SYNTH = SpeechSynthesizer()
+    return _SYNTH
+
+
+def _get_voice_list():
+    """
+    Mémorise la liste des voix pour éviter l'appel répété à all_voices.
+    """
+    global _VOICE_LIST
+    if _VOICE_LIST is None:
+        _VOICE_LIST = list(SpeechSynthesizer.all_voices)
+    return _VOICE_LIST
+
 
 # ---------------------------
 # Helpers OneCore (internes)
@@ -19,25 +45,26 @@ from winrt.windows.storage.streams import DataReader
 def _normalize_rate(rate):
     """
     OneCore uniquement : facteur de vitesse (1.0 = normal).
-    On borne dans [1.0, 1.8]. Valeur invalide → 1.0.
+    On borne dans [1.0, 1.8] pour rester compatible avec les builds courantes.
     """
     try:
         r = float(rate)
     except (TypeError, ValueError):
         return 1.0
-    return max(1.0, min(1.8, r))
-
+    r = max(1.0, min(1.8, r))
+    return r
 
 
 def _pick_voice_obj(voice_id: str | None):
-    voices = list(SpeechSynthesizer.all_voices)
+    voices = _get_voice_list()
     if not voices:
         return None
     if voice_id:
-        # Match direct par id exact, sinon par fragment dans display_name
+        # Match direct par id exact
         for v in voices:
             if v.id == voice_id:
                 return v
+        # Sinon match par fragment dans display_name
         low = voice_id.lower()
         for v in voices:
             if low in (v.display_name or "").lower():
@@ -47,11 +74,17 @@ def _pick_voice_obj(voice_id: str | None):
 
 
 async def _onecore_synthesize_bytes_async(text: str, voice_id: str | None, rate_factor: float) -> bytes:
-    synth = SpeechSynthesizer()
+    synth = _get_synth()
     v = _pick_voice_obj(voice_id)
     if v is not None:
-        synth.voice = v
-    # speaking_rate dispo via options
+        # Évite un set systématique si c'est déjà la bonne voix
+        try:
+            if getattr(synth.voice, "id", None) != v.id:
+                synth.voice = v
+        except Exception:
+            # si voice n'est pas encore défini
+            synth.voice = v
+    # speaking_rate dispo via options sur la plupart des builds
     try:
         synth.options.speaking_rate = rate_factor
     except Exception:
@@ -91,22 +124,22 @@ def get_tts_duration_for_rate(text, rate, voice_id=None):
 def find_optimal_rate(text, target_duration_ms, voice_id=None):
     """
     Cherche un facteur OneCore tel que la durée synthétisée ≈ target_duration_ms.
-    Recherche binaire simple sur [0.5, 2.5].
+    Recherche binaire sur [1.0, 1.8] (alignée avec _normalize_rate).
     """
     if not text:
         return 1.0
 
-    low, high = 0.5, 2.5
+    low, high = 1.0, 1.8
     best = 1.0
     best_err = float("inf")
 
-    for _ in range(10):  # 10 itérations suffisent en pratique
+    for _ in range(10):  # dix itérations suffisent en pratique
         mid = (low + high) / 2.0
         dur = get_tts_duration_for_rate(text, mid, voice_id)
         err = abs(dur - target_duration_ms)
         if err < best_err:
             best, best_err = mid, err
-        if err <= 80:  # tolérance ~80 ms
+        if err <= 80:  # tolérance ~ quatre-vingts ms
             return mid
         # Si c'est trop long, on accélère (↑ rate) ; si trop court, on ralentit (↓ rate)
         if dur > target_duration_ms:
@@ -124,7 +157,7 @@ def synthesize_tts_for_subtitle(text, target_duration_ms, voice_id=None):
     factor = find_optimal_rate(text, target_duration_ms, voice_id)
     segment = _onecore_synthesize_segment(text, voice_id, factor)
 
-    # Ajustement exact à la durée cible (comme avant)
+    # Ajustement exact à la durée cible
     cur = len(segment)
     if cur > target_duration_ms:
         segment = segment[:target_duration_ms]

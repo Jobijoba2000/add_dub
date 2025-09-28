@@ -8,6 +8,7 @@ ROOT = os.getcwd()
 INPUT_DIR = os.path.join(ROOT, "input")
 OUTPUT_DIR = os.path.join(ROOT, "output")
 TMP_DIR = os.path.join(ROOT, "tmp")
+# TMP_DIR = "N:/tmp/"
 
 
 def ensure_base_dirs() -> None:
