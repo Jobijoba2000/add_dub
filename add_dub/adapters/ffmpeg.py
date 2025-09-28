@@ -5,6 +5,7 @@ import time
 import subprocess
 import add_dub.helpers.number as _n
 import sys
+from pathlib import Path
 
 def run_ffmpeg_with_percentage(cmd, duration_source):
     """
@@ -158,7 +159,13 @@ def merge_to_container(
     dub_title = f"{orig_audio_name_for_title} doublé en Français"
     orig_title = orig_audio_name_for_title
     sub_title = "Français"
-
+    
+    extension_source = Path(video_fullpath).suffix.lower()
+    if extension_source == ".avi":
+        copy_video = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-c:a", "copy"]
+    else:
+        copy_video = ["-c", "copy"]
+    
     cmd = [
         "ffmpeg", "-y",
         "-hide_banner", "-loglevel", "error", 
@@ -168,7 +175,7 @@ def merge_to_container(
         "-map", "1:a:0",
         "-map", "2:a:0",
         "-map", "3:0",
-        "-c:v", "copy",
+    ] + copy_video + [
         "-c:a:0", "copy",
         "-c:a:1", "copy",
         "-c:s:0", sub_codec,

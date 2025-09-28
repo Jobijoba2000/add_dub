@@ -118,6 +118,10 @@ def list_input_videos():
             srt = find_sidecar_srt(full)
             if srt:
                 candidates.append(f)
+        elif fl.endswith(".avi"):
+            srt = find_sidecar_srt(full)
+            if srt:
+                candidates.append(f)
     return sorted(candidates, key=lambda x: x.lower())
 
 
