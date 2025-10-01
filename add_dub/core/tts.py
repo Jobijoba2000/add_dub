@@ -5,11 +5,41 @@ import uuid
 import tempfile
 import asyncio
 from pydub import AudioSegment
-import pyttsx3  # conservé pour les versions *_old
 
 # OneCore (WinRT)
-from winrt.windows.media.speechsynthesis import SpeechSynthesizer
-from winrt.windows.storage.streams import DataReader
+try:
+    from winrt.windows.media.speechsynthesis import SpeechSynthesizer
+    from winrt.windows.storage.streams import DataReader
+except Exception:
+    SpeechSynthesizer = None
+    DataReader = None
+
+
+# --------------------------------
+# Listing des voix OneCore
+# --------------------------------
+
+def list_available_voices() -> list[dict]:
+    """
+    Retourne la liste des voix OneCore sous forme de dictionnaires:
+        [{ "id": str, "display_name": str, "lang": str }, ...]
+    - id : l'ID complet OneCore (copiable tel quel dans options.conf)
+    - display_name : nom lisible (ex. 'Microsoft Julie')
+    - lang : tag BCP-47 (ex. 'fr-FR', 'es-ES')
+    """
+    out: list[dict] = []
+    if SpeechSynthesizer is None:
+        return out
+    try:
+        voices = list(SpeechSynthesizer.all_voices)
+    except Exception:
+        voices = []
+    for v in voices:
+        vid = getattr(v, "id", "") or ""
+        dname = getattr(v, "display_name", "") or ""
+        lang = getattr(v, "language", "") or ""
+        out.append({"id": vid, "display_name": dname, "lang": lang})
+    return out
 
 
 # ---------------------------
@@ -28,34 +58,49 @@ def _normalize_rate(rate):
     return max(1.0, min(1.8, r))
 
 
-
 def _pick_voice_obj(voice_id: str | None):
-    voices = list(SpeechSynthesizer.all_voices)
-    if not voices:
+    """
+    Sélection STRICTE (aucun garde-fou ici) :
+      - si voice_id est fourni: match exact d'ID uniquement, sinon None.
+      - si voice_id est None: None.
+    Les contrôles amont (is_valid_voice_id / defaults / build_default_opts) garantissent
+    normalement un ID valide avant d'arriver jusqu'ici.
+    """
+    if SpeechSynthesizer is None:
         return None
-    if voice_id:
-        # Match direct par id exact, sinon par fragment dans display_name
-        for v in voices:
-            if v.id == voice_id:
-                return v
-        low = voice_id.lower()
-        for v in voices:
-            if low in (v.display_name or "").lower():
-                return v
-    # défaut : première voix
-    return voices[0]
+    try:
+        voices = list(SpeechSynthesizer.all_voices)
+    except Exception:
+        return None
+
+    if not voice_id:
+        return None
+
+    vid = voice_id.strip()
+    for v in voices:
+        if getattr(v, "id", "") == vid:
+            return v
+    return None
 
 
 async def _onecore_synthesize_bytes_async(text: str, voice_id: str | None, rate_factor: float) -> bytes:
+    """
+    AUCUN fallback ici :
+      - WinRT indisponible → RuntimeError
+      - voice_id introuvable → RuntimeError
+    """
+    if SpeechSynthesizer is None or DataReader is None:
+        raise RuntimeError("No TTS voice available (WinRT SpeechSynthesizer not available)")
+
     synth = SpeechSynthesizer()
     v = _pick_voice_obj(voice_id)
-    if v is not None:
-        synth.voice = v
-    # speaking_rate dispo via options
+    if v is None:
+        raise RuntimeError("No TTS voice available (requested voice id not found)")
+
+    synth.voice = v
     try:
         synth.options.speaking_rate = rate_factor
     except Exception:
-        # si indispo sur cette build, on ignore
         pass
 
     stream = await synth.synthesize_text_to_stream_async(text)
@@ -70,13 +115,16 @@ async def _onecore_synthesize_bytes_async(text: str, voice_id: str | None, rate_
 
 
 def _onecore_synthesize_segment(text: str, voice_id: str | None, rate_factor: float) -> AudioSegment:
+    """
+    Laisse remonter les erreurs (pas de segment silencieux masquant le problème).
+    """
     data = asyncio.run(_onecore_synthesize_bytes_async(text, voice_id, rate_factor))
     bio = io.BytesIO(data)
     return AudioSegment.from_file(bio, format="wav")
 
 
 # ------------------------------------------------
-# Implémentations OneCore (remplacent les anciennes)
+# Implémentations OneCore
 # ------------------------------------------------
 
 def get_tts_duration_for_rate(text, rate, voice_id=None):
@@ -100,17 +148,16 @@ def find_optimal_rate(text, target_duration_ms, voice_id=None):
     best = 1.0
     best_err = float("inf")
 
-    for _ in range(10):  # 10 itérations suffisent en pratique
+    for _ in range(10):
         mid = (low + high) / 2.0
         dur = get_tts_duration_for_rate(text, mid, voice_id)
         err = abs(dur - target_duration_ms)
         if err < best_err:
             best, best_err = mid, err
-        if err <= 80:  # tolérance ~80 ms
+        if err <= 80:
             return mid
-        # Si c'est trop long, on accélère (↑ rate) ; si trop court, on ralentit (↓ rate)
         if dur > target_duration_ms:
-            low = mid  # besoin plus rapide → facteur plus grand
+            low = mid
         else:
             high = mid
     return best
@@ -124,7 +171,6 @@ def synthesize_tts_for_subtitle(text, target_duration_ms, voice_id=None):
     factor = find_optimal_rate(text, target_duration_ms, voice_id)
     segment = _onecore_synthesize_segment(text, voice_id, factor)
 
-    # Ajustement exact à la durée cible (comme avant)
     cur = len(segment)
     if cur > target_duration_ms:
         segment = segment[:target_duration_ms]
@@ -134,10 +180,11 @@ def synthesize_tts_for_subtitle(text, target_duration_ms, voice_id=None):
 
 
 # ------------------------------------------------
-# Versions d'origine basées sur pyttsx3 (suffixe _old)
+# Anciennes versions pyttsx3 (_old) — laissées pour compatibilité
 # ------------------------------------------------
 
 def get_tts_duration_for_rate_old(text, rate, voice_id=None):
+    import pyttsx3
     engine = pyttsx3.init()
     if voice_id:
         engine.setProperty("voice", voice_id)
@@ -178,6 +225,7 @@ def find_optimal_rate_old(text, target_duration_ms, voice_id=None):
 
 
 def synthesize_tts_for_subtitle_old(text, target_duration_ms, voice_id=None):
+    import pyttsx3
     optimal_rate = find_optimal_rate_old(text, target_duration_ms, voice_id)
     engine = pyttsx3.init()
     if voice_id:
@@ -201,3 +249,67 @@ def synthesize_tts_for_subtitle_old(text, target_duration_ms, voice_id=None):
     elif len(segment) < target_duration_ms:
         segment = segment + AudioSegment.silent(duration=(target_duration_ms - len(segment)))
     return segment
+
+
+def get_system_default_voice_id() -> str | None:
+    """
+    Retourne l'ID complet (OneCore) de la voix TTS par défaut du système.
+    - Si la voix par défaut est accessible: retourne son .id
+    - Sinon: retourne l'ID de la première voix disponible
+    - Si aucune voix/WinRT indisponible: retourne None
+    """
+    try:
+        from winrt.windows.media.speechsynthesis import SpeechSynthesizer  # type: ignore
+    except Exception:
+        return None
+
+    try:
+        synth = SpeechSynthesizer()
+        v = getattr(synth, "voice", None)
+        if v:
+            vid = getattr(v, "id", "") or ""
+            if vid:
+                return vid
+    except Exception:
+        pass
+
+    try:
+        voices = list(SpeechSynthesizer.all_voices)
+        if voices:
+            vid = getattr(voices[0], "id", "") or ""
+            return vid or None
+    except Exception:
+        pass
+
+    return None
+
+
+def is_valid_voice_id(voice_id: str | None) -> bool:
+    """
+    True si voice_id correspond exactement à une voix OneCore installée.
+    False si None, vide, WinRT indisponible, ou ID introuvable.
+    Affiche un avertissement si une valeur non vide (ex: depuis options.conf) est invalide.
+    """
+    if not voice_id:
+        # Absence de valeur: pas d'avertissement ici.
+        print("pas de voice_id")
+        return False
+
+    if SpeechSynthesizer is None:
+        print("[WARN] WinRT/SpeechSynthesizer indisponible : impossible de valider 'voice_id' défini dans options.conf.")
+        return False
+
+    try:
+        voices = list(SpeechSynthesizer.all_voices)
+    except Exception:
+        print("[WARN] Impossible d'énumérer les voix OneCore : validation de 'voice_id' (options.conf) non réalisée.")
+        return False
+
+    vid = str(voice_id).strip()
+    for v in voices:
+        if getattr(v, "id", "") == vid:
+            return True
+
+    # Valeur non vide mais introuvable → avertissement explicite
+    print(f"[WARN] 'voice_id' invalide dans options.conf : '{vid}'. Voix introuvable sur ce système.")
+    return False

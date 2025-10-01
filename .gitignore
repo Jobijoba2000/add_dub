@@ -12,6 +12,7 @@ licenses/
 
 # Fichiers locaux/packaging
 TOOLBOX_VERSION.txt
+options.example.conf
 gen_requirements.py
 README.txt
 *.zip

@@ -5,7 +5,7 @@
 - Piste 2 : **audio d’origine**
 - Piste **sous-titres** conservée (non par défaut)
 
-> 🎯 **Windows** uniquement (TTS SAPI via `pyttsx3`)  
+> 🎯 **Windows** uniquement (TTS One core via `winrt`)  
 > 🔒 100 % local (pas de cloud)
 
 ---
@@ -60,7 +60,7 @@
 ## ✨ Fonctionnalités
 
 - *Ducking* réglable (réduction en dB pendant les répliques)  
-- TTS **pyttsx3** (détection automatique d’une voix FR si dispo)  
+- TTS **winrt** (détection automatique d’une voix FR si dispo)  
 - Mix distinct **BG (audio d’origine)** / **TTS**  
 - Remux final vidéo + **2 pistes audio** + **sous-titres**  
 - Modes **Auto** (batch) et **Manuel** (test 5 min possible)
