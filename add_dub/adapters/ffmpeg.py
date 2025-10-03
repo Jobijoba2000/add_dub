@@ -29,8 +29,8 @@ def run_ffmpeg_with_percentage(cmd, duration_source):
     try:
         for line in p.stdout:
             if line.startswith("out_time_ms="):
-                ms = float(line.split("=", 1)[1])
-                pct = (ms / (duration * 10000.0))
+                micro_s = float(line.split("=", 1)[1])
+                pct = (micro_s / (duration * 10000.0))
                 print(f"\r{pct:.0f}%", end="", flush=True)
             elif line.strip() == "progress=end":
                 print("\r100%")
@@ -140,6 +140,7 @@ def merge_to_container(
     output_video_path,
     orig_audio_name_for_title,
     sub_codec,
+    offset_ms,
 ):
     """
     Fusionne :
@@ -149,11 +150,16 @@ def merge_to_container(
       - Piste sous-titres : présente mais non par défaut -> title: "Français"
     Pas de -shortest pour garder toute la durée.
     """
-    inputs = [
-        "-i", video_fullpath,            # 0
-        "-i", mixed_audio_file,          # 1
-        "-i", orig_audio_encoded_file,   # 2
-        "-i", subtitle_srt_path,         # 3
+    
+    offset_s = _n.int_to_scaled_str(offset_ms)
+    
+    inputs = [         
+        # "-itsoffset", "-8.500",
+        "-i", video_fullpath,   
+        "-i", mixed_audio_file,                  
+        "-i", orig_audio_encoded_file,
+        "-itsoffset", offset_s,
+        "-i", subtitle_srt_path,         
     ]
 
     dub_title = f"{orig_audio_name_for_title} doublé en Français"
@@ -187,7 +193,6 @@ def merge_to_container(
         "-metadata:s:s:0", f"title={sub_title}",
         output_video_path,
     ]
-
     # subprocess.run(cmd, check=True)
     run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
     return output_video_path

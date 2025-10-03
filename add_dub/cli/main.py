@@ -20,7 +20,7 @@ from add_dub.config.opts_loader import load_options
 
 # NOUVEAU : on importe juste la liste des voix depuis tts.py
 from add_dub.core.tts import list_available_voices
-from add_dub.core.tts import is_valid_voice_id
+from add_dub.core.tts import is_valid_voice_id, get_system_default_voice_id, list_available_voices
 
 opts = load_options()
 
@@ -179,14 +179,29 @@ def _ask_config_for_video(
             print("Aucune source de sous-titres choisie.")
             return None
 
-    # --- Sélection VOIX de doublage (uniquement si 'voice_id' est en mode interactif 'd') ---
+    # --- Sélection VOIX de doublage (garantie d'un voice_id valide) ---
     voice_entry = opts.get("voice_id")
-    ask_voice = (voice_entry is None) or bool(getattr(voice_entry, "display", False))
     chosen_voice = base_opts.voice_id or None
-    if ask_voice:
+
+    # Si l’option est marquée interactive, on demande la langue puis la voix.
+    if voice_entry and getattr(voice_entry, "display", False):
         maybe_voice = _ask_dub_language_and_voice(default_voice=base_opts.voice_id)
-        if maybe_voice is not None:
-            chosen_voice = maybe_voice  # ID complet
+        if maybe_voice:
+            chosen_voice = maybe_voice
+
+    # Si toujours vide ou invalide, on applique des fallbacks robustes.
+    if not chosen_voice or not is_valid_voice_id(chosen_voice):
+        fallback = get_system_default_voice_id()
+        if not fallback:
+            try:
+                voices = list_available_voices()
+                fallback = voices[0]["id"] if voices else None
+            except Exception:
+                fallback = None
+        chosen_voice = fallback
+
+    # chosen_voice peut rester None si aucune voix système n’est disponible,
+    # mais dans ce cas pipeline appliquera quand même un tag par défaut "fr".
 
     # --- Reste des options (inchangées) ---
     oal = ask_option("orig_audio_lang", opts, "str", "Langue originale", base_opts.orig_audio_lang)

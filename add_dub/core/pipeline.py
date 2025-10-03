@@ -18,6 +18,28 @@ from add_dub.adapters.ffmpeg import (
     merge_to_container,
 )
 from add_dub.helpers.time import measure_duration as _md
+import re
+
+def _dub_code_from_voice(voice_id: str | None) -> str:
+    from add_dub.core.tts import list_available_voices
+    if not voice_id:
+        return "fr"
+    try:
+        voices = list_available_voices()
+    except Exception:
+        voices = []
+    lang = ""
+    vid = str(voice_id).strip()
+    for v in voices:
+        if str(v.get("id", "")).strip() == vid:
+            lang = (v.get("lang") or "").strip()
+            break
+    if not lang:
+        m = re.search(r"([a-zA-Z]{2})(?:[-_][A-Za-z]{2})?", vid)
+        if m:
+            lang = m.group(0)
+    base = (lang.split("-")[0] if lang else "fr").lower()
+    return re.sub(r"[^a-z]", "", base) or "fr"
 
 def _step(msg: str) -> None:
     print("\n" + msg)
@@ -209,7 +231,8 @@ def process_one_video(
 
     # 13) Fusion finale (vidéo + 2 audios + ST)
     final_ext = _video_ext_from_codec_args(opts.audio_codec_args)
-    final_video = join_output(f"{test_prefix}{base}[dub-fr]{final_ext}")
+    dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
+    final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}")
     _step("Fusion finale (conteneur)...")
     _md(
         merge_to_container,
@@ -220,6 +243,7 @@ def process_one_video(
         final_video,
         orig_audio_name_for_title=orig_audio_lang,
         sub_codec=opts.sub_codec,
+        offset_ms=opts.offset_ms,
     )
 
     # 14) Nettoyage
