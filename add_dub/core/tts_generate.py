@@ -1,14 +1,14 @@
 # add_dub/core/tts_generate.py
 import os
-import time
 import math
 from multiprocessing import cpu_count
-from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor, wait, FIRST_COMPLETED
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait, FIRST_COMPLETED
 from typing import List, Tuple, Optional
 
 import numpy as np
 from pydub import AudioSegment
 
+from add_dub.core.options import DubOptions
 from add_dub.core.subtitles import parse_srt_file
 from add_dub.workers import tts_worker
 
@@ -72,23 +72,28 @@ def _export_int16_wav(array_int16: np.ndarray, sr: int, ch: int, out_path: str) 
 def generate_dub_audio(
     srt_file: str,
     output_wav: str,
-    voice_id: str,
+    opts: DubOptions,
     *,
     duration_limit_sec: Optional[int] = None,
     target_total_duration_ms: Optional[int] = None,
-    offset_ms: int = 0,
 ) -> str:
     """
     Génère la piste TTS alignée sur le SRT et retourne le chemin du WAV généré.
+
+    Modifs principales :
+    - On passe l'objet complet `opts: DubOptions` pour regrouper la config.
+    - Les jobs transmis au tts_worker incluent `opts` pour que les bornes min/max TTS
+      (et autres réglages) soient respectées côté synthèse.
     """
     subtitles = parse_srt_file(srt_file, duration_limit_sec=duration_limit_sec)
     if not subtitles:
         AudioSegment.silent(duration=0).export(output_wav, format="wav")
         return output_wav
 
-    jobs: List[Tuple[int, int, int, str, str]] = []
+    # Job: (idx, start_ms, end_ms, text, voice_id, opts)
+    jobs: List[Tuple[int, int, int, str, str, DubOptions]] = []
     for idx, (start, end, text) in enumerate(subtitles):
-        jobs.append((idx, int(start * 1000), int(end * 1000), text, voice_id))
+        jobs.append((idx, int(start * 1000), int(end * 1000), text, opts.voice_id, opts))
 
     max_workers = min(20, max(1, cpu_count()))
     results: List[Optional[Tuple[str, int, int]]] = [None] * len(jobs)
@@ -138,15 +143,13 @@ def generate_dub_audio(
                 done += 1
                 pct = int(done * 100 / total)
                 print(f"\rTTS: {pct}% [{done}/{total}]", end="", flush=True)
-                
+
     finally:
         # clé: NE PAS attendre la fin propre des workers (sinon deadlock)
         ex.shutdown(wait=False, cancel_futures=True)
 
-
-
     # Format cible à partir du premier segment
-    first_path, _, _ = results[0]
+    first_path, _, _ = results[0]  # type: ignore
     first_seg = AudioSegment.from_file(first_path)
     target_sr = first_seg.frame_rate
     target_ch = first_seg.channels
@@ -157,8 +160,8 @@ def generate_dub_audio(
     # Calcul de la durée finale (ms)
     max_end_ms = 0
     for (start, end, _text), _res in zip(subtitles, results):
-        s = int(start * 1000) + offset_ms
-        e = int(end * 1000) + offset_ms
+        s = int(start * 1000) + (opts.offset_ms or 0)
+        e = int(end * 1000) + (opts.offset_ms or 0)
         if e <= 0:
             continue
         if s < 0:
@@ -192,8 +195,8 @@ def generate_dub_audio(
     tasks = []
     for (start, end, _text), res in zip(subtitles, results):
         path, _s_ms, _e_ms = res  # type: ignore
-        start_ms = int(start * 1000) + offset_ms
-        end_ms = int(end * 1000) + offset_ms
+        start_ms = int(start * 1000) + (opts.offset_ms or 0)
+        end_ms = int(end * 1000) + (opts.offset_ms or 0)
 
         if end_ms <= 0:
             continue

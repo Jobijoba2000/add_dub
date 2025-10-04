@@ -19,6 +19,7 @@ from add_dub.adapters.ffmpeg import (
 )
 from add_dub.helpers.time import measure_duration as _md
 import re
+from add_dub.core.options import DubOptions, Services
 
 def _dub_code_from_voice(voice_id: str | None) -> str:
     from add_dub.core.tts import list_available_voices
@@ -44,28 +45,6 @@ def _dub_code_from_voice(voice_id: str | None) -> str:
 def _step(msg: str) -> None:
     print("\n" + msg)
 
-@dataclass
-class DubOptions:
-    audio_ffmpeg_index: Optional[int] = None          # index de la piste source (ffmpeg)
-    sub_choice: Optional[tuple] = None                # ("srt", path) ou ("mkv", idx)
-    orig_audio_lang: Optional[str] = None             # libellé de la piste originale dans la sortie
-    db_reduct: float = -5.0                           # ducking en dB
-    offset_ms: int = 0                                # décalage ST/TTS
-    bg_mix: float = 1.0                               # gain BG
-    tts_mix: float = 1.0                              # gain TTS
-    audio_codec: str = "ac3"                          # Codec de des pistes audio
-    audio_bitrate: int = 320                          # Bitrate des pistes audio
-    voice_id: Optional[str] = None                    # identifiant de voix
-    audio_codec_args: Iterable[str] = ()              # args ffmpeg audio final (ex: "-c:a","aac","-b:a","192k")
-    sub_codec: str = "srt"                            # "srt" ou "ass"
-
-
-@dataclass
-class Services:
-    resolve_srt_for_video: Callable[[str, tuple], Optional[str]]
-    generate_dub_audio: Callable[..., str]
-    choose_audio_track: Callable[[str], int]
-    choose_subtitle_source: Callable[[str], Optional[tuple]]
 
 
 def _video_ext_from_codec_args(args: Iterable[str]) -> str:
@@ -173,10 +152,9 @@ def process_one_video(
         svcs.generate_dub_audio,
         srt_file=srt_path,
         output_wav=tts_wav,
-        voice_id=opts.voice_id,
+        opts=opts,
         duration_limit_sec=limit_duration_sec,
         target_total_duration_ms=orig_len_ms,
-        offset_ms=opts.offset_ms,
     )
 
     # 9) Ducking de l'audio d'origine pendant les dialogues
@@ -241,9 +219,7 @@ def process_one_video(
         orig_encoded,
         srt_path,
         final_video,
-        orig_audio_name_for_title=orig_audio_lang,
-        sub_codec=opts.sub_codec,
-        offset_ms=opts.offset_ms,
+        opts=opts,
     )
 
     # 14) Nettoyage

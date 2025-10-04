@@ -6,6 +6,9 @@ import tempfile
 import asyncio
 from pydub import AudioSegment
 
+# Typage (et pour accéder aux bornes min/max depuis l'instance)
+from add_dub.core.options import DubOptions
+
 # OneCore (WinRT)
 try:
     from winrt.windows.media.speechsynthesis import SpeechSynthesizer
@@ -46,16 +49,16 @@ def list_available_voices() -> list[dict]:
 # Helpers OneCore (internes)
 # ---------------------------
 
-def _normalize_rate(rate):
+def _normalize_rate(rate: float, *, opts: DubOptions) -> float:
     """
     OneCore uniquement : facteur de vitesse (1.0 = normal).
-    On borne dans [1.0, 1.8]. Valeur invalide → 1.0.
+    Borne dans [opts.min_rate_tts, opts.max_rate_tts]. Valeur invalide → opts.min_rate_tts.
     """
     try:
         r = float(rate)
     except (TypeError, ValueError):
-        return 1.0
-    return max(1.0, min(1.8, r))
+        return opts.min_rate_tts
+    return max(opts.min_rate_tts, min(opts.max_rate_tts, r))
 
 
 def _pick_voice_obj(voice_id: str | None):
@@ -127,19 +130,19 @@ def _onecore_synthesize_segment(text: str, voice_id: str | None, rate_factor: fl
 # Implémentations OneCore
 # ------------------------------------------------
 
-def get_tts_duration_for_rate(text, rate, voice_id=None):
+def get_tts_duration_for_rate(text: str, rate: float, voice_id: str | None, opts: DubOptions) -> int:
     """
     Synthèse OneCore à un débit donné (factor), retourne durée en ms.
     """
-    factor = _normalize_rate(rate)
+    factor = _normalize_rate(rate, opts=opts)
     segment = _onecore_synthesize_segment(text, voice_id, factor)
     return len(segment)
 
 
-def find_optimal_rate(text, target_duration_ms, voice_id=None):
+def find_optimal_rate(text: str, target_duration_ms: int, voice_id: str | None, opts: DubOptions) -> float:
     """
     Cherche un facteur OneCore tel que la durée synthétisée ≈ target_duration_ms.
-    Recherche binaire simple sur [0.5, 2.5].
+    Recherche binaire simple sur [0.5, 2.5], borné ensuite par opts.
     """
     if not text:
         return 1.0
@@ -150,25 +153,27 @@ def find_optimal_rate(text, target_duration_ms, voice_id=None):
 
     for _ in range(10):
         mid = (low + high) / 2.0
-        dur = get_tts_duration_for_rate(text, mid, voice_id)
+        dur = get_tts_duration_for_rate(text, mid, voice_id, opts)
         err = abs(dur - target_duration_ms)
         if err < best_err:
             best, best_err = mid, err
         if err <= 80:
-            return mid
+            # on renvoie une valeur normalisée dans les bornes opts
+            return _normalize_rate(mid, opts=opts)
         if dur > target_duration_ms:
             low = mid
         else:
             high = mid
-    return best
+
+    return _normalize_rate(best, opts=opts)
 
 
-def synthesize_tts_for_subtitle(text, target_duration_ms, voice_id=None):
+def synthesize_tts_for_subtitle(text: str, target_duration_ms: int, voice_id: str | None, opts: DubOptions) -> AudioSegment:
     """
     Synthèse OneCore ajustée à la durée cible.
     Retourne un AudioSegment (coupé/paddé à target_duration_ms).
     """
-    factor = find_optimal_rate(text, target_duration_ms, voice_id)
+    factor = find_optimal_rate(text, target_duration_ms, voice_id, opts)
     segment = _onecore_synthesize_segment(text, voice_id, factor)
 
     cur = len(segment)

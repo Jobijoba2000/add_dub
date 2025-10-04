@@ -5,7 +5,8 @@ from dataclasses import replace
 
 from add_dub.io.fs import ensure_base_dirs, join_input
 from add_dub.core.subtitles import list_input_videos, resolve_srt_for_video
-from add_dub.core.pipeline import DubOptions, Services, process_one_video
+from add_dub.core.pipeline import process_one_video
+from add_dub.core.options import DubOptions, Services
 from add_dub.core.tts_generate import generate_dub_audio
 from add_dub.cli.ui import ask_option, ask_mode, ask_yes_no
 from add_dub.cli.selectors import (
@@ -29,18 +30,16 @@ def _generate_dub_audio_impl(
     *,
     srt_file: str,
     output_wav: str,
-    voice_id: str | None,
+    opts: DubOptions,
     duration_limit_sec: int | None,
     target_total_duration_ms: int | None,
-    offset_ms: int,
 ) -> str:
     return generate_dub_audio(
         srt_file,
         output_wav,
-        voice_id or "",
+        opts,
         duration_limit_sec=duration_limit_sec,
         target_total_duration_ms=target_total_duration_ms,
-        offset_ms=offset_ms,
     )
 
 
@@ -75,11 +74,14 @@ def build_default_opts() -> DubOptions:
         offset_ms=int(opts["offset"].value) if "offset" in opts else cfg.OFFSET_STR,
         bg_mix=float(opts["bg"].value) if "bg" in opts else cfg.BG_MIX,
         tts_mix=float(opts["tts"].value) if "tts" in opts else cfg.TTS_MIX,
+        min_rate_tts=float(opts["min_rate_tts"].value) if "min_rate_tts" in opts else cfg.MIN_RATE_TTS,
+        max_rate_tts=float(opts["max_rate_tts"].value) if "max_rate_tts" in opts else cfg.MAX_RATE_TTS,
         audio_codec=audio_codec,
         audio_bitrate=audio_bitrate,
         voice_id = voice_id,
         audio_codec_args=tuple(audio_args),
         sub_codec=sub_codec,
+        offset_video_ms=int(opts["offset_video"].value) if "offset_video" in opts else cfg.OFFSET_VIDEO,
     )
 
 
@@ -206,9 +208,12 @@ def _ask_config_for_video(
     # --- Reste des options (inchangées) ---
     oal = ask_option("orig_audio_lang", opts, "str", "Langue originale", base_opts.orig_audio_lang)
     db = ask_option("db", opts, "float", "Réduction (ducking) en dB", base_opts.db_reduct)
-    off = ask_option("offset", opts, "int", "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
+    off    = ask_option("offset", opts, "int", "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
+    offvid = ask_option("offset_video", opts, "int", "Décalage vidéo (ms, négatif = plus tôt)", base_opts.offset_video_ms)
     bg = ask_option("bg", opts, "float", "Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
     tts = ask_option("tts", opts, "float", "Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
+    min_rate_tts = ask_option("min_rate_tts", opts, "float", "Vitesse TTS minimal (1.0 = inchangé)", base_opts.min_rate_tts)
+    max_rate_tts = ask_option("max_rate_tts", opts, "float", "Vitesse TTS maximal (1.8 = inchangé)", base_opts.max_rate_tts)
     ac = ask_option("audio_codec", opts, "str", "Codec audio", base_opts.audio_codec)
     ab = ask_option("audio_bitrate", opts, "int", "Bitrate", base_opts.audio_bitrate)
 
@@ -221,10 +226,13 @@ def _ask_config_for_video(
         offset_ms=off,
         bg_mix=bg,
         tts_mix=tts,
+        min_rate_tts = min_rate_tts,
+        max_rate_tts = max_rate_tts,
         audio_codec=ac,
         audio_bitrate=ab,
         voice_id=chosen_voice,
         audio_codec_args=final_audio_codec_args(ac, f"{ab}k"),
+        offset_video_ms=offvid,
     )
 
 

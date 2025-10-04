@@ -7,6 +7,9 @@ AUDIO_CODEC_FINAL = "ac3"      # "aac", "mp3", "ac3", "flac", "opus", "vorbis", 
 AUDIO_BITRATE = 320         # ex: "192k" ou None
 BG_MIX = 1.0                   # niveau BG
 TTS_MIX = 1.0                  # niveau TTS
+MIN_RATE_TTS = 1.0                  # niveau TTS
+MAX_RATE_TTS = 1.8                  # niveau TTS
 DB_REDUCT = -5.0               # ducking en dB
 OFFSET_STR = 0                 # ms
+OFFSET_VIDEO = 0                 # ms
 

@@ -6,6 +6,7 @@ import subprocess
 import add_dub.helpers.number as _n
 import sys
 from pathlib import Path
+from add_dub.core.options import DubOptions
 
 def run_ffmpeg_with_percentage(cmd, duration_source):
     """
@@ -138,9 +139,7 @@ def merge_to_container(
     orig_audio_encoded_file,
     subtitle_srt_path,
     output_video_path,
-    orig_audio_name_for_title,
-    sub_codec,
-    offset_ms,
+    opts: DubOptions,
 ):
     """
     Fusionne :
@@ -150,11 +149,12 @@ def merge_to_container(
       - Piste sous-titres : présente mais non par défaut -> title: "Français"
     Pas de -shortest pour garder toute la durée.
     """
-    
-    offset_s = _n.int_to_scaled_str(offset_ms)
+
+    offset_s = _n.int_to_scaled_str(opts.offset_ms)
+    offset_video_s = _n.int_to_scaled_str(opts. offset_video_ms)
     
     inputs = [         
-        # "-itsoffset", "-8.500",
+        "-itsoffset", offset_video_s,
         "-i", video_fullpath,   
         "-i", mixed_audio_file,                  
         "-i", orig_audio_encoded_file,
@@ -162,8 +162,8 @@ def merge_to_container(
         "-i", subtitle_srt_path,         
     ]
 
-    dub_title = f"{orig_audio_name_for_title} doublé en Français"
-    orig_title = orig_audio_name_for_title
+    dub_title = f"{opts.orig_audio_lang} doublé en Français"
+    orig_title = opts.orig_audio_lang
     sub_title = "Français"
     
     extension_source = Path(video_fullpath).suffix.lower()
@@ -184,7 +184,7 @@ def merge_to_container(
     ] + copy_video + [
         "-c:a:0", "copy",
         "-c:a:1", "copy",
-        "-c:s:0", sub_codec,
+        "-c:s:0", opts.sub_codec,
         "-disposition:a:0", "default",
         "-disposition:a:1", "0",
         "-disposition:s:0", "0",
@@ -193,6 +193,7 @@ def merge_to_container(
         "-metadata:s:s:0", f"title={sub_title}",
         output_video_path,
     ]
+    print(cmd)
     # subprocess.run(cmd, check=True)
     run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
     return output_video_path
