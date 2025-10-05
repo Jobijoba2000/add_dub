@@ -19,7 +19,9 @@ from add_dub.adapters.ffmpeg import (
 )
 from add_dub.helpers.time import measure_duration as _md
 import re
-from add_dub.core.options import DubOptions, Services
+from add_dub.core.options import DubOptions
+from add_dub.core.services import Services
+from pprint import pprint
 
 def _dub_code_from_voice(voice_id: str | None) -> str:
     from add_dub.core.tts import list_available_voices
@@ -93,6 +95,9 @@ def process_one_video(
     Traite UNE vidéo avec les options et services fournis.
     Retourne le chemin de la vidéo finale, ou None si annulé.
     """
+    
+    print(video_name)
+    
     video_full = join_input(video_name)
     base, ext = os.path.splitext(os.path.basename(video_full))
 

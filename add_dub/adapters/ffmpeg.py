@@ -193,7 +193,6 @@ def merge_to_container(
         "-metadata:s:s:0", f"title={sub_title}",
         output_video_path,
     ]
-    print(cmd)
     # subprocess.run(cmd, check=True)
     run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
     return output_video_path

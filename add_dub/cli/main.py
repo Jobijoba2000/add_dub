@@ -4,49 +4,37 @@ import sys
 from dataclasses import replace
 
 from add_dub.io.fs import ensure_base_dirs, join_input
+
 from add_dub.core.subtitles import list_input_videos, resolve_srt_for_video
 from add_dub.core.pipeline import process_one_video
-from add_dub.core.options import DubOptions, Services
+from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
 from add_dub.core.tts_generate import generate_dub_audio
+from add_dub.core.tts import is_valid_voice_id, get_system_default_voice_id, list_available_voices
+from add_dub.core.subtitles import resolve_srt_for_video
+
 from add_dub.cli.ui import ask_option, ask_mode, ask_yes_no
 from add_dub.cli.selectors import (
-    choose_files,
     choose_audio_track_ffmpeg_index,
+    choose_files,
     choose_subtitle_source,
 )
-from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
+
 from add_dub.config import cfg
 from add_dub.helpers.time import measure_duration as _md
 from add_dub.config.opts_loader import load_options
 
-# NOUVEAU : on importe juste la liste des voix depuis tts.py
-from add_dub.core.tts import list_available_voices
-from add_dub.core.tts import is_valid_voice_id, get_system_default_voice_id, list_available_voices
+from add_dub.core.options import DubOptions
+from add_dub.core.services import Services
 
 opts = load_options()
 
-
-def _generate_dub_audio_impl(
-    *,
-    srt_file: str,
-    output_wav: str,
-    opts: DubOptions,
-    duration_limit_sec: int | None,
-    target_total_duration_ms: int | None,
-) -> str:
-    return generate_dub_audio(
-        srt_file,
-        output_wav,
-        opts,
-        duration_limit_sec=duration_limit_sec,
-        target_total_duration_ms=target_total_duration_ms,
-    )
 
 
 def build_services() -> Services:
     return Services(
         resolve_srt_for_video=resolve_srt_for_video,
-        generate_dub_audio=_generate_dub_audio_impl,
+        generate_dub_audio=generate_dub_audio,
+        choose_files=choose_files,
         choose_audio_track=choose_audio_track_ffmpeg_index,
         choose_subtitle_source=choose_subtitle_source,
     )
@@ -392,15 +380,16 @@ def run_manual(selected: list[str], svcs: Services) -> int:
 
 
 def main() -> int:
+    svcs = build_services()
     while True:
         ensure_base_dirs()
         files = list_input_videos()
-        selected = choose_files(files)
+        selected = svcs.choose_files(files)
         if not selected:
             print("Aucun fichier sélectionné.")
             return 1
         mode = ask_mode().strip().lower()
-        svcs = build_services()
+        
         if mode.startswith("a"):
             code = run_auto(selected, svcs)
         else:

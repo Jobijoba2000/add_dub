@@ -27,17 +27,4 @@ class DubOptions:
     sub_codec: str = "srt"                            # "srt" ou "ass"
     offset_video_ms: int = 0                          # décalage piste vidéo
 
-
-@dataclass
-class Services:
-    """
-    Conteneur des callbacks/points d’intégration.
-    Placé ici (module neutre) pour limiter les dépendances croisées.
-    """
-    resolve_srt_for_video: Callable[[str, Tuple], Optional[str]]
-    generate_dub_audio: Callable[..., str]
-    choose_audio_track: Callable[[str], int]
-    choose_subtitle_source: Callable[[str], Optional[Tuple]]
-
-
 __all__ = ["DubOptions", "Services"]
