@@ -9,6 +9,7 @@ input/
 output/
 tools/
 licenses/
+add_dub/logs/
 
 # Fichiers locaux/packaging
 TOOLBOX_VERSION.txt
