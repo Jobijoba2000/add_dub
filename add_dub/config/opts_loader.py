@@ -22,6 +22,11 @@ def _coerce(s: str) -> Any:
     s = s.strip()
     if (len(s) >= 2) and ((s[0] == s[-1] == '"') or (s[0] == s[-1] == "'")):
         return s[1:-1]
+    low = s.lower()
+    if low in ("true", "yes", "on", "1"):
+        return True
+    if low in ("false", "no", "off", "0"):
+        return False
     try:
         if "." in s:
             return float(s)
@@ -33,7 +38,7 @@ def _ensure_options_file(path: str) -> None:
     """
     Si `path` (ex: options.conf) n'existe pas :
       - s'il existe `options.example.conf` au même endroit, on le copie.
-      - sinon, on crée un fichier vide (ou minimal) pour démarrer.
+      - sinon, on crée un fichier minimal.
     """
     if os.path.isfile(path):
         return
@@ -44,7 +49,6 @@ def _ensure_options_file(path: str) -> None:
             shutil.copyfile(example, path)
             print(f"[INFO] '{path}' introuvable : copie de '{example}'.")
         else:
-            # Fallback minimal : créer un fichier vide (ou quelques valeurs commentées)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(
                     "# options.conf créé automatiquement.\n"
@@ -70,15 +74,33 @@ def load_options() -> Dict[str, OptEntry]:
     if not os.path.isfile(path):
         return out
 
+    current_section = ""
+
     with open(path, "r", encoding="utf-8") as f:
         for raw in f:
-            raw = raw.strip()
-            if not raw or raw.startswith("#") or raw.startswith(";"):
+            line = raw.strip()
+            if not line:
                 continue
-            m = _line.match(raw)
+            # commentaires pleine ligne
+            if line.startswith("#") or line.startswith(";"):
+                continue
+            # section [logging], etc.
+            if line.startswith("[") and line.endswith("]"):
+                current_section = line[1:-1].strip().lower()
+                continue
+            # commentaires inline ; et #
+            line = line.split(";", 1)[0].split("#", 1)[0].strip()
+            if not line:
+                continue
+
+            m = _line.match(line)
             if not m:
                 continue
+
             key = m.group("key").strip().lower()
+            if current_section:
+                key = f"{current_section}.{key}"
+
             val = _coerce(m.group("val"))
             display = (m.group("flag") or "").lower() == "d"
             out[key] = OptEntry(val, display)

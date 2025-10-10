@@ -25,6 +25,7 @@ from add_dub.config.opts_loader import load_options
 
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
+from add_dub.adapters.mkvtoolnix import audio_video_offset_ms
 
 opts = load_options()
 
@@ -164,6 +165,8 @@ def _ask_config_for_video(
 
     if force_choose_tracks_and_subs:
         aidx = svcs.choose_audio_track(video_fullpath)
+        # offset_audio = audio_video_offset_ms(video_fullpath,aidx)
+        # print(offset_audio)
         sc = svcs.choose_subtitle_source(video_fullpath)
         if sc is None:
             print("Aucune source de sous-titres choisie.")
@@ -243,55 +246,16 @@ def run_auto(selected: list[str], svcs: Services) -> int:
     base_for_tests = build_default_opts()
     validated_opts = None
 
-    if ask_yes_no("Faire un test de 5 minutes ?", True):
-        while True:
-            cfg_opts = _ask_config_for_video(
-                base_opts=base_for_tests,
-                svcs=svcs,
-                video_fullpath=first_full,
-                force_choose_tracks_and_subs=True,
-            )
-            if cfg_opts is None:
-                return 1
-
-            out_test = None
-            try:
-                out_test = _md(
-                    process_one_video,
-                    first,
-                    cfg_opts,
-                    svcs,
-                    limit_duration_sec=300,
-                    test_prefix="TEST_",
-                )
-                if out_test:
-                    print(f"[TEST] OK → {out_test}")
-            except Exception as e:
-                print(f"[TEST] Erreur: {e}")
-
-            test_ok = ask_yes_no("Le test est-il OK et valide les réglages ?", True)
-            _cleanup_test_outputs(out_test)
-
-            if test_ok:
-                validated_opts = cfg_opts
-                break
-            else:
-                print(cfg_opts)
-                base_for_tests = replace(
-                    cfg_opts,
-                    audio_ffmpeg_index=None,
-                    sub_choice=None,
-                )
-    else:
-        cfg_opts = _ask_config_for_video(
-            base_opts=base_for_tests,
-            svcs=svcs,
-            video_fullpath=first_full,
-            force_choose_tracks_and_subs=True,
-        )
-        if cfg_opts is None:
-            return 1
-        validated_opts = cfg_opts
+    
+    cfg_opts = _ask_config_for_video(
+        base_opts=base_for_tests,
+        svcs=svcs,
+        video_fullpath=first_full,
+        force_choose_tracks_and_subs=True,
+    )
+    if cfg_opts is None:
+        return 1
+    validated_opts = cfg_opts
 
     for v in selected:
         try:
@@ -388,12 +352,9 @@ def main() -> int:
         if not selected:
             print("Aucun fichier sélectionné.")
             return 1
-        mode = ask_mode().strip().lower()
         
-        if mode.startswith("a"):
-            code = run_auto(selected, svcs)
-        else:
-            code = run_manual(selected, svcs)
+        run_auto(selected, svcs)
+        
         choix = input("Voulez-vous générer une autre vidéo ? (o/n) : ").strip().lower()
         if not choix.startswith("o"):
             return code

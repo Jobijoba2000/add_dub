@@ -7,6 +7,8 @@ import add_dub.helpers.number as _n
 import sys
 from pathlib import Path
 from add_dub.core.options import DubOptions
+from add_dub.logger import (log_call, log_time)
+
 
 def run_ffmpeg_with_percentage(cmd, duration_source):
     """
@@ -41,6 +43,8 @@ def run_ffmpeg_with_percentage(cmd, duration_source):
         if rc != 0:
             raise subprocess.CalledProcessError(rc, cmd)
 
+@log_time
+@log_call()
 def get_track_info(video_fullpath):
     """
     Retourne la liste des streams 'audio' (objets JSON ffprobe).
@@ -59,7 +63,8 @@ def get_track_info(video_fullpath):
             audio_tracks.append(stream)
     return audio_tracks
 
-
+@log_time
+@log_call()
 def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_sec=None):
     """
     Extrait la piste audio ffmpeg index 'audio_track_index' en WAV PCM 16-bit.
@@ -81,7 +86,8 @@ def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_
     run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
     return output_wav
 
-
+@log_time
+@log_call()
 def mix_audios(audio1_wav, audio2_wav, output_file, bg_mix, tts_mix, audio_codec_args):
     """
     Mixe audio1 (BG) + audio2 (TTS) -> fichier audio final (codec défini par audio_codec_args).
@@ -113,7 +119,8 @@ def mix_audios(audio1_wav, audio2_wav, output_file, bg_mix, tts_mix, audio_codec
     run_ffmpeg_with_percentage(cmd, duration_source=audio1_wav)
     return output_file
 
-
+@log_time
+@log_call()
 def encode_original_audio_to_final_codec(original_wav, output_audio, audio_codec_args):
     """
     Réencode l'audio d'origine (WAV) vers le codec final (args fournis),
@@ -133,6 +140,8 @@ def encode_original_audio_to_final_codec(original_wav, output_audio, audio_codec
     run_ffmpeg_with_percentage(cmd, duration_source=original_wav)
     return output_audio
 
+@log_time
+@log_call(exclude="subtitle_srt_path")
 def merge_to_container(
     video_fullpath,
     mixed_audio_file,
@@ -300,3 +309,247 @@ def merge_to_container_test(
     subprocess.run(cmd, check=True)
     # run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
 
+
+
+
+
+
+@log_time
+@log_call(exclude="subtitle_srt_path")
+def dub_in_one_pass(
+    *,
+    video_fullpath: str,
+    bg_wav: str,                 # audio1_wav (BG)
+    tts_wav: str,                # audio2_wav (TTS)
+    original_wav: str,           # WAV de l'audio d'origine (déjà extrait)
+    subtitle_srt_path: str,
+    output_video_path: str,
+    bg_mix: float,
+    tts_mix: float,
+    audio_codec_args: list[str], # ex: ["-c:a","aac","-b:a","192k"]
+    opts: DubOptions,
+):
+    """
+    Fait en UNE PASSE :
+      - mix BG+TTS (amix) avec volumes,
+      - encode le mix au codec cible (audio_codec_args),
+      - encode l'audio original au même codec,
+      - applique les offsets (vidéo et sous-titres),
+      - mux dans le conteneur final avec métadonnées/dispositions.
+
+    Entrées:
+      0: (avec -itsoffset) vidéo source
+      1: bg_wav
+      2: tts_wav
+      3: original_wav (sera encodé comme piste audio #1)
+      4: (avec -itsoffset) sous-titres SRT
+    Sorties mappées:
+      - 0:v:0  (copié ou transcodé selon extension)
+      - [a_mix] (piste audio #0, mix BG+TTS, encodée)
+      - 3:a:0   (piste audio #1, original, encodé)
+      - 4:0     (piste sous-titres)
+    """
+
+    # Sanity rapide sur les entrées audio
+    if os.path.getsize(bg_wav) == 0 or os.path.getsize(tts_wav) == 0:
+        print("Un des fichiers (BG/TTS) est vide. Impossible de mixer.")
+        return
+
+    # Offsets
+    offset_s = _n.int_to_scaled_str(opts.offset_ms)
+    offset_video_s = _n.int_to_scaled_str(opts.offset_video_ms)
+
+    # Titrages
+    dub_title = f"{opts.orig_audio_lang} doublé en Français"
+    orig_title = opts.orig_audio_lang
+    sub_title = "Français"
+
+    # Choix de copie/transcodage vidéo selon extension
+    extension_source = Path(video_fullpath).suffix.lower()
+    if extension_source == ".avi":
+        copy_video = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"]
+    else:
+        copy_video = ["-c:v", "copy"]
+
+    # Mix en s16/stereo et resample asynchrone, volumes appliqués
+    filter_str = (
+        f"[1:a]aformat=sample_fmts=s16:channel_layouts=stereo,aresample=async=1,volume={bg_mix}[bg];"
+        f"[2:a]aformat=sample_fmts=s16:channel_layouts=stereo,aresample=async=1,volume={tts_mix}[tts];"
+        f"[bg][tts]amix=inputs=2:duration=longest:dropout_transition=0[a_mix]"
+    )
+
+    # Construction commande unique
+    cmd = [
+        "ffmpeg", "-y",
+        "-hide_banner", "-loglevel", "error",
+        "-nostats", "-progress", "pipe:1",
+
+        # 0: vidéo (avec offset vidéo)
+        "-itsoffset", offset_video_s, "-i", video_fullpath,
+
+        # 1: BG wav, 2: TTS wav, 3: original wav
+        "-i", bg_wav,
+        "-i", tts_wav,
+        "-i", original_wav,
+
+        # 4: sous-titres (avec offset ST)
+        "-itsoffset", offset_s, "-i", subtitle_srt_path,
+
+        # Filter pour fabriquer [a_mix]
+        "-filter_complex", filter_str,
+
+        # Mapping sorties
+        "-map", "0:v:0",
+        "-map", "[a_mix]",   # audio 0 (dub)
+        "-map", "3:a:0",     # audio 1 (original)
+        "-map", "4:0",       # sous-titres
+
+    ] + copy_video + [
+        # Audio: même codec/paramètres pour TOUTES les pistes audio
+        # (audio_codec_args est appliqué globalement à -c:a)
+    ] + list(audio_codec_args) + [
+        # Force stéréo pour la piste audio 1 (original encodé), la 0 sort déjà en stéréo du mix
+        "-ac:a:1", "2",
+
+        # Codec des sous-titres
+        "-c:s:0", opts.sub_codec,
+
+        # Dispositions
+        "-disposition:a:0", "default",
+        "-disposition:a:1", "0",
+        "-disposition:s:0", "0",
+
+        # Métadonnées
+        "-metadata:s:a:0", f"title={dub_title}",
+        "-metadata:s:a:1", f"title={orig_title}",
+        "-metadata:s:s:0", f"title={sub_title}",
+
+        # Sortie finale
+        output_video_path,
+    ]
+
+    # Barre de progression (basée sur la durée vidéo)
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
+    return output_video_path
+
+
+
+@log_time
+def merge_with_offsets_and_mix(
+    video_fullpath: str,
+    ducked_wav: str,
+    tts_wav: str,
+    subtitle_srt_path: str | None,
+    output_video_path: str,
+    orig_audio_name_for_title: str,
+    sub_codec: str,
+    bg_mix: float,
+    tts_mix: float,
+    offset_audio_ms: int = 0,
+    offset_video_ms: int = 0,
+    offset_subtitle_ms: int = 0,
+    set_dub_default: bool = True,
+    add_subtitle: bool = True,
+    audio_codec: str | None = None,
+    audio_bitrate: int | None = None
+):
+    def ms_to_sec(ms: int) -> str:
+        return f"{ms / 1000:.3f}"
+
+    dub_title = f"{orig_audio_name_for_title} doublé en Français"
+
+    def count_streams(path: str, kind: str) -> int:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error",
+             "-select_streams", kind,
+             "-show_entries", "stream=index",
+             "-of", "csv=p=0", path],
+            capture_output=True, text=True
+        )
+        return sum(1 for line in r.stdout.splitlines() if line.strip())
+
+    # --- Compte les pistes existantes ---
+    orig_audio_count = count_streams(video_fullpath, "a")
+    new_audio_out_index = orig_audio_count
+    orig_sub_count = count_streams(video_fullpath, "s")
+    new_sub_out_index = orig_sub_count
+
+    # --- Inputs ---
+    inputs = []
+    if offset_video_ms != 0:
+        inputs += ["-itsoffset", ms_to_sec(offset_video_ms)]
+    inputs += ["-i", video_fullpath]
+    
+    if offset_audio_ms != 0:
+        inputs += ["-itsoffset", ms_to_sec(offset_audio_ms)]
+    inputs += ["-i", ducked_wav]
+
+    if offset_audio_ms != 0:
+        inputs += ["-itsoffset", ms_to_sec(offset_audio_ms)]
+    inputs += ["-i", tts_wav]
+
+    if add_subtitle and subtitle_srt_path:
+        if offset_subtitle_ms != 0:
+            inputs += ["-itsoffset", ms_to_sec(offset_subtitle_ms)]
+        inputs += ["-f", "srt", "-i", subtitle_srt_path]
+
+    # --- Filtre audio ---
+    filter_str = (
+        f"[1:a]aformat=sample_fmts=s16:channel_layouts=stereo,aresample=async=1,volume={bg_mix}[bg];"
+        f"[2:a]aformat=sample_fmts=s16:channel_layouts=stereo,aresample=async=1,volume={tts_mix}[tts];"
+        f"[bg][tts]amix=inputs=2:duration=longest:dropout_transition=0[a_mix]"
+    )
+
+    # --- Commande de base ---
+    cmd = [
+        "ffmpeg", "-y",
+        "-hide_banner", "-loglevel", "error",
+        "-nostats", "-progress", "pipe:1",
+    ] + inputs + [
+        "-filter_complex", filter_str,
+        "-map", "0:v:0",
+        "-map", "0:a",
+        "-map", "[a_mix]",
+        "-map", "0:s?",
+    ]
+
+    # --- Mapping SRT externe si présent ---
+    if add_subtitle and subtitle_srt_path:
+        srt_input_index = inputs.count("-i") - 1
+        cmd += ["-map", f"{srt_input_index}:s:0"]
+
+    # --- Codecs ---
+    cmd += ["-c:v", "copy"]     # copie vidéo
+    cmd += ["-c:a", "copy"]     # copie pistes audio originales
+    cmd += ["-c:s", "copy"]     # copie sous-titres originaux
+
+    # encode uniquement la piste audio mixée
+    if audio_codec and audio_bitrate:
+        cmd += [
+            f"-c:a:{new_audio_out_index}", audio_codec,
+            f"-b:a:{new_audio_out_index}", f"{audio_bitrate}k"
+        ]
+    else:
+        cmd += [
+            f"-c:a:{new_audio_out_index}", "aac",
+            f"-b:a:{new_audio_out_index}", "192k"
+        ]
+
+    # --- Métadonnées piste audio mixée ---
+    cmd += ["-metadata:s:a:{}".format(new_audio_out_index), f"title={dub_title}"]
+
+    # --- Sous-titres externes ---
+    if add_subtitle and subtitle_srt_path:
+        cmd += ["-metadata:s:s:{}".format(new_sub_out_index), "title=Français"]
+        cmd += ["-c:s:{}".format(new_sub_out_index), sub_codec]
+
+    # --- Dispositions ---
+    if set_dub_default:
+        cmd += ["-disposition:a", "0"]
+        cmd += ["-disposition:a:{}".format(new_audio_out_index), "default"]
+        cmd += ["-disposition:s", "0"]
+
+    # --- Sortie ---
+    cmd += [output_video_path]
+
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)

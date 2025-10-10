@@ -2,6 +2,7 @@
 import os
 from pydub import AudioSegment
 from concurrent.futures import ThreadPoolExecutor
+from add_dub.logger import (log_call, log_time)
 
 try:
     import numpy as np  # optionnel : si indisponible, on bascule en mode pydub pur
@@ -106,7 +107,8 @@ def _merge_close_intervals(subtitles, offset_ms, fade_ms, min_gap_ms=200):
     merged.append((cs, ce))
     return merged
 
-
+@log_time
+@log_call(exclude="subtitles")
 def lower_audio_during_subtitles(
     audio_file,
     subtitles,

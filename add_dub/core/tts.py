@@ -5,9 +5,13 @@ import uuid
 import tempfile
 import asyncio
 from pydub import AudioSegment
+from add_dub.config.defaults import get_system_default_voice_id  # re-export
 
 # Typage (et pour accéder aux bornes min/max depuis l'instance)
 from add_dub.core.options import DubOptions
+from add_dub.logger import (log_call, log_time)
+import time
+import asyncio
 
 # OneCore (WinRT)
 try:
@@ -16,6 +20,68 @@ try:
 except Exception:
     SpeechSynthesizer = None
     DataReader = None
+
+
+# --------------------------------
+# Caches par processus (memoization locale à chaque worker)
+# --------------------------------
+_SYNTH = None          # instance unique du synthétiseur OneCore (par process)
+_VOICE_LIST = None     # liste des voix OneCore (par process)
+_VOICE_OBJ = None      # objet voix résolu pour la voice_id courante (par process)
+_CURRENT_VOICE_ID = None  # voice_id actuellement résolue dans _VOICE_OBJ
+
+
+def _get_synth():
+    """
+    Retourne un synthétiseur OneCore unique par processus.
+    Créé paresseusement à la première utilisation.
+    """
+    global _SYNTH
+    if _SYNTH is None and SpeechSynthesizer is not None:
+        _SYNTH = SpeechSynthesizer()
+    return _SYNTH
+
+
+def _get_voice_list():
+    """
+    Charge une fois la liste des voix OneCore dans le process courant.
+    """
+    global _VOICE_LIST
+    if _VOICE_LIST is None:
+        if SpeechSynthesizer is None:
+            _VOICE_LIST = []
+        else:
+            try:
+                _VOICE_LIST = list(SpeechSynthesizer.all_voices)
+            except Exception:
+                _VOICE_LIST = []
+    return _VOICE_LIST
+
+
+def _get_voice_obj_from_id(voice_id: str | None):
+    """
+    Résout (et mémorise) l'objet voix à partir d'un voice_id connu/valide.
+    Ne rescane pas les voix si la voice_id ne change pas.
+    """
+    global _VOICE_OBJ, _CURRENT_VOICE_ID
+    if SpeechSynthesizer is None or not voice_id:
+        return None
+
+    vid = voice_id.strip()
+    if _CURRENT_VOICE_ID == vid and _VOICE_OBJ is not None:
+        return _VOICE_OBJ
+
+    voices = _get_voice_list()
+    for v in voices:
+        if getattr(v, "id", "") == vid:
+            _VOICE_OBJ = v
+            _CURRENT_VOICE_ID = vid
+            return _VOICE_OBJ
+
+    # Non trouvé
+    _VOICE_OBJ = None
+    _CURRENT_VOICE_ID = None
+    return None
 
 
 # --------------------------------
@@ -68,22 +134,14 @@ def _pick_voice_obj(voice_id: str | None):
       - si voice_id est None: None.
     Les contrôles amont (is_valid_voice_id / defaults / build_default_opts) garantissent
     normalement un ID valide avant d'arriver jusqu'ici.
+
+    Implémentation mémorisée : n'énumère pas les voix à chaque appel si la voice_id ne change pas.
     """
     if SpeechSynthesizer is None:
         return None
-    try:
-        voices = list(SpeechSynthesizer.all_voices)
-    except Exception:
-        return None
-
     if not voice_id:
         return None
-
-    vid = voice_id.strip()
-    for v in voices:
-        if getattr(v, "id", "") == vid:
-            return v
-    return None
+    return _get_voice_obj_from_id(voice_id)
 
 
 async def _onecore_synthesize_bytes_async(text: str, voice_id: str | None, rate_factor: float) -> bytes:
@@ -95,12 +153,22 @@ async def _onecore_synthesize_bytes_async(text: str, voice_id: str | None, rate_
     if SpeechSynthesizer is None or DataReader is None:
         raise RuntimeError("No TTS voice available (WinRT SpeechSynthesizer not available)")
 
-    synth = SpeechSynthesizer()
+    synth = _get_synth()
+    if synth is None:
+        raise RuntimeError("No TTS voice available (synthesizer not created)")
+
     v = _pick_voice_obj(voice_id)
     if v is None:
         raise RuntimeError("No TTS voice available (requested voice id not found)")
 
-    synth.voice = v
+    # Assigner la voix uniquement si nécessaire
+    try:
+        if getattr(synth.voice, "id", None) != getattr(v, "id", None):
+            synth.voice = v
+    except Exception:
+        synth.voice = v
+
+    # Régler le débit (peut ne pas être dispo selon build)
     try:
         synth.options.speaking_rate = rate_factor
     except Exception:
@@ -157,7 +225,7 @@ def find_optimal_rate(text: str, target_duration_ms: int, voice_id: str | None, 
         err = abs(dur - target_duration_ms)
         if err < best_err:
             best, best_err = mid, err
-        if err <= 80:
+        if err <= 300:
             # on renvoie une valeur normalisée dans les bornes opts
             return _normalize_rate(mid, opts=opts)
         if dur > target_duration_ms:
@@ -173,6 +241,7 @@ def synthesize_tts_for_subtitle(text: str, target_duration_ms: int, voice_id: st
     Synthèse OneCore ajustée à la durée cible.
     Retourne un AudioSegment (coupé/paddé à target_duration_ms).
     """
+    
     factor = find_optimal_rate(text, target_duration_ms, voice_id, opts)
     segment = _onecore_synthesize_segment(text, voice_id, factor)
 
@@ -254,39 +323,6 @@ def synthesize_tts_for_subtitle_old(text, target_duration_ms, voice_id=None):
     elif len(segment) < target_duration_ms:
         segment = segment + AudioSegment.silent(duration=(target_duration_ms - len(segment)))
     return segment
-
-
-def get_system_default_voice_id() -> str | None:
-    """
-    Retourne l'ID complet (OneCore) de la voix TTS par défaut du système.
-    - Si la voix par défaut est accessible: retourne son .id
-    - Sinon: retourne l'ID de la première voix disponible
-    - Si aucune voix/WinRT indisponible: retourne None
-    """
-    try:
-        from winrt.windows.media.speechsynthesis import SpeechSynthesizer  # type: ignore
-    except Exception:
-        return None
-
-    try:
-        synth = SpeechSynthesizer()
-        v = getattr(synth, "voice", None)
-        if v:
-            vid = getattr(v, "id", "") or ""
-            if vid:
-                return vid
-    except Exception:
-        pass
-
-    try:
-        voices = list(SpeechSynthesizer.all_voices)
-        if voices:
-            vid = getattr(voices[0], "id", "") or ""
-            return vid or None
-    except Exception:
-        pass
-
-    return None
 
 
 def is_valid_voice_id(voice_id: str | None) -> bool:

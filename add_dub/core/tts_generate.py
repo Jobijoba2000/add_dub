@@ -4,14 +4,14 @@ import math
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait, FIRST_COMPLETED
 from typing import List, Tuple, Optional
-
+from pprint import pprint
 import numpy as np
 from pydub import AudioSegment
 
 from add_dub.core.options import DubOptions
 from add_dub.core.subtitles import parse_srt_file
 from add_dub.workers import tts_worker
-
+from add_dub.logger import (log_call, log_time)
 
 def _load_segment_as_array(
     path: str,
@@ -68,7 +68,8 @@ def _export_int16_wav(array_int16: np.ndarray, sr: int, ch: int, out_path: str) 
     )
     seg.export(out_path, format="wav")
 
-
+@log_time
+@log_call()
 def generate_dub_audio(
     srt_file: str,
     output_wav: str,
@@ -86,6 +87,7 @@ def generate_dub_audio(
       (et autres réglages) soient respectées côté synthèse.
     """
     subtitles = parse_srt_file(srt_file, duration_limit_sec=duration_limit_sec)
+    
     if not subtitles:
         AudioSegment.silent(duration=0).export(output_wav, format="wav")
         return output_wav
@@ -94,7 +96,7 @@ def generate_dub_audio(
     jobs: List[Tuple[int, int, int, str, str, DubOptions]] = []
     for idx, (start, end, text) in enumerate(subtitles):
         jobs.append((idx, int(start * 1000), int(end * 1000), text, opts.voice_id, opts))
-
+    
     max_workers = min(20, max(1, cpu_count()))
     results: List[Optional[Tuple[str, int, int]]] = [None] * len(jobs)
 

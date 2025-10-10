@@ -13,15 +13,13 @@ from add_dub.core.subtitles import parse_srt_file, strip_subtitle_tags_inplace
 from add_dub.core.ducking import lower_audio_during_subtitles
 from add_dub.adapters.ffmpeg import (
     extract_audio_track,
-    mix_audios,
-    encode_original_audio_to_final_codec,
-    merge_to_container,
+    dub_in_one_pass,
 )
-from add_dub.helpers.time import measure_duration as _md
 import re
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
 from pprint import pprint
+from add_dub.logger import (log_call, log_time)
 
 def _dub_code_from_voice(voice_id: str | None) -> str:
     from add_dub.core.tts import list_available_voices
@@ -47,8 +45,6 @@ def _dub_code_from_voice(voice_id: str | None) -> str:
 def _step(msg: str) -> None:
     print("\n" + msg)
 
-
-
 def _video_ext_from_codec_args(args: Iterable[str]) -> str:
     codec = None
     a = list(args) if args is not None else []
@@ -57,7 +53,6 @@ def _video_ext_from_codec_args(args: Iterable[str]) -> str:
             codec = a[i + 1].lower()
             break
     return ".mkv"
-
 
 def _audio_ext_from_codec_args(args: Iterable[str]) -> str:
     codec = None
@@ -82,7 +77,8 @@ def _audio_ext_from_codec_args(args: Iterable[str]) -> str:
         return ".wav"
     return ".mka"
 
-
+@log_time
+@log_call
 def process_one_video(
     video_name: str,
     opts: DubOptions,
@@ -95,9 +91,9 @@ def process_one_video(
     Traite UNE vidéo avec les options et services fournis.
     Retourne le chemin de la vidéo finale, ou None si annulé.
     """
-    
+
     print(video_name)
-    
+
     video_full = join_input(video_name)
     base, ext = os.path.splitext(os.path.basename(video_full))
 
@@ -130,14 +126,13 @@ def process_one_video(
     # 6) Extraction audio d'origine (WAV PCM)
     orig_wav = join_output(f"{test_prefix}{base}_orig.wav")
     _step("Extraction de l'audio d'origine (WAV PCM)...")
-    _md(
-        extract_audio_track, 
-        video_full, 
-        audio_idx, 
-        orig_wav, 
+    extract_audio_track(
+        video_full,
+        audio_idx,
+        orig_wav,
         duration_sec=limit_duration_sec
     )
-    
+
     # Durée cible (utile pour calages éventuels)
     try:
         orig_len_ms = len(AudioSegment.from_file(orig_wav))
@@ -153,8 +148,7 @@ def process_one_video(
     # 8) Génération TTS alignée (WAV)
     tts_wav = join_output(f"{test_prefix}{base}_tts.wav")
     _step("Génération TTS (WAV)...")
-    _md(
-        svcs.generate_dub_audio,
+    svcs.generate_dub_audio(
         srt_file=srt_path,
         output_wav=tts_wav,
         opts=opts,
@@ -165,8 +159,7 @@ def process_one_video(
     # 9) Ducking de l'audio d'origine pendant les dialogues
     ducked_wav = join_output(f"{test_prefix}{base}_ducked.wav")
     _step("Ducking de l'audio original pendant les dialogues...")
-    _md(
-        lower_audio_during_subtitles,
+    lower_audio_during_subtitles(
         audio_file=orig_wav,
         subtitles=subtitles,
         output_wav=ducked_wav,
@@ -174,30 +167,7 @@ def process_one_video(
         offset_ms=opts.offset_ms,
     )
 
-    # 10) Mix final BG + TTS
-    mixed_audio = join_output(f"{test_prefix}{base}_mix{_audio_ext_from_codec_args(opts.audio_codec_args)}")
-    _step("Mixage final BG/TTS...")
-    _md(
-        mix_audios, 
-        ducked_wav,
-        tts_wav,
-        mixed_audio,
-        bg_mix=opts.bg_mix,
-        tts_mix=opts.tts_mix,
-        audio_codec_args=list(opts.audio_codec_args),
-    )
-
-    # 11) Encodage de la piste originale dans le codec final
-    orig_encoded = join_output(f"{test_prefix}{base}_orig_enc{_audio_ext_from_codec_args(opts.audio_codec_args)}")
-    _step("Encodage de l'audio d'origine dans le codec final...")
-    _md(
-        encode_original_audio_to_final_codec, 
-        orig_wav,
-        orig_encoded,
-        audio_codec_args=list(opts.audio_codec_args),
-    )
-
-    # 12) Clip vidéo si TEST
+    # 10) Clip vidéo si TEST
     video_for_merge = video_full
     tmp_clip = None
     if limit_duration_sec is not None:
@@ -212,28 +182,82 @@ def process_one_video(
         ], check=True)
         video_for_merge = tmp_clip
 
-    # 13) Fusion finale (vidéo + 2 audios + ST)
+    # 11) Sortie finale (vidéo + 2 audios + ST) — en une seule passe
+    # final_ext = _video_ext_from_codec_args(opts.audio_codec_args)
+    # dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
+    # final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}")
+    # _step("Mixage/Encodage/Mux en une passe...")
+    # dub_in_one_pass(
+        # video_fullpath=video_for_merge,
+        # bg_wav=ducked_wav,
+        # tts_wav=tts_wav,
+        # original_wav=orig_wav,
+        # subtitle_srt_path=srt_path,
+        # output_video_path=final_video,
+        # bg_mix=opts.bg_mix,
+        # tts_mix=opts.tts_mix,
+        # audio_codec_args=list(opts.audio_codec_args),
+        # opts=opts,
+    # )
+    
+    
+    
+    
+    # 11) Sortie finale
     final_ext = _video_ext_from_codec_args(opts.audio_codec_args)
     dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
     final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}")
-    _step("Fusion finale (conteneur)...")
-    _md(
-        merge_to_container,
-        video_for_merge,
-        mixed_audio,
-        orig_encoded,
-        srt_path,
-        final_video,
-        opts=opts,
-    )
 
-    # 14) Nettoyage
+    _step("Mixage/Encodage/Mux final...")
+    if getattr(opts, "use_merge_offsets", False):
+        print("ok")
+        from add_dub.adapters.ffmpeg import merge_with_offsets_and_mix
+        merge_with_offsets_and_mix(
+            video_fullpath=video_for_merge,
+            ducked_wav=ducked_wav,
+            tts_wav=tts_wav,
+            subtitle_srt_path=srt_path,
+            output_video_path=final_video,
+            orig_audio_name_for_title=orig_audio_lang,
+            sub_codec=opts.sub_codec,
+            bg_mix=opts.bg_mix,
+            tts_mix=opts.tts_mix,
+            offset_audio_ms=0,
+            offset_video_ms=opts.offset_video_ms,
+            offset_subtitle_ms=opts.offset_ms,
+            set_dub_default=True,
+            add_subtitle=True,
+            audio_codec=opts.audio_codec,
+            audio_bitrate=opts.audio_bitrate
+        )
+    else:
+   
+
+        dub_in_one_pass(
+            video_fullpath=video_for_merge,
+            bg_wav=ducked_wav,
+            tts_wav=tts_wav,
+            original_wav=orig_wav,
+            subtitle_srt_path=srt_path,
+            output_video_path=final_video,
+            bg_mix=opts.bg_mix,
+            tts_mix=opts.tts_mix,
+            audio_codec_args=list(opts.audio_codec_args),
+            opts=opts,
+        )
+
+
+    
+    
+    
+    
+    
+    
+    # 12) Nettoyage
     for f in (
-        orig_wav, 
-        tts_wav, 
-        ducked_wav, 
-        mixed_audio, 
-        orig_encoded
+        orig_wav,
+        tts_wav,
+        ducked_wav,
     ):
         try:
             if f and os.path.exists(f):
@@ -245,5 +269,5 @@ def process_one_video(
             os.remove(tmp_clip)
         except Exception:
             pass
-    # time.sleep(20)
+
     return final_video
