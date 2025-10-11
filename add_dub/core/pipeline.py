@@ -166,93 +166,23 @@ def process_one_video(
         reduction_db=opts.db_reduct,
         offset_ms=opts.offset_ms,
     )
-
-    # 10) Clip vidéo si TEST
-    video_for_merge = video_full
-    tmp_clip = None
-    if limit_duration_sec is not None:
-        tmp_clip = join_output(f"{test_prefix}{base}_clip{ext}")
-        subprocess.run([
-            "ffmpeg", "-y",
-            "-hide_banner", "-loglevel", "error", "-stats",
-            "-i", video_full,
-            "-t", str(int(limit_duration_sec)),
-            "-c", "copy",
-            tmp_clip
-        ], check=True)
-        video_for_merge = tmp_clip
-
-    # 11) Sortie finale (vidéo + 2 audios + ST) — en une seule passe
-    # final_ext = _video_ext_from_codec_args(opts.audio_codec_args)
-    # dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
-    # final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}")
-    # _step("Mixage/Encodage/Mux en une passe...")
-    # dub_in_one_pass(
-        # video_fullpath=video_for_merge,
-        # bg_wav=ducked_wav,
-        # tts_wav=tts_wav,
-        # original_wav=orig_wav,
-        # subtitle_srt_path=srt_path,
-        # output_video_path=final_video,
-        # bg_mix=opts.bg_mix,
-        # tts_mix=opts.tts_mix,
-        # audio_codec_args=list(opts.audio_codec_args),
-        # opts=opts,
-    # )
-    
-    
-    
-    
+ 
     # 11) Sortie finale
     final_ext = _video_ext_from_codec_args(opts.audio_codec_args)
     dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
     final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}")
 
     _step("Mixage/Encodage/Mux final...")
-    if getattr(opts, "use_merge_offsets", False):
-        print("ok")
-        from add_dub.adapters.ffmpeg import merge_with_offsets_and_mix
-        merge_with_offsets_and_mix(
-            video_fullpath=video_for_merge,
-            ducked_wav=ducked_wav,
-            tts_wav=tts_wav,
-            subtitle_srt_path=srt_path,
-            output_video_path=final_video,
-            orig_audio_name_for_title=orig_audio_lang,
-            sub_codec=opts.sub_codec,
-            bg_mix=opts.bg_mix,
-            tts_mix=opts.tts_mix,
-            offset_audio_ms=0,
-            offset_video_ms=opts.offset_video_ms,
-            offset_subtitle_ms=opts.offset_ms,
-            set_dub_default=True,
-            add_subtitle=True,
-            audio_codec=opts.audio_codec,
-            audio_bitrate=opts.audio_bitrate
-        )
-    else:
-   
-
-        dub_in_one_pass(
-            video_fullpath=video_for_merge,
-            bg_wav=ducked_wav,
-            tts_wav=tts_wav,
-            original_wav=orig_wav,
-            subtitle_srt_path=srt_path,
-            output_video_path=final_video,
-            bg_mix=opts.bg_mix,
-            tts_mix=opts.tts_mix,
-            audio_codec_args=list(opts.audio_codec_args),
-            opts=opts,
-        )
-
-
-    
-    
-    
-    
-    
-    
+    dub_in_one_pass(
+        video_fullpath=video_full,
+        bg_wav=ducked_wav,
+        tts_wav=tts_wav,
+        original_wav=orig_wav,
+        subtitle_srt_path=srt_path,
+        output_video_path=final_video,
+        opts=opts,
+    )
+  
     # 12) Nettoyage
     for f in (
         orig_wav,
@@ -264,10 +194,5 @@ def process_one_video(
                 os.remove(f)
         except Exception:
             pass
-    if tmp_clip and os.path.exists(tmp_clip):
-        try:
-            os.remove(tmp_clip)
-        except Exception:
-            pass
-
+    
     return final_video

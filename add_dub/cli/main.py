@@ -239,7 +239,6 @@ def _cleanup_test_outputs(output_path: str | None) -> None:
 
 
 def run_auto(selected: list[str], svcs: Services) -> int:
-    print("\n[Auto] Configuration/test sur la première vidéo, application au lot si validé.")
     first = selected[0]
     first_full = join_input(first)
 
@@ -268,81 +267,6 @@ def run_auto(selected: list[str], svcs: Services) -> int:
     print("\nTerminé.")
     return 0
 
-
-def run_manual(selected: list[str], svcs: Services) -> int:
-    print("\n[Manuel] Chaque vidéo repart de zéro. Les défauts ne sont conservés que pendant les re-tests de la même vidéo (hors audio/ST).")
-
-    for v in selected:
-        print(f"\n[Manuel] Vidéo : {v}")
-        v_full = join_input(v)
-
-        base_for_this_video = build_default_opts()
-
-        cur = _ask_config_for_video(
-            base_opts=base_for_this_video,
-            svcs=svcs,
-            video_fullpath=v_full,
-            force_choose_tracks_and_subs=True,
-        )
-        if cur is None:
-            print("Aucune source de sous-titres choisie. Vidéo ignorée.")
-            continue
-
-        if ask_yes_no("Faire un test de 5 minutes pour cette vidéo ?", True):
-            while True:
-                out_test = None
-                try:
-                    out_test = _md(
-                        process_one_video,
-                        v,
-                        cur,
-                        svcs,
-                        limit_duration_sec=300,
-                        test_prefix="TEST_",
-                    )
-                    if out_test:
-                        print(f"[TEST] OK → {out_test}")
-                except Exception as e:
-                    print(f"[TEST] Erreur: {e}")
-
-                test_ok = ask_yes_no("Le test est-il OK et valide les réglages pour cette vidéo ?", True)
-                _cleanup_test_outputs(out_test)
-
-                if test_ok:
-                    break
-                else:
-                    base_for_this_video = replace(
-                        cur,
-                        audio_ffmpeg_index=None,
-                        sub_choice=None,
-                    )
-                    maybe = _ask_config_for_video(
-                        base_opts=base_for_this_video,
-                        svcs=svcs,
-                        video_fullpath=v_full,
-                        force_choose_tracks_and_subs=True,
-                    )
-                    if maybe is None:
-                        print("Aucune source de sous-titres choisie. Abandon de cette vidéo.")
-                        cur = None
-                        break
-                    cur = maybe
-
-        if cur is None:
-            print("Configuration annulée pour cette vidéo.")
-            continue
-
-        try:
-            outp = _md(process_one_video, v, cur, svcs)
-            if outp:
-                print(f"[OK] {v} → {outp}")
-        except Exception as e:
-            print(f"[ERREUR] {v} → {e}")
-
-    print("\nTerminé.")
-    return 0
-
-
 def main() -> int:
     svcs = build_services()
     while True:
@@ -353,7 +277,7 @@ def main() -> int:
             print("Aucun fichier sélectionné.")
             return 1
         
-        run_auto(selected, svcs)
+        code = run_auto(selected, svcs)
         
         choix = input("Voulez-vous générer une autre vidéo ? (o/n) : ").strip().lower()
         if not choix.startswith("o"):

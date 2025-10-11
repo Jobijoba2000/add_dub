@@ -7,7 +7,7 @@ import uuid
 def tts_worker(args):
     # Import local pour éviter les soucis de pickling/multiprocessing sous Windows
     from add_dub.core.tts import synthesize_tts_for_subtitle
-
+    # from add_dub.core.tts_edge import synthesize_tts_for_subtitle
     # On récupère aussi opts (6e élément du tuple)
     idx, start_ms, end_ms, text, voice_id, opts = args
     duration = end_ms - start_ms
