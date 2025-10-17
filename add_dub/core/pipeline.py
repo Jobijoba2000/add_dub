@@ -80,10 +80,12 @@ def _audio_ext_from_codec_args(args: Iterable[str]) -> str:
 @log_time
 @log_call
 def process_one_video(
-    video_name: str,
+    *,
+    input_video_path: str,
+    input_video_name: str,
+    output_dir_path: Optional[str] = None,
     opts: DubOptions,
     svcs: Services,
-    *,
     limit_duration_sec: Optional[int] = None,
     test_prefix: str = "",
 ) -> Optional[str]:
@@ -92,27 +94,27 @@ def process_one_video(
     Retourne le chemin de la vidéo finale, ou None si annulé.
     """
 
-    print(video_name)
+    print(input_video_name)
 
-    video_full = join_input(video_name)
-    base, ext = os.path.splitext(os.path.basename(video_full))
+    # video_full = join_input(video_name)
+    base, ext = os.path.splitext(os.path.basename(input_video_path))
 
     # 1) Piste audio source
     audio_idx = opts.audio_ffmpeg_index
     if audio_idx is None:
-        audio_idx = svcs.choose_audio_track(video_full)
+        audio_idx = svcs.choose_audio_track(input_video_path)
 
     # 2) Source des sous-titres
     sub_choice = opts.sub_choice
     if sub_choice is None:
-        sub_choice = svcs.choose_subtitle_source(video_full)
+        sub_choice = svcs.choose_subtitle_source(input_video_path)
         if sub_choice is None:
             return None
 
     # 3) Résolution vers un SRT exploitable
-    srt_path = svcs.resolve_srt_for_video(video_full, sub_choice)
+    srt_path = svcs.resolve_srt_for_video(input_video_path, sub_choice)
     if not srt_path:
-        _step(f"Impossible d'obtenir un SRT pour {video_name}.")
+        _step(f"Impossible d'obtenir un SRT pour {input_video_name}.")
         return None
 
     # 4) Nettoyage SRT
@@ -127,7 +129,7 @@ def process_one_video(
     orig_wav = join_output(f"{test_prefix}{base}_orig.wav")
     _step("Extraction de l'audio d'origine (WAV PCM)...")
     extract_audio_track(
-        video_full,
+        input_video_path,
         audio_idx,
         orig_wav,
         duration_sec=limit_duration_sec
@@ -174,7 +176,7 @@ def process_one_video(
 
     _step("Mixage/Encodage/Mux final...")
     dub_in_one_pass(
-        video_fullpath=video_full,
+        video_fullpath=input_video_path,
         bg_wav=ducked_wav,
         tts_wav=tts_wav,
         original_wav=orig_wav,

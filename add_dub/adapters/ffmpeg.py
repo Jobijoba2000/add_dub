@@ -177,7 +177,7 @@ def dub_in_one_pass(
     ] + copy_video + [
         # Audio: même codec/paramètres pour TOUTES les pistes audio
         # (audio_codec_args est appliqué globalement à -c:a)
-    ] + list(opts.audio_codec_args) + [
+        "-c:a", opts.audio_codec, "-b:a", f"{int(opts.audio_bitrate)}k", 
         # Force stéréo pour la piste audio 1 (original encodé), la 0 sort déjà en stéréo du mix
         "-ac:a:1", "2",
 

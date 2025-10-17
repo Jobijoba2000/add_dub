@@ -26,6 +26,7 @@ from add_dub.config.opts_loader import load_options
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
 from add_dub.adapters.mkvtoolnix import audio_video_offset_ms
+from add_dub.io.fs import join_input, join_output
 
 opts = load_options()
 
@@ -157,17 +158,17 @@ def _ask_config_for_video(
     *,
     base_opts: DubOptions,
     svcs: Services,
-    video_fullpath: str,
+    input_video_path: str,
     force_choose_tracks_and_subs: bool = True,
 ) -> DubOptions | None:
     aidx = base_opts.audio_ffmpeg_index
     sc = base_opts.sub_choice
 
     if force_choose_tracks_and_subs:
-        aidx = svcs.choose_audio_track(video_fullpath)
+        aidx = svcs.choose_audio_track(input_video_path)
         # offset_audio = audio_video_offset_ms(video_fullpath,aidx)
         # print(offset_audio)
-        sc = svcs.choose_subtitle_source(video_fullpath)
+        sc = svcs.choose_subtitle_source(input_video_path)
         if sc is None:
             print("Aucune source de sous-titres choisie.")
             return None
@@ -238,7 +239,8 @@ def _cleanup_test_outputs(output_path: str | None) -> None:
         print(f"[TEST] Impossible de supprimer le fichier de test ({output_path}) : {e}")
 
 
-def run_auto(selected: list[str], svcs: Services) -> int:
+def run_interactive(selected: list[str], svcs: Services) -> int:
+    
     first = selected[0]
     first_full = join_input(first)
 
@@ -246,23 +248,25 @@ def run_auto(selected: list[str], svcs: Services) -> int:
     validated_opts = None
 
     
-    cfg_opts = _ask_config_for_video(
-        base_opts=base_for_tests,
+    opts = _ask_config_for_video(
+        base_opts=build_default_opts(),
         svcs=svcs,
-        video_fullpath=first_full,
+        input_video_path=join_input(selected[0]),
         force_choose_tracks_and_subs=True,
     )
-    if cfg_opts is None:
-        return 1
-    validated_opts = cfg_opts
-
-    for v in selected:
+    
+    for input_video_name in selected:
         try:
-            outp = _md(process_one_video, v, validated_opts, svcs)
+            outp = process_one_video(
+                input_video_path=join_input(input_video_name), 
+                input_video_name=input_video_name, 
+                opts=opts, 
+                svcs=svcs
+            )
             if outp:
-                print(f"[OK] {v} → {outp}")
+                print(f"[OK] {input_video_name} → {outp}")
         except Exception as e:
-            print(f"[ERREUR] {v} → {e}")
+            print(f"[ERREUR] {input_video_name} → {e}")
 
     print("\nTerminé.")
     return 0
@@ -277,7 +281,7 @@ def main() -> int:
             print("Aucun fichier sélectionné.")
             return 1
         
-        code = run_auto(selected, svcs)
+        code = run_interactive(selected, svcs)
         
         choix = input("Voulez-vous générer une autre vidéo ? (o/n) : ").strip().lower()
         if not choix.startswith("o"):
