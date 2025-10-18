@@ -7,6 +7,7 @@ tmp/
 # Dossiers de travail de l’app
 input/
 output/
+srt/
 tools/
 licenses/
 add_dub/logs/
