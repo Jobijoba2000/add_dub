@@ -17,6 +17,7 @@ TOOLBOX_VERSION.txt
 options.conf
 gen_requirements.py
 README.txt
+mkvinfo.py
 *.zip
 *.lnk
 
