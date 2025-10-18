@@ -1,9 +1,11 @@
 # add_dub/cli/selectors.py
 import os
 import sys
+import add_dub.io.fs as io_fs
 from add_dub.adapters.ffmpeg import get_track_info
 from add_dub.adapters.mkvtoolnix import list_mkv_sub_tracks
 from add_dub.core.subtitles import find_sidecar_srt
+
 
 def choose_files(files):
     if not files:
@@ -21,6 +23,7 @@ def choose_files(files):
     except Exception:
         print("Sélection invalide. Traitement de tous les fichiers.")
         return files
+
 
 def choose_audio_track_ffmpeg_index(video_fullpath):
     tracks = get_track_info(video_fullpath)
@@ -44,20 +47,38 @@ def choose_audio_track_ffmpeg_index(video_fullpath):
         sys.exit(1)
     return tracks[chosen_idx].get("index")
 
+
 def choose_subtitle_source(video_fullpath):
     """
     Retourne:
         ("srt", srt_path)  ou  ("mkv", local_sub_index)
+
+    Règles:
+      - Si un SRT homonyme existe dans srt/ → on l'affiche et on LE PRIVILÉGIE.
+      - Sinon, si un sidecar .srt est à côté de la vidéo → on l'affiche.
+      - Les pistes MKV sont toujours listées derrière.
+      - Si SRT dans srt/ ET sidecar existent, on n'affiche QUE celui de srt/.
     """
-    base, ext = os.path.splitext(video_fullpath)
+    base_name = os.path.splitext(os.path.basename(video_fullpath))[0]
+    srt_in_srt = io_fs.join_srt(base_name + ".srt")
+    has_srt_in_srt = os.path.exists(srt_in_srt)
+
     sidecar = find_sidecar_srt(video_fullpath)
+
     choices = []
     labels = []
 
-    if sidecar:
+    # 1) SRT dans srt/ prioritaire (et exclusif vis-à-vis du sidecar)
+    if has_srt_in_srt:
+        choices.append(("srt", srt_in_srt))
+        labels.append(f"    0 : SRT (srt/) -> {os.path.basename(srt_in_srt)}")
+    # 2) Sinon, proposer le sidecar s'il existe
+    elif sidecar:
         choices.append(("srt", sidecar))
         labels.append(f"    0 : SRT sidecar -> {os.path.basename(sidecar)}")
 
+    # 3) Pistes MKV (le cas échéant)
+    _, ext = os.path.splitext(video_fullpath)
     if ext.lower().endswith(".mkv"):
         tracks, printable = list_mkv_sub_tracks(video_fullpath)
         for i, _t in enumerate(tracks):
@@ -76,7 +97,7 @@ def choose_subtitle_source(video_fullpath):
     s = input(f"Choisir la source ST (0..{len(choices)-1}) [0]: ").strip()
     try:
         idx = int(s) if s != "" else 0
-    except:
+    except Exception:
         idx = 0
     if idx < 0 or idx >= len(choices):
         idx = 0

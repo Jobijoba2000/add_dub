@@ -1,0 +1,1277 @@
+1
+00:01:31,146 --> 00:01:32,216
+Ça va, Cobra ?
+
+2
+00:01:33,786 --> 00:01:36,426
+Le Turtle risque de lâcher
+avant moi, on dirait.
+
+3
+00:01:40,066 --> 00:01:41,818
+La Guilde a de nouveaux renforts.
+
+4
+00:01:42,866 --> 00:01:44,698
+45 degrés à gauche.
+On fonce !
+
+5
+00:01:44,946 --> 00:01:46,744
+Puissance maxi !
+Go !
+
+6
+00:02:00,666 --> 00:02:02,304
+Zone de rocs flottants devant.
+
+7
+00:02:23,986 --> 00:02:25,579
+Nous l'avons franchie !
+
+8
+00:02:26,466 --> 00:02:29,299
+La Guilde y a perdu
+beaucoup d'appareils.
+
+9
+00:02:30,426 --> 00:02:34,545
+Malgré leurs pertes,
+on reste mal barrés !
+
+10
+00:02:43,306 --> 00:02:45,183
+La défense de la planète Wing !
+
+11
+00:02:47,546 --> 00:02:50,015
+Nous voilà entre Charybde et Scylla !
+
+12
+00:02:50,146 --> 00:02:52,217
+Serait-ce la fin de Cobra ?
+
+13
+00:02:52,586 --> 00:02:54,975
+À fond jusqu'au bout alors !
+
+14
+00:02:55,306 --> 00:02:56,819
+Allons-y, Lady !
+
+15
+00:03:07,066 --> 00:03:08,386
+Au laser !
+Feu !
+
+16
+00:03:09,706 --> 00:03:11,060
+Attends, Lady !
+
+17
+00:03:16,506 --> 00:03:18,019
+Que se passe-t-il ?
+
+18
+00:03:18,186 --> 00:03:20,746
+La patrouille de Wing
+a dépassé le Turtle
+
+19
+00:03:20,866 --> 00:03:22,618
+et se dirige vers la Guilde !
+
+20
+00:03:25,506 --> 00:03:28,339
+Ici Véga,
+shérif de la zone X de Wing !
+
+21
+00:03:28,466 --> 00:03:32,061
+Quittez notre territoire
+ou nous attaquons !
+
+22
+00:03:32,226 --> 00:03:36,185
+Un autre a violé votre territoire !
+
+23
+00:03:36,306 --> 00:03:38,616
+Que faites-vous de lui ?
+
+24
+00:03:38,786 --> 00:03:40,618
+Nous nous en occupons !
+
+25
+00:03:40,746 --> 00:03:43,386
+Cela ne vous regarde pas !
+Partez !
+
+26
+00:03:44,666 --> 00:03:48,182
+Vous osez vous opposer à la Guilde :
+quel cran !
+
+27
+00:03:48,346 --> 00:03:54,376
+Même la Guilde souffrirait
+contre nos appareils.
+
+28
+00:03:54,626 --> 00:03:56,378
+- Quoi ?
+- Attends !
+
+29
+00:03:56,866 --> 00:03:59,824
+D'accord !
+Nous vous le laissons.
+
+30
+00:04:00,466 --> 00:04:03,140
+Le shérif de la zone X de Wing, Véga.
+
+31
+00:04:03,226 --> 00:04:04,625
+Je m'en souviendrai.
+
+32
+00:04:05,466 --> 00:04:09,585
+ÉPISODE 15 :
+L'AMI DU CRISTAL DU DRAGON !
+
+33
+00:04:23,666 --> 00:04:26,784
+Tu nous as sauvés !
+Je te dois la vie !
+
+34
+00:04:26,906 --> 00:04:28,419
+Je te revaudrai ça !
+
+35
+00:04:28,546 --> 00:04:30,344
+Je suis le shérif.
+
+36
+00:04:30,466 --> 00:04:33,504
+Secourir les victimes de la Guilde
+est mon devoir.
+
+37
+00:04:33,626 --> 00:04:35,378
+Inutile de me remercier.
+
+38
+00:04:35,986 --> 00:04:37,977
+Tu dis que je suis un voyageur ?
+
+39
+00:04:38,106 --> 00:04:40,143
+Oui, un voyageur.
+
+40
+00:04:40,386 --> 00:04:43,378
+Je pense que c'est mieux
+pour nous deux.
+
+41
+00:04:45,066 --> 00:04:47,945
+Jamais rencontré de shérif
+si compréhensif !
+
+42
+00:04:48,066 --> 00:04:50,785
+La planète Wing...
+Je sens que je vais l'aimer.
+
+43
+00:04:50,986 --> 00:04:52,624
+Au revoir, Véga !
+
+44
+00:04:52,826 --> 00:04:56,342
+On se boira un verre de Talcaros
+la prochaine fois !
+
+45
+00:05:16,946 --> 00:05:17,902
+Cobra...
+
+46
+00:05:18,066 --> 00:05:20,342
+Cobra s'est fait tuer par la Guilde ?
+
+47
+00:05:34,626 --> 00:05:36,583
+Tu tiens vraiment à y aller, Cobra ?
+
+48
+00:05:37,026 --> 00:05:37,743
+Ouais...
+
+49
+00:05:37,866 --> 00:05:41,222
+J'avais promis à Véga
+qu'on boirait du Talcaros.
+
+50
+00:05:41,546 --> 00:05:46,620
+Cela fait 8 ans que Véga
+nous a sauvés sur Wing.
+
+51
+00:05:47,066 --> 00:05:49,819
+Pendant mes 5 ans de planque,
+
+52
+00:05:49,946 --> 00:05:53,905
+la planète Wing a été conquise
+par la Guilde.
+
+53
+00:05:54,226 --> 00:05:55,944
+Les villes sont en ruines
+
+54
+00:05:56,066 --> 00:05:59,024
+et les gouvernements manipulés
+par les pirates.
+
+55
+00:05:59,586 --> 00:06:01,497
+Véga a perdu son poste
+
+56
+00:06:01,626 --> 00:06:03,697
+et est recherché par la Guilde !
+
+57
+00:06:45,946 --> 00:06:49,143
+Arrête !
+J'suis pas chasseur de primes !
+
+58
+00:06:49,266 --> 00:06:51,576
+On m'a dit que tu montais un groupe.
+
+59
+00:06:51,706 --> 00:06:54,619
+Pour garder la fierté
+des habitants de Wing !
+
+60
+00:06:54,746 --> 00:06:58,376
+Cette mission mortelle
+ne concerne pas les Terriens.
+
+61
+00:06:58,466 --> 00:07:01,822
+N'sois pas si strict et laisse moi t'aider !
+
+62
+00:07:02,066 --> 00:07:03,215
+J'suis bon !
+
+63
+00:07:03,346 --> 00:07:06,384
+Si tu cherches du travail,
+va voir ailleurs !
+
+64
+00:07:12,546 --> 00:07:13,945
+Oh ! Ça va ?
+
+65
+00:07:16,946 --> 00:07:18,345
+Hé ben !
+
+66
+00:07:18,466 --> 00:07:20,821
+T'as acquis les réflexes du fugitif !
+
+67
+00:07:20,946 --> 00:07:23,859
+T'étais pas comme ça autrefois !
+
+68
+00:07:23,986 --> 00:07:25,545
+Tu me connais ?
+
+69
+00:07:25,666 --> 00:07:27,384
+Qui es-tu ?
+
+70
+00:07:28,626 --> 00:07:31,379
+Cobra !
+C-O-B-R-A
+
+71
+00:07:31,546 --> 00:07:32,616
+Cobra ?
+
+72
+00:07:36,586 --> 00:07:40,261
+Arrête tes sales blagues
+et casse-toi !
+
+73
+00:07:40,426 --> 00:07:42,383
+Je m'appelle Cobra !
+
+74
+00:07:42,506 --> 00:07:45,339
+Cobra est mort il y a cinq ans !
+
+75
+00:07:45,666 --> 00:07:47,816
+C'est vrai officiellement mais
+
+76
+00:07:47,946 --> 00:07:52,417
+je suis revenu tenir la promesse
+que je t'avais faite !
+
+77
+00:07:55,146 --> 00:07:56,341
+Promesse ?
+
+78
+00:07:58,506 --> 00:08:01,624
+Je t'avais promis qu'on boirait
+du Talcaros, non ?
+
+79
+00:08:01,706 --> 00:08:04,380
+Impossible !
+Cobra est bien mort !
+
+80
+00:08:06,546 --> 00:08:09,299
+T'es vraiment parano !
+
+81
+00:08:11,626 --> 00:08:14,823
+Dans ce cas, je vais te le prouver !
+
+82
+00:08:27,746 --> 00:08:29,305
+Le Psycho-gun...
+
+83
+00:08:32,186 --> 00:08:33,938
+L'univers est vaste,
+
+84
+00:08:34,066 --> 00:08:36,535
+mais un seul homme a un tel canon !
+
+85
+00:08:36,666 --> 00:08:38,816
+Cobra, c'est vraiment toi ?
+
+86
+00:08:39,066 --> 00:08:41,023
+Tu es donc vivant ?
+
+87
+00:08:42,026 --> 00:08:42,777
+Allez !
+
+88
+00:08:42,906 --> 00:08:46,183
+Tu me parles
+de cette mission mortelle ?
+
+89
+00:08:56,866 --> 00:08:59,016
+C'est le musée Loon sur Miro.
+
+90
+00:08:59,146 --> 00:09:04,744
+La Guilde y expose les œuvres d'art
+de ses planètes.
+
+91
+00:09:05,226 --> 00:09:08,298
+Voici le cristal du Dragon de Wing.
+
+92
+00:09:08,666 --> 00:09:11,465
+C'était la source d'énergie qui régulait
+
+93
+00:09:11,586 --> 00:09:13,623
+le climat instable de Wing.
+
+94
+00:09:13,706 --> 00:09:17,665
+Il est conservé au dernier étage
+du musée Loon.
+
+95
+00:09:17,866 --> 00:09:21,825
+Voler le cristal du Dragon
+est donc notre objectif.
+
+96
+00:09:22,866 --> 00:09:23,822
+Oui.
+
+97
+00:09:24,066 --> 00:09:29,903
+Sans le cristal, les plaines
+ont perdu verdure et fertilité !
+
+98
+00:09:30,266 --> 00:09:32,906
+Je veux récupérer le cristal
+
+99
+00:09:33,026 --> 00:09:36,621
+et refaire de Wing
+une planète verdoyante !
+
+100
+00:09:40,186 --> 00:09:42,097
+Véga, je comprends ton désir !
+
+101
+00:09:42,226 --> 00:09:45,981
+Mais Wing est sous le contrôle
+de la Guilde !
+
+102
+00:09:46,066 --> 00:09:49,377
+Même si on réussit,
+tu ne pourras pas l'utiliser.
+
+103
+00:09:49,546 --> 00:09:53,699
+Je dois le faire !
+Une fois la nouvelle répandue,
+
+104
+00:09:53,866 --> 00:09:57,063
+les patriotes se lèveront
+
+105
+00:09:57,186 --> 00:10:01,145
+et rejetteront les pirates de la Guilde
+dans l'espace !
+
+106
+00:10:03,186 --> 00:10:03,823
+Véga !
+
+107
+00:10:04,826 --> 00:10:05,816
+Rassure-toi !
+
+108
+00:10:05,946 --> 00:10:08,779
+Ma dernière crise est encore loin !
+
+109
+00:10:08,906 --> 00:10:12,376
+Les gens de Wing meurent
+six heures
+
+110
+00:10:12,506 --> 00:10:15,817
+après leur dernière crise...
+
+111
+00:10:15,986 --> 00:10:18,660
+Le cristal du Dragon est mon âme !
+
+112
+00:10:18,866 --> 00:10:22,746
+Au risque de ma dernière crise,
+je le récupérerai !
+
+113
+00:10:23,026 --> 00:10:27,179
+Une fois que nous l'aurons,
+Cobra, garde-le !
+
+114
+00:10:27,306 --> 00:10:32,176
+Jusqu'à ce que ma planète
+soit libérée de la Guilde !
+
+115
+00:10:33,226 --> 00:10:35,342
+Au risque de ta dernière crise ?
+
+116
+00:10:35,706 --> 00:10:37,265
+C'est triste...
+
+117
+00:10:38,666 --> 00:10:39,736
+D'accord !
+
+118
+00:10:39,986 --> 00:10:42,216
+Je serai le témoin de ta fin !
+
+119
+00:10:50,306 --> 00:10:53,025
+Quel endroit agaçant,
+la planète Miro !
+
+120
+00:10:53,266 --> 00:10:56,224
+J'ai l'impression de conduire
+dans un nuage !
+
+121
+00:10:56,586 --> 00:11:00,864
+On va finir par moisir ici !
+
+122
+00:11:00,986 --> 00:11:05,025
+Faisons ce musée rapidement,
+Pr. Davinch.
+
+123
+00:11:19,746 --> 00:11:22,056
+On le voit maintenant, Pr. Davinch.
+
+124
+00:11:22,186 --> 00:11:23,779
+Il semblerait...
+
+125
+00:11:33,306 --> 00:11:37,777
+Nous vous remercions de venir
+au musée Loon aujourd'hui.
+
+126
+00:11:38,066 --> 00:11:42,537
+Les œuvres y sont conservées
+dans des caissons
+
+127
+00:11:42,666 --> 00:11:47,217
+recréant l'environnement
+de leur planète d'origine.
+
+128
+00:11:47,346 --> 00:11:52,341
+Ainsi, vous pouvez les voir
+dans l'intégralité de leur beauté.
+
+129
+00:11:54,026 --> 00:11:56,745
+Je suis Davinch, l'expert artistique !
+
+130
+00:11:57,506 --> 00:12:00,225
+Nous vous attendions, Pr. Davinch !
+
+131
+00:12:00,466 --> 00:12:03,424
+Je suis Angle,
+la directrice du musée Loon.
+
+132
+00:12:03,746 --> 00:12:05,783
+- Enchantée.
+- Moi de même !
+
+133
+00:12:06,146 --> 00:12:08,786
+Mais quelle surprise !
+
+134
+00:12:08,906 --> 00:12:11,978
+Une belle femme comme directrice !
+
+135
+00:12:12,426 --> 00:12:13,905
+Et qui est monsieur ?
+
+136
+00:12:14,466 --> 00:12:15,661
+Mon assistant, Véga.
+
+137
+00:12:15,866 --> 00:12:18,426
+De quelle planète venez-vous,
+M. Véga ?
+
+138
+00:12:18,626 --> 00:12:20,902
+Pourquoi me demandez-vous ça ?
+
+139
+00:12:21,466 --> 00:12:22,297
+Eh bien...
+
+140
+00:12:22,466 --> 00:12:26,221
+Généralement, les experts en art
+sont du système solaire...
+
+141
+00:12:26,466 --> 00:12:28,616
+C'est de la discrimination !
+
+142
+00:12:28,746 --> 00:12:29,577
+Directrice Angle,
+
+143
+00:12:29,706 --> 00:12:32,459
+vous non plus n'êtes pas
+du système solaire !
+
+144
+00:12:32,586 --> 00:12:34,782
+Vos attributs sont trop plantureux !
+
+145
+00:12:34,906 --> 00:12:36,260
+Professeur Davinch !
+
+146
+00:12:36,866 --> 00:12:39,540
+Je vous guide !
+Suivez-moi, je vous prie.
+
+147
+00:12:39,826 --> 00:12:41,897
+Elle a l'air en colère.
+
+148
+00:12:42,546 --> 00:12:46,505
+40000 œuvres sont conservées
+dans ce musée.
+
+149
+00:12:47,146 --> 00:12:50,582
+Le temps ne nous permet pas
+de les estimer toutes.
+
+150
+00:12:50,986 --> 00:12:55,423
+Limitez-vous aux œuvres
+désignées d'office.
+
+151
+00:12:56,266 --> 00:13:00,180
+Je préférerais estimer
+ce genre de truc :
+
+152
+00:13:00,386 --> 00:13:02,946
+des jambes fuselées,
+des fesses fermes
+
+153
+00:13:03,066 --> 00:13:05,899
+et de beaux seins excitants !
+
+154
+00:13:06,186 --> 00:13:09,383
+Pr. Davinch !
+Êtes-vous réellement expert ?
+
+155
+00:13:09,706 --> 00:13:11,663
+Vous insultez les œuvres !
+
+156
+00:13:13,786 --> 00:13:17,256
+Combien vaut cette statue
+d'Antoninus par Mizala ?
+
+157
+00:13:17,386 --> 00:13:20,504
+C'est un chef d'œuvre de l'année
+2043 de l'ère Z.
+
+158
+00:13:20,866 --> 00:13:24,222
+La culture et l'esprit
+de cette ancienne civilisation...
+
+159
+00:13:24,306 --> 00:13:27,424
+La tête est de Mizala
+et de 2041 !
+
+160
+00:13:28,586 --> 00:13:33,023
+Mais le reste a été fait
+par son élève Iza en 2045.
+
+161
+00:13:34,266 --> 00:13:37,224
+- C'est vrai ! Quelle erreur !
+- C'est bon ! C'est bon !
+
+162
+00:13:37,346 --> 00:13:39,496
+Vous avez trop d'œuvres !
+
+163
+00:13:40,586 --> 00:13:42,384
+On m'a testé...
+
+164
+00:13:45,266 --> 00:13:49,419
+À propos, je n'vois aucune trace
+de la sécurité.
+
+165
+00:13:49,586 --> 00:13:52,465
+Ne vous inquiétez pas !
+Elle est là !
+
+166
+00:13:56,826 --> 00:13:59,420
+Ce sont des accompagnatrices, non ?
+
+167
+00:13:59,586 --> 00:14:03,545
+En cas d'urgence, elles sont
+d'efficaces agents de sécurité.
+
+168
+00:14:03,946 --> 00:14:06,745
+Le jour, la sécurité autour de la tour
+est extrême
+
+169
+00:14:06,866 --> 00:14:09,255
+et la nuit, nos chiens de garde
+ont notre confiance.
+
+170
+00:14:09,386 --> 00:14:11,024
+Des chiens de garde ?
+
+171
+00:14:15,866 --> 00:14:18,142
+La ville sombre.
+
+172
+00:14:20,386 --> 00:14:24,823
+Les canons anti-aériens
+qui ne laissent rien passer
+
+173
+00:14:24,946 --> 00:14:27,062
+s'enfoncent aussi.
+
+174
+00:14:27,306 --> 00:14:28,341
+La nuit tombe.
+
+175
+00:14:32,546 --> 00:14:35,857
+Et les éclairs remplacent
+ces canons.
+
+176
+00:14:36,186 --> 00:14:38,223
+Rien ne peut sortir la nuit.
+
+177
+00:14:38,386 --> 00:14:43,859
+Même les vaisseaux spatiaux
+se font détruire.
+
+178
+00:14:44,666 --> 00:14:48,546
+La foudre s'abat sur le moindre
+petit bout de métal.
+
+179
+00:14:48,706 --> 00:14:51,505
+C'est un gardien créé par la nature.
+
+180
+00:14:52,146 --> 00:14:57,220
+Seul ce musée construit comme
+un paratonnerre est sûr.
+
+181
+00:14:57,346 --> 00:14:59,940
+Canons le jour, éclairs la nuit ;
+
+182
+00:15:00,066 --> 00:15:02,296
+toute évasion est impossible.
+
+183
+00:15:06,106 --> 00:15:06,823
+Alors ?
+
+184
+00:15:06,946 --> 00:15:08,857
+Le travail avance bien ?
+
+185
+00:15:08,986 --> 00:15:11,944
+J'ai un problème avec les éclairs.
+
+186
+00:15:12,146 --> 00:15:15,104
+Dès qu'ils éclatent,
+mon nombril se ferme.
+
+187
+00:15:16,066 --> 00:15:17,943
+Nous allons fermer les salles.
+
+188
+00:15:18,066 --> 00:15:19,818
+Vous continuerez demain.
+
+189
+00:15:19,946 --> 00:15:21,061
+On fait comme ça, alors.
+
+190
+00:15:21,186 --> 00:15:23,143
+Je n'arrive pas à me calmer.
+
+191
+00:15:30,026 --> 00:15:31,664
+Qu'avez-vous, M. Véga ?
+
+192
+00:15:34,626 --> 00:15:36,617
+Il a une maladie qui provoque
+
+193
+00:15:36,746 --> 00:15:38,657
+des crises épisodiques.
+
+194
+00:15:38,786 --> 00:15:40,982
+Un peu de repos, et ça Ira mieux.
+
+195
+00:15:43,066 --> 00:15:44,625
+Il s'est réveillé.
+
+196
+00:15:44,746 --> 00:15:45,622
+Ouf !
+
+197
+00:15:45,786 --> 00:15:48,221
+Il n'y a pas de médecin
+pour extra-terrestres ici.
+
+198
+00:15:48,346 --> 00:15:50,019
+Eh bien, je vous laisse.
+
+199
+00:15:52,226 --> 00:15:55,218
+N'allez pas dans les salles
+d'exposition la nuit.
+
+200
+00:15:55,386 --> 00:15:57,377
+Vous n'y seriez pas en sécurité.
+
+201
+00:15:57,586 --> 00:15:58,542
+Sécurité ?
+
+202
+00:15:58,706 --> 00:16:01,619
+Les chiens de garde sont violents.
+C'est tout.
+
+203
+00:16:01,746 --> 00:16:03,100
+À plus tard !
+
+204
+00:16:03,866 --> 00:16:06,699
+Cobra ! Il me semble que
+c'est le moment.
+
+205
+00:16:06,866 --> 00:16:10,336
+Ma prochaine crise sera la dernière.
+
+206
+00:16:11,586 --> 00:16:14,499
+Je vois.
+Pas le temps de nous préparer.
+
+207
+00:16:14,666 --> 00:16:17,101
+Ok !
+On en finit ce soir !
+
+208
+00:16:25,786 --> 00:16:27,618
+C'est étrange.
+
+209
+00:16:27,746 --> 00:16:30,215
+Ni caméra ni garde de sécurité.
+
+210
+00:16:31,306 --> 00:16:35,584
+Y a les éclairs mais c'est
+quand même léger !
+
+211
+00:16:43,066 --> 00:16:44,465
+Me fais pas peur !
+
+212
+00:16:44,626 --> 00:16:48,017
+Espèce de dinosaure empaillé
+et renfrogné !
+
+213
+00:17:01,986 --> 00:17:05,263
+Pigé !
+Pas besoin de garde avec ça !
+
+214
+00:17:05,426 --> 00:17:07,337
+C'est lui, le chien de garde !
+
+215
+00:17:09,986 --> 00:17:12,739
+Scanners infra-rouges,
+détecteurs de son intégrés
+
+216
+00:17:12,866 --> 00:17:14,504
+et les yeux sont des caméras !
+
+217
+00:17:16,986 --> 00:17:19,899
+Bon, ben, puisqu'il est là,
+autant l'utiliser !
+
+218
+00:17:22,146 --> 00:17:24,342
+Le détecteur de son !
+
+219
+00:17:30,066 --> 00:17:32,421
+"Le phare n'éclaire pas sa base !"
+
+220
+00:17:32,546 --> 00:17:34,617
+Il ne voit pas dans son dos !
+
+221
+00:17:34,746 --> 00:17:38,580
+Allez, mène-moi au cristal
+du Dragon !
+
+222
+00:17:40,946 --> 00:17:42,220
+Quoi ?
+
+223
+00:17:48,266 --> 00:17:51,543
+Étonnant !
+Il y en a d'autres ?
+
+224
+00:17:52,066 --> 00:17:54,501
+Véga, tout marche impeccable.
+
+225
+00:17:54,626 --> 00:17:55,422
+Dépêche-toi !
+
+226
+00:17:55,546 --> 00:17:57,617
+La crise va bientôt commencer !
+
+227
+00:17:57,786 --> 00:17:58,537
+Quoi ?
+
+228
+00:17:58,666 --> 00:18:00,259
+Tu penses tenir ?
+
+229
+00:18:00,426 --> 00:18:03,339
+Je ne resterai plus longtemps
+conscient.
+
+230
+00:18:03,466 --> 00:18:05,059
+Dépêche-toi !
+
+231
+00:18:09,386 --> 00:18:11,184
+Qu'est-ce qu'il y a Véga ?
+Véga ?
+
+232
+00:18:15,666 --> 00:18:16,462
+Étrange !
+
+233
+00:18:16,586 --> 00:18:19,977
+Le détecteur de son du robot
+n°7 ne marche pas.
+
+234
+00:18:22,266 --> 00:18:24,223
+Le récepteur marche.
+
+235
+00:18:24,466 --> 00:18:26,377
+Ce doit être le robot.
+
+236
+00:18:28,186 --> 00:18:29,779
+Où est le n°7 ?
+
+237
+00:18:29,906 --> 00:18:33,137
+Au dernier étage, vers la salle
+du Cristal du Dragon.
+
+238
+00:18:33,306 --> 00:18:34,535
+Le n°8 y est aussi.
+
+239
+00:18:34,666 --> 00:18:36,498
+Vérifions avec lui.
+
+240
+00:18:44,506 --> 00:18:45,826
+Là !
+Le voilà, le voilà !
+
+241
+00:18:48,066 --> 00:18:50,376
+Mon adorable petit
+Cristal du Dragon !
+
+242
+00:18:52,746 --> 00:18:55,977
+Regarde !
+Quelqu'un sur la tête du n°7 !
+
+243
+00:18:57,226 --> 00:18:59,183
+C'est le Pr. Davinch !
+
+244
+00:18:59,666 --> 00:19:00,622
+Non.
+
+245
+00:19:00,826 --> 00:19:03,898
+Ce doit être un imposteur
+venu voler le cristal.
+
+246
+00:19:04,106 --> 00:19:06,063
+N°8 !
+Tue cet homme !
+
+247
+00:19:06,186 --> 00:19:07,699
+Ils m'ont découvert !
+
+248
+00:19:34,706 --> 00:19:36,105
+Alerte ! Alerte !
+
+249
+00:19:36,266 --> 00:19:38,143
+Intrus au dernier étage !
+
+250
+00:19:38,266 --> 00:19:40,496
+Que la sécurité isole cet étage !
+
+251
+00:19:40,666 --> 00:19:42,418
+Pourquoi ce raffut ?
+
+252
+00:19:42,546 --> 00:19:44,583
+Un voleur au dernier étage !
+
+253
+00:19:44,706 --> 00:19:46,822
+Ce pseudo Davinch
+est un imposteur !
+
+254
+00:19:46,946 --> 00:19:48,095
+Comment ?
+
+255
+00:19:48,306 --> 00:19:51,185
+Véga ! Tu m'entends ?
+J'ai le Cristal du Dragon !
+
+256
+00:19:51,306 --> 00:19:52,626
+Oh oui, je t'entends !
+
+257
+00:19:52,746 --> 00:19:55,340
+Difficile de dormir avec ce bordel !
+
+258
+00:19:55,466 --> 00:19:56,615
+J'ai un peu gaffé !
+
+259
+00:19:56,746 --> 00:19:57,736
+Et toi ?
+
+260
+00:19:57,866 --> 00:20:00,904
+Ils arrivent !
+J'peux pas t'attendre !
+
+261
+00:20:01,026 --> 00:20:02,300
+Pas besoin...
+
+262
+00:20:02,426 --> 00:20:05,976
+Dans moins d'une minute,
+je dis adieu à ce corps...
+
+263
+00:20:06,386 --> 00:20:09,344
+Soyons précis !
+Dans une minute pile !
+
+264
+00:20:09,466 --> 00:20:11,423
+Ok !
+Je mets la minuterie !
+
+265
+00:20:13,666 --> 00:20:15,816
+Mais quels imbéciles !
+
+266
+00:20:16,066 --> 00:20:18,342
+Ils pensent pouvoir fuir cette tour ?
+
+267
+00:20:18,586 --> 00:20:22,022
+Dans les nuages aux éclairs
+et du dernier étage...
+
+268
+00:20:23,386 --> 00:20:27,619
+Même une petite fusée ne passerait
+pas tous ces éclairs !
+
+269
+00:20:28,346 --> 00:20:32,465
+Les murs électrifiés de la tour
+sont impraticables !
+
+270
+00:20:32,826 --> 00:20:36,421
+M. l'imposteur, vous n'avez
+aucun moyen de fuir !
+
+271
+00:20:52,346 --> 00:20:54,303
+J'n'ai plus rien de métallique !
+
+272
+00:21:01,626 --> 00:21:04,539
+La sécurité arrive bientôt !
+
+273
+00:21:20,146 --> 00:21:21,944
+3...
+2...
+
+274
+00:21:22,106 --> 00:21:23,062
+1
+
+275
+00:21:23,266 --> 00:21:24,222
+0 !
+
+276
+00:21:25,826 --> 00:21:27,783
+Véga !
+À toi de jouer !
+
+277
+00:21:31,666 --> 00:21:33,225
+Belle réception !
+
+278
+00:21:37,706 --> 00:21:39,379
+Il n'y a personne !
+
+279
+00:21:39,866 --> 00:21:43,222
+Directrice Angle !
+Il n'y a personne au dernier étage !
+
+280
+00:21:43,426 --> 00:21:44,825
+Impossible !
+
+281
+00:21:45,066 --> 00:21:45,783
+Ils auraient...?
+
+282
+00:21:46,066 --> 00:21:47,625
+Non, ils n'auraient pas pu !
+
+283
+00:21:54,346 --> 00:21:55,905
+Il a mué...
+
+284
+00:21:56,386 --> 00:21:57,785
+C'est ça.
+
+285
+00:21:57,906 --> 00:22:01,024
+Le pseudo assistant était
+un habitant de Wing.
+
+286
+00:22:10,666 --> 00:22:15,615
+Ils ne vivent que six heures
+après leur mue.
+
+287
+00:22:17,986 --> 00:22:20,705
+Véga !
+On fonce au Turtle !
+
+288
+00:22:28,706 --> 00:22:29,662
+Véga !
+
+289
+00:22:30,066 --> 00:22:33,855
+Je protégerai ton Cristal du Dragon !

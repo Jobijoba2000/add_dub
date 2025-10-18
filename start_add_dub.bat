@@ -70,7 +70,6 @@ if %CURRENT% LSS %REQUIRED% (
     set "TMPDL=%ROOT%tmp\toolbox_%REQUIRED%.zip"
     set "UNPACK=%ROOT%tmp\_unpack_toolbox_%REQUIRED%"
 
-    rem Nettoyage securise du dossier d'unpack
     if exist "!UNPACK!" rd /s /q "!UNPACK!" >nul 2>&1
     mkdir "!UNPACK!" >nul 2>&1
 
@@ -96,7 +95,6 @@ if %CURRENT% LSS %REQUIRED% (
         exit /b 1
     )
 
-    rem --- Validation de la toolbox unpackee ---------------------------------
     if not exist "!UNPACK!\tools\python\python.exe" (
         echo [ERREUR] Toolbox invalide : python portable introuvable dans tools\python.
         goto :unpack_fail
@@ -110,9 +108,7 @@ if %CURRENT% LSS %REQUIRED% (
         goto :unpack_fail
     )
 
-    rem --- Copie SECURISEE : uniquement tools/ et licenses/ ------------------
     echo [ETAPE] Deploiement des outils ^(copie controlee^)... 
-    rem Robocopy retourne 0,1,2,3,5,6,7 comme succes; on ignore le code pour simplifier.
     robocopy "!UNPACK!\tools"     "%ROOT%tools"     /E /R:1 /W:1 >nul
     if errorlevel 8 (
         echo [ERREUR] Echec de copie du dossier tools.
@@ -126,19 +122,15 @@ if %CURRENT% LSS %REQUIRED% (
         )
     )
 
-    rem --- Ecrire la version installee ---------------------------------------
     if exist "!UNPACK!\TOOLBOX_VERSION.txt" (
         copy /y "!UNPACK!\TOOLBOX_VERSION.txt" "%ROOT%%CUR_FILE%" >nul
     ) else (
-        rem Si le fichier manque, on ecrit la version requise pour rester coherent
         > "%ROOT%%CUR_FILE%" echo %REQUIRED%
     )
 
-    rem Nettoyage temporaire
     if exist "!UNPACK!" rd /s /q "!UNPACK!" >nul 2>&1
     if exist "!TMPDL!" del /q "!TMPDL!" >nul 2>&1
 
-    rem Relecture de la version installee
     set "CURRENT=0"
     if exist "%ROOT%%CUR_FILE%" set /p CURRENT=<"%ROOT%%CUR_FILE%"
     if "!CURRENT!" NEQ "%REQUIRED%" (
@@ -184,7 +176,6 @@ if not exist "%ROOT%.venv\Scripts\python.exe" (
 
 call "%ROOT%.venv\Scripts\activate.bat"
 
-
 rem --- Dependances ------------------------------------------------------------
 if exist "%ROOT%requirements.txt" (
     if not exist "%ROOT%.venv\.deps_ok" (
@@ -202,7 +193,13 @@ rem --- Boucle d'execution -----------------------------------------------------
 :loop
 echo.
 echo → Lancement du module add_dub
-python -m add_dub
+
+rem Si des arguments sont passes au .bat, on les relaie au module Python
+if "%~1"=="" (
+    start "" /HIGH /WAIT /B python -m add_dub
+) else (
+    start "" /HIGH /WAIT /B python -m add_dub %*
+)
 
 if errorlevel 1 goto fail
 echo.

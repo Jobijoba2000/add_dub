@@ -1,47 +1,74 @@
-# add_dub/cli/args.py
-# 4 espaces d'indentation
 from __future__ import annotations
 
+# add_dub/cli/args.py
 import argparse
-from typing import Tuple
+from typing import Tuple, List
+
+from add_dub.config.effective import effective_values
 
 
-def parse_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
+def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     """
-    Parse uniquement ce qui nous intéresse maintenant, sans casser l'existant.
-    On utilise parse_known_args pour ignorer les flags futurs tant qu'ils ne sont pas implémentés.
-
-    Retourne (args, unknown) où:
-        - args: Namespace avec les options reconnues (ex: --interactive)
-        - unknown: liste des autres tokens laissés de côté (pour évolution ultérieure)
+    Les defaults d'argparse viennent du builder partagé (options.conf > defaults.py).
+    Si l'utilisateur ne passe pas un flag, il récupère ces valeurs "effectives".
     """
+    fused = effective_values()
+
     parser = argparse.ArgumentParser(
         prog="add_dub",
-        add_help=True,
-        description="add_dub — lance l'outil (interactif par défaut)."
+        description="AdDub — Ajout de doublage TTS sur vidéos."
     )
 
-    # Modes (pour l’instant on ne branche réellement que --interactive)
-    parser.add_argument(
-        "--interactive",
-        action="store_true",
-        help="Force le mode interactif (comportement actuel)."
-    )
+    # Modes
+    g_mode = parser.add_mutually_exclusive_group()
+    g_mode.add_argument("--interactive", action="store_true", help="Lance l'interface interactive (défaut).")
+    g_mode.add_argument("--batch", action="store_true", help="Traite sans interaction.")
 
-    # On accepte déjà ces options pour l’avenir, sans les utiliser tout de suite.
-    parser.add_argument(
-        "--batch",
-        action="store_true",
-        help="(Réservé) Mode non-interactif. Ignoré tant que non implémenté."
-    )
-    parser.add_argument(
-        "--files",
-        nargs="+",
-        metavar="FICHIER",
-        help="(Réservé) Fichiers à traiter en mode batch. Ignoré tant que non implémenté."
-    )
+    # Actions utilitaires
+    parser.add_argument("--list-voices", action="store_true", help="Affiche les voix disponibles et quitte.")
 
-    # IMPORTANT: ne pas lever d'erreur sur les options non encore gérées
+    # Cibles (batch)
+    parser.add_argument("--input", "-i", nargs="+", metavar="PATH",
+                        help="Fichiers vidéo ou dossiers à traiter. En dossier: parcourt les vidéos détectables.")
+    parser.add_argument("--recursive", "-r", action="store_true", help="Parcourt les dossiers récursivement (batch).")
+
+    # Sélection technique
+    parser.add_argument("--audio-index", type=int, default=None,
+                        help="Index global FFmpeg de la piste audio source (ffprobe->streams[index]).")
+    parser.add_argument("--voice", metavar="VOICE_ID", default=fused["voice"],
+                        help="Identifiant de la voix TTS à utiliser (optionnel).")
+
+    # Mixages / niveaux / calages — defaults issus de la fusion conf→defaults
+    parser.add_argument("--offset-ms", type=int, default=fused["offset_ms"],
+                        help="Décalage global des sous-titres/voix (ms).")
+    parser.add_argument("--offset-video-ms", type=int, default=fused["offset_video_ms"],
+                        help="Décalage de la vidéo (ms) appliqué dans le mux final.")
+    parser.add_argument("--ducking-db", type=float, default=fused["ducking_db"],
+                        help="Réduction du fond (dB) pendant la voix (ducking).")
+    parser.add_argument("--bg-mix", type=float, default=fused["bg_mix"],
+                        help="Gain de la piste 'fond' (après aformat/resample), multiplicatif.")
+    parser.add_argument("--tts-mix", type=float, default=fused["tts_mix"],
+                        help="Gain de la piste 'tts' (après aformat/resample), multiplicatif.")
+    parser.add_argument("--min-rate-tts", type=float, default=fused["min_rate_tts"],
+                        help="Vitesse minimale de lecture TTS (facteur).")
+    parser.add_argument("--max-rate-tts", type=float, default=fused["max_rate_tts"],
+                        help="Vitesse maximale de lecture TTS (facteur).")
+
+    # Codecs / sortie
+    parser.add_argument("--audio-codec", default=fused["audio_codec"],
+                        choices=["ac3", "aac", "libopus", "opus", "flac", "libvorbis", "vorbis", "pcm_s16le"],
+                        help="Codec audio cible pour la piste doublage+original.")
+    parser.add_argument("--audio-bitrate", type=int, default=fused["audio_bitrate"],
+                        help="Bitrate audio (kb/s) pour le codec cible (si pertinent).")
+    parser.add_argument("--output-dir", default=None, metavar="PATH",
+                        help="Dossier de sortie (défaut: ./output).")
+
+    # Flags booléens (inchangés)
+    parser.add_argument("--overwrite", action="store_true", help="Écrase les sorties existantes si présent.")
+    parser.add_argument("--dry-run", action="store_true", help="Montre ce qui serait fait sans écrire les fichiers.")
+    parser.add_argument("--limit-duration-sec", type=int, default=None,
+                        help="Limite la durée traitée (tests rapides).")
+
     args, unknown = parser.parse_known_args(argv)
     return args, unknown
 
@@ -49,9 +76,10 @@ def parse_args(argv: list[str]) -> Tuple[argparse.Namespace, list[str]]:
 def want_interactive(args: argparse.Namespace) -> bool:
     """
     Décide si on doit lancer l'interactif.
-    Aujourd'hui: interactif par défaut, ou si --interactive est présent.
+    - Interactif si --interactive
+    - Interactif si rien n'est précisé
+    - Batch si --batch
     """
-    if getattr(args, "interactive", False):
-        return True
-    # Tant que le batch n'est pas implémenté, on reste en interactif par défaut.
+    if getattr(args, "batch", False):
+        return False
     return True

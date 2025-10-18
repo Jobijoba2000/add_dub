@@ -1,5 +1,4 @@
 # add_dub/core/pipeline.py
-
 import os
 import subprocess
 import time
@@ -8,7 +7,7 @@ from typing import Callable, Optional, Iterable
 
 from pydub import AudioSegment
 
-from add_dub.io.fs import join_input, join_output
+from add_dub.io.fs import join_input, join_output, join_tmp
 from add_dub.core.subtitles import parse_srt_file, strip_subtitle_tags_inplace
 from add_dub.core.ducking import lower_audio_during_subtitles
 from add_dub.adapters.ffmpeg import (
@@ -21,61 +20,7 @@ from add_dub.core.services import Services
 from pprint import pprint
 from add_dub.logger import (log_call, log_time)
 
-def _dub_code_from_voice(voice_id: str | None) -> str:
-    from add_dub.core.tts import list_available_voices
-    if not voice_id:
-        return "fr"
-    try:
-        voices = list_available_voices()
-    except Exception:
-        voices = []
-    lang = ""
-    vid = str(voice_id).strip()
-    for v in voices:
-        if str(v.get("id", "")).strip() == vid:
-            lang = (v.get("lang") or "").strip()
-            break
-    if not lang:
-        m = re.search(r"([a-zA-Z]{2})(?:[-_][A-Za-z]{2})?", vid)
-        if m:
-            lang = m.group(0)
-    base = (lang.split("-")[0] if lang else "fr").lower()
-    return re.sub(r"[^a-z]", "", base) or "fr"
-
-def _step(msg: str) -> None:
-    print("\n" + msg)
-
-def _video_ext_from_codec_args(args: Iterable[str]) -> str:
-    codec = None
-    a = list(args) if args is not None else []
-    for i, tok in enumerate(a):
-        if tok == "-c:a" and i + 1 < len(a):
-            codec = a[i + 1].lower()
-            break
-    return ".mkv"
-
-def _audio_ext_from_codec_args(args: Iterable[str]) -> str:
-    codec = None
-    a = list(args) if args is not None else []
-    for i, tok in enumerate(a):
-        if tok == "-c:a" and i + 1 < len(a):
-            codec = a[i + 1].lower()
-            break
-    if codec in ("aac",):
-        return ".m4a"
-    if codec in ("libmp3lame", "mp3"):
-        return ".mp3"
-    if codec in ("ac3",):
-        return ".ac3"
-    if codec in ("flac",):
-        return ".flac"
-    if codec in ("libopus", "opus"):
-        return ".opus"
-    if codec in ("libvorbis", "vorbis"):
-        return ".ogg"
-    if codec in ("pcm_s16le",):
-        return ".wav"
-    return ".mka"
+# ... (_dub_code_from_voice etc. inchangé)
 
 @log_time
 @log_call
@@ -96,7 +41,6 @@ def process_one_video(
 
     print(input_video_name)
 
-    # video_full = join_input(video_name)
     base, ext = os.path.splitext(os.path.basename(input_video_path))
 
     # 1) Piste audio source
@@ -114,20 +58,18 @@ def process_one_video(
     # 3) Résolution vers un SRT exploitable
     srt_path = svcs.resolve_srt_for_video(input_video_path, sub_choice)
     if not srt_path:
-        _step(f"Impossible d'obtenir un SRT pour {input_video_name}.")
+        print(f"Impossible d'obtenir un SRT pour {input_video_name}.")
         return None
 
     # 4) Nettoyage SRT
     strip_subtitle_tags_inplace(srt_path)
 
-    # 5) Libellé de la piste d'origine
-    orig_audio_lang = opts.orig_audio_lang
-    if not orig_audio_lang:
-        orig_audio_lang = svcs.ask_str("Nom de la piste d'origine (ex. Japonais)", "Original")
+    # 5) Libellé langue d'origine
+    orig_audio_lang = opts.orig_audio_lang or "Original"
 
-    # 6) Extraction audio d'origine (WAV PCM)
-    orig_wav = join_output(f"{test_prefix}{base}_orig.wav")
-    _step("Extraction de l'audio d'origine (WAV PCM)...")
+    # 6) Extraction audio d'origine → **tmp/**
+    orig_wav = join_tmp(f"{base}_orig.wav")
+    print("\nExtraction de l'audio d'origine (WAV PCM)...")
     extract_audio_track(
         input_video_path,
         audio_idx,
@@ -147,9 +89,9 @@ def process_one_video(
         print("Aucun sous-titre exploitable.")
         return None
 
-    # 8) Génération TTS alignée (WAV)
-    tts_wav = join_output(f"{test_prefix}{base}_tts.wav")
-    _step("Génération TTS (WAV)...")
+    # 8) Génération TTS alignée → **tmp/**
+    tts_wav = join_tmp(f"{test_prefix}{base}_tts.wav")
+    print("\nGénération TTS (WAV)...")
     svcs.generate_dub_audio(
         srt_file=srt_path,
         output_wav=tts_wav,
@@ -158,9 +100,9 @@ def process_one_video(
         target_total_duration_ms=orig_len_ms,
     )
 
-    # 9) Ducking de l'audio d'origine pendant les dialogues
-    ducked_wav = join_output(f"{test_prefix}{base}_ducked.wav")
-    _step("Ducking de l'audio original pendant les dialogues...")
+    # 9) Ducking → **tmp/**
+    ducked_wav = join_tmp(f"{test_prefix}{base}_ducked.wav")
+    print("\nDucking de l'audio original pendant les dialogues...")
     lower_audio_during_subtitles(
         audio_file=orig_wav,
         subtitles=subtitles,
@@ -168,13 +110,37 @@ def process_one_video(
         reduction_db=opts.db_reduct,
         offset_ms=opts.offset_ms,
     )
- 
-    # 11) Sortie finale
-    final_ext = _video_ext_from_codec_args(opts.audio_codec_args)
-    dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
-    final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}")
 
-    _step("Mixage/Encodage/Mux final...")
+    # 10) Sortie finale
+    final_ext = ".mkv"  # conteneur cible
+    # code dub pour suffix
+    from add_dub.core.tts import list_available_voices
+    def _dub_code_from_voice(voice_id: str | None) -> str:
+        if not voice_id:
+            return "fr"
+        try:
+            voices = list_available_voices()
+        except Exception:
+            voices = []
+        lang = ""
+        vid = str(voice_id).strip()
+        for v in voices:
+            if str(v.get("id", "")).strip() == vid:
+                lang = (v.get("lang") or "").strip()
+                break
+        if not lang:
+            import re as _re
+            m = _re.search(r"([a-zA-Z]{2})(?:[-_][A-Za-z]{2})?", vid)
+            if m:
+                lang = m.group(0)
+        base = (lang.split("-")[0] if lang else "fr").lower()
+        import re as _re
+        return _re.sub(r"[^a-z]", "", base) or "fr"
+
+    dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
+    final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}", output_dir_path)
+
+    print("\nMixage/Encodage/Mux final...")
     dub_in_one_pass(
         video_fullpath=input_video_path,
         bg_wav=ducked_wav,
@@ -184,17 +150,14 @@ def process_one_video(
         output_video_path=final_video,
         opts=opts,
     )
-  
-    # 12) Nettoyage
-    for f in (
-        orig_wav,
-        tts_wav,
-        ducked_wav,
-    ):
+
+    # 11) Nettoyage des **tmp/**
+    for f in (orig_wav, tts_wav, ducked_wav):
         try:
             if f and os.path.exists(f):
                 os.remove(f)
         except Exception:
             pass
-    
+    # import time
+    # time.sleep(60)
     return final_video

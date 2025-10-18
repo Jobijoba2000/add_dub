@@ -1,18 +1,20 @@
 # add_dub/cli/main.py
+
 import os
 import sys
 from dataclasses import replace
 
-from add_dub.io.fs import ensure_base_dirs, join_input
+import add_dub.io.fs as io_fs  # ← module, pas des valeurs copiées
+from add_dub.io.fs import ensure_base_dirs, set_base_dirs, join_input, join_output
 
 from add_dub.core.subtitles import list_input_videos, resolve_srt_for_video
 from add_dub.core.pipeline import process_one_video
-from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
+from add_dub.core.codecs import final_audio_codec_args
 from add_dub.core.tts_generate import generate_dub_audio
 from add_dub.core.tts import is_valid_voice_id, get_system_default_voice_id, list_available_voices
 from add_dub.core.subtitles import resolve_srt_for_video
 
-from add_dub.cli.ui import ask_option, ask_mode, ask_yes_no
+from add_dub.cli.ui import ask_option
 from add_dub.cli.selectors import (
     choose_audio_track_ffmpeg_index,
     choose_files,
@@ -26,10 +28,11 @@ from add_dub.config.opts_loader import load_options
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
 from add_dub.adapters.mkvtoolnix import audio_video_offset_ms
-from add_dub.io.fs import join_input, join_output
+
+# Builder centralisé (options.conf > defaults.py)
+from add_dub.config.effective import build_default_opts
 
 opts = load_options()
-
 
 
 def build_services() -> Services:
@@ -42,41 +45,8 @@ def build_services() -> Services:
     )
 
 
-def build_default_opts() -> DubOptions:
-    audio_codec = str(opts["audio_codec"].value) if "audio_codec" in opts else cfg.AUDIO_CODEC_FINAL
-    audio_bitrate = int(opts["audio_bitrate"].value) if "audio_bitrate" in opts else cfg.AUDIO_BITRATE
-    audio_args = final_audio_codec_args(audio_codec, f"{audio_bitrate}k")
-    sub_codec = subtitle_codec_for_container(cfg.AUDIO_CODEC_FINAL)
-    
-    if "voice_id" in opts:
-        if not is_valid_voice_id(str(opts["voice_id"].value)):
-            opts["voice_id"].display = True
-        voice_id = opts["voice_id"].value 
-    else:
-        voice_id = cfg.VOICE_ID
-        
-
-    return DubOptions(
-        audio_ffmpeg_index=None,
-        sub_choice=None,
-        orig_audio_lang=opts["orig_audio_lang"].value if "orig_audio_lang" in opts else cfg.ORIG_AUDIO_LANG,
-        db_reduct=float(opts["db"].value) if "db" in opts else cfg.DB_REDUCT,
-        offset_ms=int(opts["offset"].value) if "offset" in opts else cfg.OFFSET_STR,
-        bg_mix=float(opts["bg"].value) if "bg" in opts else cfg.BG_MIX,
-        tts_mix=float(opts["tts"].value) if "tts" in opts else cfg.TTS_MIX,
-        min_rate_tts=float(opts["min_rate_tts"].value) if "min_rate_tts" in opts else cfg.MIN_RATE_TTS,
-        max_rate_tts=float(opts["max_rate_tts"].value) if "max_rate_tts" in opts else cfg.MAX_RATE_TTS,
-        audio_codec=audio_codec,
-        audio_bitrate=audio_bitrate,
-        voice_id = voice_id,
-        audio_codec_args=tuple(audio_args),
-        sub_codec=sub_codec,
-        offset_video_ms=int(opts["offset_video"].value) if "offset_video" in opts else cfg.OFFSET_VIDEO,
-    )
-
-
 # -------------------------------
-# Sélection langue de doublage → voix (AJOUT)
+# Sélection langue de doublage → voix (identique à ta version)
 # -------------------------------
 
 def _lang_base(tag: str | None) -> str:
@@ -93,7 +63,6 @@ def _group_by_lang_base(voices: list[dict]) -> list[tuple[str, list[dict]]]:
     for v in voices:
         b = _lang_base(v.get("lang"))
         buckets.setdefault(b, []).append(v)
-    # tri par code
     return sorted(buckets.items(), key=lambda kv: kv[0] or "~")
 
 
@@ -105,10 +74,6 @@ def _display_name_short(d: str) -> str:
 
 
 def _ask_dub_language_and_voice(default_voice: str | None) -> str | None:
-    """
-    Affiche les langues détectées (par numéro), puis les voix (prénom + ID complet).
-    Retourne l'ID complet de la voix choisie, ou None.
-    """
     all_voices = list_available_voices()
     if not all_voices:
         print("[INFO] Aucune voix OneCore détectée.")
@@ -154,6 +119,31 @@ def _ask_dub_language_and_voice(default_voice: str | None) -> str | None:
     return None
 
 
+def _ask_dirs_if_needed() -> None:
+    """
+    Si les clés input_dir / output_dir / tmp_dir existent dans options.conf
+    **avec le flag 'd'**, on demande en interactif et on applique immédiatement.
+    """
+    in_entry = opts.get("input_dir")
+    out_entry = opts.get("output_dir")
+    tmp_entry = opts.get("tmp_dir")
+
+    new_in = None
+    new_out = None
+    new_tmp = None
+
+    if in_entry and getattr(in_entry, "display", False):
+        new_in = ask_option("input_dir", opts, "str", "Dossier d'entrée (input_dir)", in_entry.value)
+    if out_entry and getattr(out_entry, "display", False):
+        new_out = ask_option("output_dir", opts, "str", "Dossier de sortie (output_dir)", out_entry.value)
+    if tmp_entry and getattr(tmp_entry, "display", False):
+        new_tmp = ask_option("tmp_dir", opts, "str", "Dossier temporaire (tmp_dir)", tmp_entry.value)
+
+    if any(v is not None for v in (new_in, new_out, new_tmp)):
+        set_base_dirs(new_in, new_out, new_tmp)
+        # `ensure_base_dirs()` sera appelé juste après dans `main()`
+
+
 def _ask_config_for_video(
     *,
     base_opts: DubOptions,
@@ -166,24 +156,19 @@ def _ask_config_for_video(
 
     if force_choose_tracks_and_subs:
         aidx = svcs.choose_audio_track(input_video_path)
-        # offset_audio = audio_video_offset_ms(video_fullpath,aidx)
-        # print(offset_audio)
         sc = svcs.choose_subtitle_source(input_video_path)
         if sc is None:
             print("Aucune source de sous-titres choisie.")
             return None
 
-    # --- Sélection VOIX de doublage (garantie d'un voice_id valide) ---
     voice_entry = opts.get("voice_id")
     chosen_voice = base_opts.voice_id or None
 
-    # Si l’option est marquée interactive, on demande la langue puis la voix.
     if voice_entry and getattr(voice_entry, "display", False):
         maybe_voice = _ask_dub_language_and_voice(default_voice=base_opts.voice_id)
         if maybe_voice:
             chosen_voice = maybe_voice
 
-    # Si toujours vide ou invalide, on applique des fallbacks robustes.
     if not chosen_voice or not is_valid_voice_id(chosen_voice):
         fallback = get_system_default_voice_id()
         if not fallback:
@@ -194,13 +179,9 @@ def _ask_config_for_video(
                 fallback = None
         chosen_voice = fallback
 
-    # chosen_voice peut rester None si aucune voix système n’est disponible,
-    # mais dans ce cas pipeline appliquera quand même un tag par défaut "fr".
-
-    # --- Reste des options (inchangées) ---
     oal = ask_option("orig_audio_lang", opts, "str", "Langue originale", base_opts.orig_audio_lang)
     db = ask_option("db", opts, "float", "Réduction (ducking) en dB", base_opts.db_reduct)
-    off    = ask_option("offset", opts, "int", "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
+    off = ask_option("offset", opts, "int", "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
     offvid = ask_option("offset_video", opts, "int", "Décalage vidéo (ms, négatif = plus tôt)", base_opts.offset_video_ms)
     bg = ask_option("bg", opts, "float", "Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
     tts = ask_option("tts", opts, "float", "Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
@@ -213,13 +194,13 @@ def _ask_config_for_video(
         base_opts,
         audio_ffmpeg_index=aidx,
         sub_choice=sc,
-        orig_audio_lang=oal,  # on ne modifie pas la langue d’origine
+        orig_audio_lang=oal,
         db_reduct=db,
         offset_ms=off,
         bg_mix=bg,
         tts_mix=tts,
-        min_rate_tts = min_rate_tts,
-        max_rate_tts = max_rate_tts,
+        min_rate_tts=min_rate_tts,
+        max_rate_tts=max_rate_tts,
         audio_codec=ac,
         audio_bitrate=ab,
         voice_id=chosen_voice,
@@ -240,27 +221,21 @@ def _cleanup_test_outputs(output_path: str | None) -> None:
 
 
 def run_interactive(selected: list[str], svcs: Services) -> int:
-    
-    first = selected[0]
-    first_full = join_input(first)
-
     base_for_tests = build_default_opts()
-    validated_opts = None
 
-    
-    opts = _ask_config_for_video(
-        base_opts=build_default_opts(),
+    opts_local = _ask_config_for_video(
+        base_opts=base_for_tests,
         svcs=svcs,
         input_video_path=join_input(selected[0]),
         force_choose_tracks_and_subs=True,
     )
-    
+
     for input_video_name in selected:
         try:
             outp = process_one_video(
-                input_video_path=join_input(input_video_name), 
-                input_video_name=input_video_name, 
-                opts=opts, 
+                input_video_path=join_input(input_video_name),
+                input_video_name=input_video_name,
+                opts=opts_local,
                 svcs=svcs
             )
             if outp:
@@ -271,18 +246,30 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
     print("\nTerminé.")
     return 0
 
+
 def main() -> int:
     svcs = build_services()
     while True:
+        # 1) Demander d'abord les dossiers si options.conf marque 'd'
+        _ask_dirs_if_needed()
+        # 2) Créer/valider les dossiers (sans écraser les overrides, cf. flags)
         ensure_base_dirs()
+
+        # Petit log de contrôle des chemins effectifs utilisés (dynamiques)
+        print(f"[dirs] input={io_fs.INPUT_DIR} | output={io_fs.OUTPUT_DIR} | tmp={io_fs.TMP_DIR}")
+
         files = list_input_videos()
+        if not files:
+            print("Aucun fichier éligible trouvé dans input/.")
+            return 1
+
         selected = svcs.choose_files(files)
         if not selected:
             print("Aucun fichier sélectionné.")
             return 1
-        
+
         code = run_interactive(selected, svcs)
-        
+
         choix = input("Voulez-vous générer une autre vidéo ? (o/n) : ").strip().lower()
         if not choix.startswith("o"):
             return code
