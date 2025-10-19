@@ -196,9 +196,9 @@ echo → Lancement du module add_dub
 
 rem Si des arguments sont passes au .bat, on les relaie au module Python
 if "%~1"=="" (
-    start "" /HIGH /WAIT /B python -m add_dub
+    python -m add_dub
 ) else (
-    start "" /HIGH /WAIT /B python -m add_dub %*
+    python -m add_dub %*
 )
 
 if errorlevel 1 goto fail

@@ -13,7 +13,7 @@ Fonctionne uniquement sous **Windows** (TTS OneCore via `winrt`). Tout est trait
 
 ### Télécharger la release
 Téléchargez la version portable :  
-[📥 add_dub_v0.3.0_win64.zip](https://github.com/Jobijoba2000/add_dub/releases/download/v0.3.0/add_dub_v0.3.0_win64.zip)
+[📥 add_dub_v0.3.1_win64.zip](https://github.com/Jobijoba2000/add_dub/releases/download/v0.3.1/add_dub_v0.3.1_win64.zip)
 
 Dézippez, puis lancez :
 
