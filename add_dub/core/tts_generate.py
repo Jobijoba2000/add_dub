@@ -105,7 +105,7 @@ def generate_dub_audio(
     print(f"\rTTS: 0% [0/{total}]", end="", flush=True)
 
     # Watchdog + fermeture non bloquante du pool
-    FREEZE_TIMEOUT = 2  # vu ta vitesse par segment
+    FREEZE_TIMEOUT = 5  # vu ta vitesse par segment
 
     ex = ProcessPoolExecutor(max_workers=max_workers)
     try:

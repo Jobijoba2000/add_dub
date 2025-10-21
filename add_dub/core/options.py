@@ -22,6 +22,7 @@ class DubOptions:
     max_rate_tts: float = 1.8                         # borne haute TTS
     audio_codec: str = "ac3"                          # codec audio final
     audio_bitrate: int = 320                          # bitrate audio final (kb/s)
+    tts_engine: Optional[str] = None
     voice_id: Optional[str] = None                    # identifiant de voix (OneCore, etc.)
     audio_codec_args: Iterable[str] = ()              # args ffmpeg audio final (ex: "-c:a","aac","-b:a","192k")
     sub_codec: str = "srt"                            # "srt" ou "ass"

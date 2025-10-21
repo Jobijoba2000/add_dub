@@ -1,5 +1,4 @@
 # add_dub/cli/main.py
-
 import os
 import sys
 from dataclasses import replace
@@ -11,8 +10,6 @@ from add_dub.core.subtitles import list_input_videos, resolve_srt_for_video
 from add_dub.core.pipeline import process_one_video
 from add_dub.core.codecs import final_audio_codec_args
 from add_dub.core.tts_generate import generate_dub_audio
-from add_dub.core.tts import is_valid_voice_id, get_system_default_voice_id, list_available_voices
-from add_dub.core.subtitles import resolve_srt_for_video
 
 from add_dub.cli.ui import ask_option
 from add_dub.cli.selectors import (
@@ -32,6 +29,13 @@ from add_dub.adapters.mkvtoolnix import audio_video_offset_ms
 # Builder centralisé (options.conf > defaults.py)
 from add_dub.config.effective import build_default_opts
 
+# Registre TTS moteur-agnostique
+from add_dub.core.tts_registry import (
+    normalize_engine,
+    list_voices_for_engine,
+    resolve_voice_with_fallbacks,
+)
+
 opts = load_options()
 
 
@@ -46,7 +50,7 @@ def build_services() -> Services:
 
 
 # -------------------------------
-# Sélection langue de doublage → voix (identique à ta version)
+# Aides pour sélection langue/locale/voix (moteur-agnostique)
 # -------------------------------
 
 def _lang_base(tag: str | None) -> str:
@@ -73,50 +77,74 @@ def _display_name_short(d: str) -> str:
     return s or d
 
 
-def _ask_dub_language_and_voice(default_voice: str | None) -> str | None:
-    all_voices = list_available_voices()
-    if not all_voices:
-        print("[INFO] Aucune voix OneCore détectée.")
-        print("Installez des voix : Paramètres Windows → Heure et langue → Voix → Gérer les voix → Ajouter des voix.")
-        return None
-
-    groups = _group_by_lang_base(all_voices)
-    if not groups:
-        print("[INFO] Aucune langue détectée. Liste brute :")
-        for i, v in enumerate(all_voices, start=1):
-            print(f"    {i}. {_display_name_short(v['display_name'])} | voice_id={v['id']} | lang={v['lang']}")
-        s = input("Saisir le numéro de la voix (ou Entrée pour annuler) : ").strip()
-        if not s.isdigit():
-            return None
+def _read_index(prompt: str, maximum: int, default_index_one_based: int = 1) -> int:
+    """
+    Lit un entier 1..maximum, sinon renvoie default_index_one_based.
+    Retourne un index **1-based**.
+    """
+    s = input(prompt).strip()
+    if s.isdigit():
         k = int(s)
-        if 1 <= k <= len(all_voices):
-            return all_voices[k - 1]["id"]
+        if 1 <= k <= maximum:
+            return k
+    return default_index_one_based
+
+
+def _ask_voice_for_engine(engine: str) -> str | None:
+    """
+    Sélection en 3 étapes :
+      1) Choisir la **langue de base** (fr, en, es, ...).
+      2) Si plusieurs locales existent pour cette langue (fr-FR, fr-CA, ...),
+         demander la **locale** précise. Sinon, prendre l'unique locale.
+      3) Lister ensuite **uniquement** les voix de la locale choisie.
+    Remarque: pour gTTS, la "locale" est généralement juste le code de langue
+    (ex. 'fr'), donc l'étape 2 affichera souvent une seule variante.
+    """
+    all_voices = list_voices_for_engine(engine)
+    if not all_voices:
+        print(f"[INFO] Aucune voix détectée pour le moteur '{engine}'.")
         return None
 
+    # Étape 1 — langue de base
+    groups = _group_by_lang_base(all_voices)
     print("\nLangues TTS disponibles :")
     for idx, (base, vs) in enumerate(groups, start=1):
         variants = sorted(set(v["lang"] for v in vs if v.get("lang")))
         label = f"{base} ({', '.join(variants)})" if base else "inconnue"
         print(f"    {idx}. {label}")
 
-    s = input("Saisir le numéro de la langue [1] : ").strip()
-    lang_idx = int(s) if s.isdigit() else 1
-    if not (1 <= lang_idx <= len(groups)):
-        lang_idx = 1
+    lang_idx = _read_index("Saisir le numéro de la langue [1] : ", len(groups), 1)
+    base_lang, voices_in_base = groups[lang_idx - 1]
 
-    _base, voices = groups[lang_idx - 1]
+    # Étape 2 — locale (si plusieurs)
+    locales = sorted({v.get("lang") for v in voices_in_base if v.get("lang")})
+    chosen_locale = None
+    if len(locales) <= 1:
+        chosen_locale = locales[0] if locales else ""
+    else:
+        print("\nVariantes disponibles pour", base_lang or "(inconnue)", ":")
+        for i, loc in enumerate(locales, start=1):
+            print(f"    {i}. {loc}")
+        loc_idx = _read_index("Saisir le numéro de la variante [1] : ", len(locales), 1)
+        chosen_locale = locales[loc_idx - 1]
 
+    # Filtrer strictement sur la locale retenue
+    voices = [v for v in voices_in_base if (v.get("lang") == chosen_locale or not chosen_locale)]
+
+    if not voices:
+        # Sécurité : si rien, on retombe sur toutes les voix de la langue de base
+        voices = voices_in_base
+
+    # Étape 3 — voix
     print("\nVoix disponibles :")
     for i, v in enumerate(voices, start=1):
         print(f"    {i}. {_display_name_short(v['display_name'])} | voice_id={v['id']} | lang={v['lang']}")
 
-    s2 = input("Saisir le numéro de la voix (ou Entrée pour annuler) : ").strip()
-    if not s2.isdigit():
+    k2 = _read_index("Saisir le numéro de la voix (ou Entrée pour annuler) : ", len(voices), -1)
+    if k2 == -1:
+        # Entrée vide → annuler
         return None
-    k2 = int(s2)
-    if 1 <= k2 <= len(voices):
-        return voices[k2 - 1]["id"]
-    return None
+    return voices[k2 - 1]["id"]
 
 
 def _ask_dirs_if_needed() -> None:
@@ -144,6 +172,34 @@ def _ask_dirs_if_needed() -> None:
         # `ensure_base_dirs()` sera appelé juste après dans `main()`
 
 
+def _ask_engine_and_voice_if_needed(base_opts: DubOptions) -> tuple[str, str | None]:
+    """
+    Si options.conf met 'd' sur tts_engine, on demande le moteur PUIS la voix de ce moteur.
+    Sinon, on ne demande rien ici. On renvoie (engine, maybe_voice).
+    """
+    engine_entry = opts.get("tts_engine")
+    current_engine = normalize_engine(base_opts.tts_engine)
+
+    if engine_entry and getattr(engine_entry, "display", False):
+        print("\nChoix du moteur TTS :")
+        print("    1) OneCore (local)")
+        print("    2) Edge TTS (cloud)")
+        print("    3) gTTS (cloud, non officiel)")
+        s = input("Saisir le numéro du moteur [1] : ").strip()
+        if s == "2":
+            current_engine = "edge"
+        elif s == "3":
+            current_engine = "gtts"
+        else:
+            current_engine = "onecore"
+
+        chosen_voice = _ask_voice_for_engine(current_engine)
+        return current_engine, chosen_voice
+
+    # Pas de 'd' → pas d'interaction ici
+    return current_engine, None
+
+
 def _ask_config_for_video(
     *,
     base_opts: DubOptions,
@@ -161,24 +217,13 @@ def _ask_config_for_video(
             print("Aucune source de sous-titres choisie.")
             return None
 
-    voice_entry = opts.get("voice_id")
-    chosen_voice = base_opts.voice_id or None
+    # 1) Moteur + (éventuellement) voix si 'd' sur tts_engine
+    engine, voice_from_wizard = _ask_engine_and_voice_if_needed(base_opts)
 
-    if voice_entry and getattr(voice_entry, "display", False):
-        maybe_voice = _ask_dub_language_and_voice(default_voice=base_opts.voice_id)
-        if maybe_voice:
-            chosen_voice = maybe_voice
+    # 2) Préparer voice_id de départ
+    chosen_voice = voice_from_wizard if voice_from_wizard else (base_opts.voice_id or None)
 
-    if not chosen_voice or not is_valid_voice_id(chosen_voice):
-        fallback = get_system_default_voice_id()
-        if not fallback:
-            try:
-                voices = list_available_voices()
-                fallback = voices[0]["id"] if voices else None
-            except Exception:
-                fallback = None
-        chosen_voice = fallback
-
+    # 3) Les autres options utilisateur
     oal = ask_option("orig_audio_lang", opts, "str", "Langue originale", base_opts.orig_audio_lang)
     db = ask_option("db", opts, "float", "Réduction (ducking) en dB", base_opts.db_reduct)
     off = ask_option("offset", opts, "int", "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
@@ -189,6 +234,18 @@ def _ask_config_for_video(
     max_rate_tts = ask_option("max_rate_tts", opts, "float", "Vitesse TTS maximal (1.8 = inchangé)", base_opts.max_rate_tts)
     ac = ask_option("audio_codec", opts, "str", "Codec audio", base_opts.audio_codec)
     ab = ask_option("audio_bitrate", opts, "int", "Bitrate", base_opts.audio_bitrate)
+
+    # 4) Validation & fallbacks (silencieux) selon le moteur choisi
+    lang_hint_base = _lang_base(oal) if oal else ""
+    chosen_voice = resolve_voice_with_fallbacks(
+        engine=engine,
+        desired_voice_id=chosen_voice,
+        preferred_lang_base=lang_hint_base or None
+    )
+
+    if chosen_voice is None:
+        print("[ERREUR] Aucune voix TTS valide disponible (même en fallback OneCore).")
+        return None
 
     return replace(
         base_opts,
@@ -203,6 +260,7 @@ def _ask_config_for_video(
         max_rate_tts=max_rate_tts,
         audio_codec=ac,
         audio_bitrate=ab,
+        tts_engine=engine,
         voice_id=chosen_voice,
         audio_codec_args=final_audio_codec_args(ac, f"{ab}k"),
         offset_video_ms=offvid,
@@ -256,7 +314,7 @@ def main() -> int:
         ensure_base_dirs()
 
         # Petit log de contrôle des chemins effectifs utilisés (dynamiques)
-        print(f"[dirs] input={io_fs.INPUT_DIR} | output={io_fs.OUTPUT_DIR} | tmp={io_fs.TMP_DIR}")
+        print(f"[dirs] \ninput  = {io_fs.INPUT_DIR} \noutput = {io_fs.OUTPUT_DIR} \ntmp    = {io_fs.TMP_DIR}")
 
         files = list_input_videos()
         if not files:

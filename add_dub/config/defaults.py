@@ -31,23 +31,25 @@ def get_system_default_voice_id() -> str | None:
 
     return None
 
-
+# TTS
+TTS_ENGINE = "onecore"
 VOICE_ID = get_system_default_voice_id()
-ORIG_AUDIO_LANG = "Original"
+MIN_RATE_TTS = 1.0
+MAX_RATE_TTS = 1.8
+
+#OUTPUT
 AUDIO_CODEC_FINAL = "ac3"      # "aac", "mp3", "ac3", "flac", "opus", "vorbis", "pcm_s16le"
 AUDIO_BITRATE = 320
 BG_MIX = 1.0
 TTS_MIX = 1.0
-MIN_RATE_TTS = 1.0
-MAX_RATE_TTS = 2.8
+
 DB_REDUCT = -5.0
 OFFSET_STR = 0                  # ms
 OFFSET_VIDEO = 0                # ms
+ORIG_AUDIO_LANG = "Original"
 
-# ↓↓↓ nouveaux défauts dossiers (peuvent être surchargés par options.conf)
+# DIRS
 INPUT_DIR = "input"
 OUTPUT_DIR = "output"
 TMP_DIR = "tmp"
-
-# Dossier SRT **fixe** (non configurable)
 SRT_DIR = "srt"
