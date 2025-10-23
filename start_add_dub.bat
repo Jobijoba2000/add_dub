@@ -108,17 +108,39 @@ if %CURRENT% LSS %REQUIRED% (
         goto :unpack_fail
     )
 
-    echo [ETAPE] Deploiement des outils ^(copie controlee^)... 
-    robocopy "!UNPACK!\tools"     "%ROOT%tools"     /E /R:1 /W:1 >nul
+    echo [ETAPE] Deploiement des outils ^(copie controlee^)...
+    robocopy "!UNPACK!\tools" "%ROOT%tools" /E /R:1 /W:1 >nul
     if errorlevel 8 (
         echo [ERREUR] Echec de copie du dossier tools.
         goto :unpack_fail
     )
     if exist "!UNPACK!\licenses" (
-        robocopy "!UNPACK!\licenses"  "%ROOT%licenses"  /E /R:1 /W:1 >nul
+        robocopy "!UNPACK!\licenses" "%ROOT%licenses" /E /R:1 /W:1 >nul
         if errorlevel 8 (
             echo [ERREUR] Echec de copie du dossier licenses.
             goto :unpack_fail
+        )
+    )
+
+    rem --- Copie NON DESTRUCTIVE de input/ et output/ si presents dans le ZIP
+    rem     Objectif : fusionner sans JAMAIS ecraser un fichier deja present dans le projet
+    rem     Strategie : robocopy /E + /XC /XN /XO
+    rem       - /XC : ignore les fichiers "changes" (donc existants avec diff de taille/horodatage)
+    rem       - /XN : ignore les fichiers plus recents cote destination
+    rem       - /XO : ignore les fichiers plus anciens cote destination
+    rem     → Tout fichier deja present dans %ROOT%input|output est conserve tel quel.
+    if exist "!UNPACK!\input" (
+        echo [INFO] Fusion non destructive de input/ depuis la toolbox...
+        robocopy "!UNPACK!\input" "%ROOT%input" /E /R:1 /W:1 /XC /XN /XO >nul
+        if errorlevel 8 (
+            echo [AVERTISSEMENT] Robocopy a signale des anomalies lors de la copie de input/.
+        )
+    )
+    if exist "!UNPACK!\output" (
+        echo [INFO] Fusion non destructive de output/ depuis la toolbox...
+        robocopy "!UNPACK!\output" "%ROOT%output" /E /R:1 /W:1 /XC /XN /XO >nul
+        if errorlevel 8 (
+            echo [AVERTISSEMENT] Robocopy a signale des anomalies lors de la copie de output/.
         )
     )
 
