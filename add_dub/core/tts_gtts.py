@@ -4,7 +4,6 @@ import os
 import shutil
 import tempfile
 import subprocess
-import asyncio
 import string
 from typing import Optional, List, Dict
 
@@ -13,13 +12,18 @@ from pydub import AudioSegment
 
 # Même signature publique que tts.py / tts_edge.py pour rester plug-and-play
 from add_dub.core.options import DubOptions
-from add_dub.logger import (log_call, log_time)
 
 # Dépendances: gTTS + ffmpeg dans le PATH
 try:
     from gtts import gTTS  # type: ignore
-except Exception:
-    gTTS = None  # type: ignore[assignment]
+    try:
+        # gTTS >=2.5: expose tts_langs(); sinon on tombera sur le fallback
+        from gtts.lang import tts_langs  # type: ignore
+    except Exception:  # pragma: no cover
+        tts_langs = None  # type: ignore
+except Exception:  # pragma: no cover
+    gTTS = None  # type: ignore
+    tts_langs = None  # type: ignore
 
 # Valeurs par défaut pour gTTS
 DEFAULT_GTTS_LANG = "fr"
@@ -31,48 +35,53 @@ def _require_gtts():
         raise RuntimeError("gTTS n'est pas installé (pip install gTTS).")
 
 
+# -------------------------------------------------------------------
+# Exigé par tts_registry.py
+# -------------------------------------------------------------------
 def list_available_voices() -> List[Dict]:
     """
-    gTTS n'a pas de 'voix' à proprement parler. On expose un choix minimal
-    de 'voices' basés sur la langue pour rester compatible avec tts_registry.
+    Retourne la liste des 'voix' gTTS. gTTS ne gère pas de timbres/voix différentes,
+    uniquement des langues. On expose donc (id=code_lang, display_name, lang).
     """
+    # Essai dynamique si la lib le permet
+    if tts_langs is not None:
+        try:
+            langs: Dict[str, str] = tts_langs()  # ex: {"fr": "French", "en": "English", ...}
+            out = []
+            for code, name in sorted(langs.items(), key=lambda kv: kv[0].lower()):
+                out.append({"id": code, "display_name": f"{name} (gTTS)", "lang": code})
+            if out:
+                return out
+        except Exception:
+            pass
+
+    # Fallback minimal si indisponible
     return [
-        {"id": "fr", "display_name": "Français (gTTS)", "lang": "fr"},
+        {"id": "fr", "display_name": "French (gTTS)", "lang": "fr"},
         {"id": "en", "display_name": "English (gTTS)", "lang": "en"},
-        {"id": "es", "display_name": "Español (gTTS)", "lang": "es"},
-        {"id": "de", "display_name": "Deutsch (gTTS)", "lang": "de"},
-        {"id": "it", "display_name": "Italiano (gTTS)", "lang": "it"},
-        {"id": "pt", "display_name": "Português (gTTS)", "lang": "pt"},
+        {"id": "es", "display_name": "Spanish (gTTS)", "lang": "es"},
+        {"id": "de", "display_name": "German (gTTS)", "lang": "de"},
+        {"id": "it", "display_name": "Italian (gTTS)", "lang": "it"},
+        {"id": "pt", "display_name": "Portuguese (gTTS)", "lang": "pt"},
     ]
 
 
-def _resolve_gtts_lang_tld(voice_id: Optional[str], opts: DubOptions) -> tuple[str, str]:
+def is_valid_voice_id(voice_id: Optional[str]) -> bool:
     """
-    Déduit (lang, tld) pour gTTS.
-    Priorités :
-      1) opts.gtts_lang / opts.gtts_tld si présents
-      2) voice_id → 'fr', 'fr-FR', 'en-US', etc. (on prend le préfixe ISO)
-      3) défauts (fr, com)
+    Valide que 'voice_id' est un code de langue gTTS supporté (ex. 'fr', 'en', ...).
     """
-    # 1) depuis les options
-    lang = getattr(opts, "gtts_lang", None)
-    tld = getattr(opts, "gtts_tld", None)
-
-    # 2) depuis voice_id si non fournis
-    if not lang and voice_id:
-        s = str(voice_id).strip().lower()
-        # extraire le code ISO primaire: ex. "fr-fr" -> "fr"
-        if "-" in s:
-            s = s.split("-")[0]
-        lang = s
-
-    # 3) défauts
-    lang = (lang or DEFAULT_GTTS_LANG).strip().lower()
-    tld = (tld or DEFAULT_GTTS_TLD).strip().lower()
-
-    return lang, tld
+    if not voice_id:
+        return False
+    vid = str(voice_id).strip().lower()
+    try:
+        return any(v["id"].lower() == vid for v in list_available_voices())
+    except Exception:
+        return vid in (DEFAULT_GTTS_LANG,)
 
 
+# -------------------------------------------------------------------
+# Outils audio
+# -------------------------------------------------------------------
 def _atempo_chain_for_factor(factor: float) -> list[str]:
     """
     Construit une chaîne de filtres atempo pour couvrir un facteur arbitraire > 0
@@ -128,7 +137,7 @@ def _speed_change_with_ffmpeg(segment: AudioSegment, factor: float) -> AudioSegm
 
 def _looks_like_silence(text: str) -> bool:
     """
-    Retourne True si 'text' ne contient que espaces/ellipses/ponctuation/symboles.
+    True si 'text' ne contient que espaces/ellipses/ponctuation/symboles.
     Ex.: "", "...", "…", ". . .", "--", "♪", "—", etc.
     """
     if text is None:
@@ -138,7 +147,7 @@ def _looks_like_silence(text: str) -> bool:
     if not s:
         return True
 
-    # Normaliser l’ellipse unicode en trois points puis retirer la ponctuation.
+    # Normaliser l’ellipse unicode en trois points puis retirer la ponctuation/symboles usuels.
     s = s.replace("…", "...")
     punct = set(string.punctuation) | {"—", "–", "«", "»", "♪", "♫", "·", "•"}
     s = "".join(ch for ch in s if ch not in punct)
@@ -147,6 +156,44 @@ def _looks_like_silence(text: str) -> bool:
     s = s.strip()
 
     return len(s) == 0
+
+
+# -------------------------------------------------------------------
+# Synthèse gTTS
+# -------------------------------------------------------------------
+def _resolve_gtts_lang_tld(voice_id: Optional[str], opts: DubOptions) -> tuple[str, str]:
+    """
+    Déduit (lang, tld) pour gTTS.
+    Priorités :
+      1) opts.gtts_lang / opts.gtts_tld si présents
+      2) voice_id → 'fr', 'fr-FR', 'en-US', etc. (on prend le préfixe ISO)
+      3) défauts (fr, com)
+    """
+    # 1) depuis les options
+    lang = getattr(opts, "gtts_lang", None)
+    tld = getattr(opts, "gtts_tld", None)
+
+    # 2) depuis voice_id si non fournis
+    if not lang and voice_id:
+        s = str(voice_id).strip().lower()
+        if "-" in s:
+            s = s.split("-")[0]
+        lang = s
+
+    # 3) défauts
+    lang = (lang or DEFAULT_GTTS_LANG).strip().lower()
+    tld = (tld or DEFAULT_GTTS_TLD).strip().lower()
+
+    # Si la lib expose les langues supportées, on vérifie que 'lang' est valide
+    if tts_langs is not None:
+        try:
+            langs = tts_langs()
+            if isinstance(langs, dict) and lang not in langs:
+                lang = DEFAULT_GTTS_LANG
+        except Exception:
+            pass
+
+    return lang, tld
 
 
 def _gtts_synthesize_bytes(text: str, lang: str, tld: str) -> bytes:
@@ -248,7 +295,6 @@ def synthesize_tts_for_subtitle(
                 seg = sped[:tgt]
             else:
                 seg = sped + AudioSegment.silent(duration=(tgt - len(sped)))
-            seg = sped if len(sped) >= tgt else sped + AudioSegment.silent(duration=(tgt - len(sped)))
         except Exception:
             # Pas d'ffmpeg ou échec → trim direct
             seg = seg[:tgt]
