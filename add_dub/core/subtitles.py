@@ -150,9 +150,8 @@ def extract_first_subtitle_to_srt_into_input(
     video_fullpath: str, local_sub_index: int = 0, ocr_lang: str = "fr"
 ) -> str | None:
     """
-    ⚠️ Comportement modifié :
-    - Extraction/convert texte/ocr → **toujours** dans srt/<video_base>.srt
-    - Jamais d'écriture dans le dossier source (input).
+    ⚠️ Comportement : extraction/convert texte/ocr → **toujours** dans srt/<video_base>.srt
+    (jamais dans le dossier source). Utilise -y (overwrite) côté ffmpeg/moves.
     """
     info = mkvmerge_identify_json(video_fullpath)
     if not info:
@@ -264,29 +263,48 @@ def extract_first_subtitle_to_srt_into_input(
 def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple) -> str | None:
     """
     Politique unifiée (jamais d'écriture dans le dossier source) :
-      1) Si srt/<base>.srt existe déjà → on l'utilise.
-      2) Sinon, si un sidecar .srt est à côté de la vidéo → on le COPIE dans srt/ et on utilise la copie.
-      3) Sinon, si on a une piste intégrée (cas MKV) → extraction vers srt/ et on l'utilise.
+
+    - Si l'utilisateur a explicitement choisi une piste MKV :
+        → on **FORCE l'extraction** de cette piste dans srt/<base>.srt (écrasement si déjà présent).
+    - Sinon :
+        1) Si srt/<base>.srt existe déjà → on l'utilise.
+        2) Sinon, si un sidecar .srt est à côté de la vidéo → on le COPIE dans srt/ et on utilise la copie.
+        3) Sinon, si on a une piste intégrée (cas MKV) → extraction vers srt/ (piste 0 par défaut) et on l'utilise.
     """
-    # 1) Priorité au SRT déjà présent dans srt/
+    kind, value = sub_choice_global
+
+    # CAS 1 — Choix explicite d'une piste MKV : extraction forcée (avec overwrite)
+    if kind == "mkv":
+        try:
+            local_idx = int(value)
+        except Exception:
+            local_idx = 0
+        srt_path = extract_first_subtitle_to_srt_into_input(
+            video_fullpath, local_sub_index=local_idx
+        )
+        if srt_path:
+            strip_subtitle_tags_inplace(srt_path)
+            return srt_path
+        print(f"[AUTO] Échec extraction SRT depuis la piste MKV sélectionnée pour {video_fullpath}.")
+        return None
+
+    # CAS 2 — Choix SRT (depuis srt/ ou sidecar)
+    # 2.1) srt/<base>.srt déjà présent → on l'utilise tel quel
     srt_in_srt = _srt_in_srt_dir_for_video(video_fullpath)
     if srt_in_srt:
         strip_subtitle_tags_inplace(srt_in_srt)
         return srt_in_srt
 
-    kind, value = sub_choice_global
-
-    # 2) Sidecar à côté de la vidéo → copie dans srt/
+    # 2.2) Sidecar .srt à côté de la vidéo → on le copie dans srt/ et on l'utilise
     sidecar = find_sidecar_srt(video_fullpath)
     if sidecar:
         dst = _copy_into_srt_dir(sidecar, video_fullpath)
         strip_subtitle_tags_inplace(dst)
         return dst
 
-    # 3) Extraction depuis piste intégrée (typiquement MKV)
-    #    (Que l'utilisateur ait choisi "mkv" ou que 'kind' soit autre, on tente l'extraction.)
+    # 2.3) En dernier recours : tenter d'extraire la première piste intégrée si disponible
     srt_path = extract_first_subtitle_to_srt_into_input(
-        video_fullpath, local_sub_index=(value if kind != "srt" else 0)
+        video_fullpath, local_sub_index=0
     )
     if srt_path:
         strip_subtitle_tags_inplace(srt_path)
