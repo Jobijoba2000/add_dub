@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Optional, Iterable, Tuple
+from typing import Optional, Iterable
 
 
 @dataclass
@@ -27,5 +27,9 @@ class DubOptions:
     audio_codec_args: Iterable[str] = ()              # args ffmpeg audio final (ex: "-c:a","aac","-b:a","192k")
     sub_codec: str = "srt"                            # "srt" ou "ass"
     offset_video_ms: int = 0                          # décalage piste vidéo
+
+    # --- NOUVEAU ---
+    ask_test_before_cleanup: bool = False             # si True, proposer un test & re-mux avant suppression des WAV
+
 
 __all__ = ["DubOptions", "Services"]

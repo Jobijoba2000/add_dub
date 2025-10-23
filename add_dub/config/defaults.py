@@ -37,7 +37,7 @@ VOICE_ID = get_system_default_voice_id()
 MIN_RATE_TTS = 1.0
 MAX_RATE_TTS = 1.8
 
-#OUTPUT
+# OUTPUT
 AUDIO_CODEC_FINAL = "ac3"      # "aac", "mp3", "ac3", "flac", "opus", "vorbis", "pcm_s16le"
 AUDIO_BITRATE = 320
 BG_MIX = 1.0
@@ -53,3 +53,8 @@ INPUT_DIR = "input"
 OUTPUT_DIR = "output"
 TMP_DIR = "tmp"
 SRT_DIR = "srt"
+
+# --- NOUVEAU ---
+# Demander à l’utilisateur de tester la vidéo AVANT de supprimer les WAV temporaires,
+# et permettre un re-mux rapide en ajustant bg/tts.
+ASK_TEST_BEFORE_CLEANUP = False

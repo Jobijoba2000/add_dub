@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import subprocess
 import asyncio
+import string
 from typing import Optional, List, Dict
 
 import add_dub.io.fs as io_fs
@@ -63,13 +64,13 @@ async def _edge_list_voices_async() -> List[Dict]:
     """
     Récupère la liste des voix Edge TTS.
     Stratégie:
-      1) edge_tts.list_voices()  ← comme dans ton script de test (prioritaire)
+      1) edge_tts.list_voices()  ← prioritaire
       2) VoicesManager.create().get_voices()  ← fallback
     """
     _require_edge_tts()
 
     voices: List[Dict] = []
-    # 1) API directe list_voices (présente sur la majorité des versions actuelles)
+    # 1) API directe list_voices
     try:
         if hasattr(edge_tts, "list_voices"):
             voices = await edge_tts.list_voices()  # type: ignore[attr-defined]
@@ -90,7 +91,7 @@ async def _edge_list_voices_async() -> List[Dict]:
 
 def list_available_voices() -> List[Dict]:
     """
-    Synchronous wrapper pour lister les voix Edge.
+    Wrapper synchrone pour lister les voix Edge.
     """
     try:
         lst = asyncio.run(_edge_list_voices_async())
@@ -221,6 +222,29 @@ def _synthesize(text: str, voice_shortname: str) -> AudioSegment:
     return seg
 
 
+def _looks_like_silence(text: str) -> bool:
+    """
+    True si 'text' ne contient que espaces/ellipses/ponctuation/symboles.
+    Ex.: "", "...", "…", ". . .", "--", "♪", "—", etc.
+    """
+    if text is None:
+        return True
+
+    s = str(text).strip()
+    if not s:
+        return True
+
+    # Normaliser l’ellipse unicode en trois points puis retirer la ponctuation.
+    s = s.replace("…", "...")
+    punct = set(string.punctuation) | {"—", "–", "«", "»", "♪", "♫", "·", "•"}
+    s = "".join(ch for ch in s if ch not in punct)
+
+    # Retirer les espaces restants
+    s = s.strip()
+
+    return len(s) == 0
+
+
 def synthesize_tts_for_subtitle(
     text: str,
     target_duration_ms: int,
@@ -232,16 +256,21 @@ def synthesize_tts_for_subtitle(
     1) Synthèse (vitesse "1.0" intrinsèque Edge)
     2) Si opts.min_rate_tts != 1.0 → post-traitement atempo (vitesse minimale globale)
     3) Ajustement à target_duration_ms :
-       - si trop long → accélération supplémentaire, **bornée par opts.max_rate_tts**
+       - si trop long → accélération supplémentaire, bornée par opts.max_rate_tts
        - si trop court → padding silence
     """
-    if not text:
-        return AudioSegment.silent(duration=max(0, target_duration_ms))
+    # Court-circuit SILENCE : texte vide/ellipses/ponctuation uniquement
+    if _looks_like_silence(text):
+        return AudioSegment.silent(duration=max(0, int(target_duration_ms)))
 
     shortname = voice_id if is_valid_voice_id(voice_id) else DEFAULT_EDGE_VOICE
 
-    # Étape 1 — synthèse
-    seg = _synthesize(text, shortname)
+    # Étape 1 — synthèse (protégée)
+    try:
+        seg = _synthesize(text, shortname)
+    except Exception:
+        # Sécurité : si Edge échoue (ex. NoAudioReceived), renvoyer du silence
+        return AudioSegment.silent(duration=max(0, int(target_duration_ms)))
 
     # Étape 2 — vitesse minimale pilotée (post-traitement)
     try:
@@ -253,7 +282,7 @@ def synthesize_tts_for_subtitle(
         try:
             seg = _speed_change_with_ffmpeg(seg, base_rate)
         except Exception:
-            # On continue avec la synthèse brute si atempo échoue
+            # Continuer avec la synthèse brute si atempo échoue
             pass
 
     # Étape 3 — ajustement à la durée cible

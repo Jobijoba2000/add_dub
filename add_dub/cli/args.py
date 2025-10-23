@@ -1,6 +1,6 @@
+# add_dub/cli/args.py
 from __future__ import annotations
 
-# add_dub/cli/args.py
 import argparse
 from typing import Tuple, List
 
@@ -33,6 +33,10 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     parser.add_argument("--recursive", "-r", action="store_true", help="Parcourt les dossiers récursivement (batch).")
 
     # Sélection technique
+    parser.add_argument("--tts-engine",
+                        choices=["onecore", "edge", "gtts"],
+                        default=fused["tts_engine"],
+                        help="Moteur TTS à utiliser (par défaut: options.conf → effective).")
     parser.add_argument("--audio-index", type=int, default=None,
                         help="Index global FFmpeg de la piste audio source (ffprobe->streams[index]).")
     parser.add_argument("--voice", metavar="VOICE_ID", default=fused["voice"],

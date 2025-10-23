@@ -15,9 +15,13 @@ from add_dub.core.subtitles import (
 )
 from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
 from add_dub.core.tts_generate import generate_dub_audio
-from add_dub.core.tts import is_valid_voice_id, get_system_default_voice_id
+from add_dub.core.tts_registry import (
+    normalize_engine,
+    resolve_voice_with_fallbacks,
+)
 from add_dub.adapters.ffmpeg import get_track_info  # ffprobe
 from add_dub.config.opts_loader import load_options
+from add_dub.config.effective import effective_values
 
 
 # --------------------------
@@ -149,10 +153,20 @@ def _make_options(args) -> DubOptions:
     audio_args = final_audio_codec_args(args.audio_codec, args.audio_bitrate)
     sub_codec = subtitle_codec_for_container(".mkv")
 
-    # Voix (si absente, fallback système)
-    voice = args.voice or get_system_default_voice_id()
-    if args.voice and not is_valid_voice_id(args.voice):
-        raise SystemExit(f"Voice ID invalide: {args.voice}")
+    # Moteur & voix — lecture silencieuse depuis les valeurs effectives, avec override CLI
+    fused = effective_values()  # options.conf > defaults
+    engine = normalize_engine(getattr(args, "tts_engine", None) or fused.get("tts_engine"))
+
+    desired_voice = args.voice or fused.get("voice")
+    resolved = resolve_voice_with_fallbacks(
+        engine=engine,
+        desired_voice_id=desired_voice,
+        preferred_lang_base=None  # en batch: on laisse le registre faire ses fallbacks
+    )
+    if resolved is None:
+        raise SystemExit("Aucune voix TTS exploitable (moteur demandé + fallbacks).")
+
+    voice_id = resolved["id"] if isinstance(resolved, dict) else resolved
 
     return DubOptions(
         audio_ffmpeg_index=args.audio_index,
@@ -166,7 +180,8 @@ def _make_options(args) -> DubOptions:
         max_rate_tts=args.max_rate_tts,
         audio_codec=args.audio_codec,
         audio_bitrate=args.audio_bitrate,
-        voice_id=voice,
+        tts_engine=engine,
+        voice_id=voice_id,
         audio_codec_args=audio_args,
         sub_codec=sub_codec,
         offset_video_ms=args.offset_video_ms,
@@ -197,6 +212,7 @@ def main(args) -> int:
             aud_idx = opts.audio_ffmpeg_index if opts.audio_ffmpeg_index is not None else svcs.choose_audio_track(path)
             print(f"  -> subtitles choice: {sub_choice}")
             print(f"  -> audio_index (ffprobe global): {aud_idx}")
+            print(f"  -> tts_engine: {opts.tts_engine}")
             print(f"  -> voice: {opts.voice_id}")
             print(f"  -> codec: {opts.audio_codec} @ {opts.audio_bitrate} kb/s")
             print(f"  -> bg_mix={opts.bg_mix}, tts_mix={opts.tts_mix}, ducking_db={opts.db_reduct}")
