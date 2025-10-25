@@ -208,10 +208,23 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
     --bg-mix 0.8 --tts-mix 1.0
 
 - `--audio-index INT`  
-  **Index FFmpeg** (base **0**) de la **piste audio source**.  
+  **Index de la piste audio source**.  
   Exemples :  
-    --audio-index 0    (première piste audio FFmpeg)  
-    --audio-index 1    (deuxième piste audio FFmpeg)
+    --audio-index 1    (première piste audio FFmpeg)  
+    --audio-index 2    (deuxième piste audio FFmpeg)
+
+- `--sub SRT:INT`  
+  **Sous-titres **.  
+  Valeur par défaut: auto
+  `auto`  Utilise le srt si présent ou prend la première piste de sous-titres (0)
+  `srt`   Utilise le srt
+  `mkv`   Utilise la première piste de sous-titres du mkv
+  `mkv:N` Utilise la piste N du mkv
+  Exemples :  
+    --sub srt    
+    --sub mkv
+	--sub mkv:0  (prend la piste 1)
+	--sub mkv:1  (prend la piste 2)
 
 ### Codec & sortie
 - `--audio-codec {aac,ac3,mp3,flac,opus,vorbis,pcm_s16le}`  
@@ -221,7 +234,7 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
     --audio-codec aac
 
 - `--audio-bitrate INT`  
-  Bitrate en **kb/s** (appliqué aux codecs avec pertes).  
+  **Bitrate en kb/s**.  
   Exemples :  
     --audio-bitrate 256  
     --audio-bitrate 192
