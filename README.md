@@ -214,16 +214,16 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
     --audio-index 2    (deuxième piste audio FFmpeg)
 
 - `--sub SRT:INT`  
-  **Sous-titres **.  
-  Valeur par défaut: auto
-  `auto`  Utilise le srt si présent ou prend la première piste de sous-titres (0)
-  `srt`   Utilise le srt
-  `mkv`   Utilise la première piste de sous-titres du mkv
-  `mkv:N` Utilise la piste N du mkv
+  **Sous-titres**.  
+  Valeur par défaut: auto 
+  `auto`  Utilise le srt si présent ou prend la première piste de sous-titres (0) 
+  `srt`   Utilise le srt 
+  `mkv`   Utilise la première piste de sous-titres du mkv 
+  `mkv:N` Utilise la piste N du mkv 
   Exemples :  
-    --sub srt    
-    --sub mkv
-	--sub mkv:0  (prend la piste 1)
+    --sub srt  
+    --sub mkv 
+	--sub mkv:0  (prend la piste 1) 
 	--sub mkv:1  (prend la piste 2)
 
 ### Codec & sortie
