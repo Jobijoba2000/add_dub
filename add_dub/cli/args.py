@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from typing import Tuple, List
 
 from add_dub.config.effective import effective_values
@@ -42,6 +43,11 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     parser.add_argument("--voice", metavar="VOICE_ID", default=fused["voice"],
                         help="Identifiant de la voix TTS à utiliser (optionnel).")
 
+    # Sous-titres — un seul argument: auto (défaut), srt, mkv, mkv:N
+    parser.add_argument("--sub",
+                        default="auto",
+                        help="Source des sous-titres: auto (défaut), srt, mkv, mkv:N (ex. mkv:4).")
+
     # Mixages / niveaux / calages — defaults issus de la fusion conf→defaults
     parser.add_argument("--offset-ms", type=int, default=fused["offset_ms"],
                         help="Décalage global des sous-titres/voix (ms).")
@@ -74,6 +80,24 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
                         help="Limite la durée traitée (tests rapides).")
 
     args, unknown = parser.parse_known_args(argv)
+
+    # Normalisation de --sub en sub_mode + sub_index
+    raw = (getattr(args, "sub", "auto") or "auto").strip().lower()
+    sub_mode = "auto"
+    sub_index = 0
+    m = re.match(r"^(mkv)\s*[:=]\s*(\d+)$", raw)
+    if m:
+        sub_mode = "mkv"
+        sub_index = int(m.group(2))
+    elif raw in ("auto", "srt", "mkv"):
+        sub_mode = raw
+    else:
+        sub_mode = "auto"
+        sub_index = 0
+
+    args.sub_mode = sub_mode
+    args.sub_index = sub_index
+
     return args, unknown
 
 

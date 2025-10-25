@@ -102,11 +102,11 @@ def _gather_targets(paths: Optional[List[str]], recursive: bool) -> List[str]:
 # --------------------------
 # Services non interactifs
 # --------------------------
-def _build_services():
+def _build_services(args):
     """
     Fournit les callbacks nécessaires au pipeline sans interaction.
     - choose_audio_track : index global de la première piste audio (ffprobe).
-    - choose_subtitle_source : SRT sidecar prioritaire, sinon piste MKV 0.
+    - choose_subtitle_source : SRT sidecar prioritaire, sinon piste MKV demandée (défaut 0).
     """
     class Svcs:
         pass
@@ -137,6 +137,15 @@ def _build_services():
         return ("mkv", 0)
 
     def _choose_subtitle_source(input_video_path: str):
+        mode = (getattr(args, "sub_mode", "auto") or "auto").lower()
+        if mode == "srt":
+            return ("srt", None)
+        if mode == "mkv":
+            try:
+                idx = max(0, int(getattr(args, "sub_index", 0)))
+            except Exception:
+                idx = 0
+            return ("mkv", idx)
         return _auto_sub_choice(input_video_path)
 
     svcs.choose_files = _choose_files
@@ -155,7 +164,7 @@ def _make_options(args) -> DubOptions:
 
     # Moteur & voix — lecture silencieuse depuis les valeurs effectives, avec override CLI
     fused = effective_values()  # options.conf > defaults
-    engine = normalize_engine(getattr(args, "tts_engine", None) or fused.get("tts_engine"))
+    engine = normalize_engine(getattr(args, "tts_engine", None) or fused["tts_engine"])
 
     desired_voice = args.voice or fused.get("voice")
     resolved = resolve_voice_with_fallbacks(
@@ -201,7 +210,7 @@ def main(args) -> int:
         print("Aucune vidéo détectée. Place des fichiers dans ./input ou indique --input.")
         return 2
 
-    svcs = _build_services()
+    svcs = _build_services(args)
     opts = _make_options(args)
 
     any_error = False
