@@ -215,16 +215,16 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
 
 - `--sub SRT:INT`  
   **Sous-titres**.  
-  Valeur par défaut: auto 
-  `auto`  Utilise le srt si présent ou prend la première piste de sous-titres (0) 
-  `srt`   Utilise le srt 
-  `mkv`   Utilise la première piste de sous-titres du mkv 
-  `mkv:N` Utilise la piste N du mkv 
+  Valeur par défaut: auto   
+  `auto` Utilise le srt si présent ou prend la première piste de sous-titres (0)   
+  `srt` Utilise le srt  
+  `mkv` Utilise la première piste de sous-titres du mkv  
+  `mkv:N` Utilise la piste N du mkv  
   Exemples :  
-    --sub srt  
-    --sub mkv 
-	--sub mkv:0  (prend la piste 1) 
-	--sub mkv:1  (prend la piste 2)
+    --sub srt   
+    --sub mkv  
+	--sub mkv:0 (prend la piste 1)   
+	--sub mkv:1 (prend la piste 2)
 
 ### Codec & sortie
 - `--audio-codec {aac,ac3,mp3,flac,opus,vorbis,pcm_s16le}`  
