@@ -5,47 +5,80 @@ import add_dub.io.fs as io_fs
 from add_dub.adapters.ffmpeg import get_track_info
 from add_dub.adapters.mkvtoolnix import list_mkv_sub_tracks
 from add_dub.core.subtitles import find_sidecar_srt
-
+from add_dub.logger import logger as log
 
 def choose_files(files):
     if not files:
         print("Aucun fichier éligible trouvé dans input/.")
-        sys.exit(1)
-    print("\nFichiers éligibles (input/):")
-    for idx, f in enumerate(files, start=1):
-        print(f"    {idx}. {f}")
-    sel = input("Entrez les numéros à traiter (espaces, Entrée=tout) : ").strip()
-    if sel == "":
-        return files
-    try:
-        indices = [int(x) for x in sel.split() if x.isdigit() and 1 <= int(x) <= len(files)]
-        return [files[i - 1] for i in indices]
-    except Exception:
-        print("Sélection invalide. Traitement de tous les fichiers.")
-        return files
+        return None
+
+    while True:
+        print("\nFichiers éligibles (input/):")
+        for idx, f in enumerate(files, start=1):
+            print(f"    {idx}. {f}")
+
+        sel = input("Entrez les numéros à traiter (espaces, Entrée=tout, q=annuler) : ").strip().lower()
+
+        if sel == "":
+            return files
+        if sel == "q":
+            print("Aucun fichier sélectionné.")
+            return None
+
+        parts = sel.split()
+        indices = []
+        ok = True
+
+        for p in parts:
+            if not p.isdigit():
+                ok = False
+                break
+            i = int(p)
+            if i < 1 or i > len(files):
+                ok = False
+                break
+            indices.append(i)
+
+        if not ok or not indices:
+            print("Saisie invalide. Exemple : 1 3 5 (dans l’intervalle 1..%d)." % len(files))
+            continue
+
+        seen = set()
+        selected = []
+        for i in indices:
+            if i not in seen:
+                seen.add(i)
+                selected.append(files[i - 1])
+
+        return selected
 
 
 def choose_audio_track_ffmpeg_index(video_fullpath):
     tracks = get_track_info(video_fullpath)
     if not tracks:
-        print("Aucune piste audio trouvée.")
-        sys.exit(1)
+        log.error("Aucune piste audio trouvée pour %s", video_fullpath)
+        return None
+
     print("\nPistes audio disponibles :")
-    for idx, stream in enumerate(tracks, start=0):
-        index = stream.get("index")
+    for idx, stream in enumerate(tracks):
+        ff_idx = stream.get("index")
         tags = stream.get("tags", {}) or {}
         lang = tags.get("language", "und")
         title = tags.get("title", "")
-        print(f"    {idx} : ffmpeg index {index}, langue={lang}, titre={title}")
-    chosen = input("Numéro de la piste audio à utiliser (défaut 0) : ").strip()
-    try:
-        chosen_idx = int(chosen) if chosen != "" else 0
-        if chosen_idx < 0 or chosen_idx >= len(tracks):
-            raise Exception("Numéro invalide")
-    except Exception:
-        print("Sélection invalide. Fin du programme.")
-        sys.exit(1)
-    return tracks[chosen_idx].get("index")
+        print(f"    {idx} : ffmpeg index {ff_idx}, langue={lang}, titre={title}")
+
+    while True:
+        chosen = input("Numéro de la piste audio à utiliser (Entrée=0, q=annuler) : ").strip().lower()
+        if chosen == "":
+            return tracks[0].get("index")
+        if chosen == "q":
+            print("Sélection de piste annulée.")
+            return None
+        if chosen.isdigit():
+            chosen_idx = int(chosen)
+            if 0 <= chosen_idx < len(tracks):
+                return tracks[chosen_idx].get("index")
+        print(f"Saisie invalide. Choisis un nombre entre 0 et {len(tracks) - 1}, ou q pour annuler.")
 
 
 def choose_subtitle_source(video_fullpath):

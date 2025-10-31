@@ -35,7 +35,7 @@ from add_dub.core.tts_registry import (
     list_voices_for_engine,
     resolve_voice_with_fallbacks,
 )
-
+from add_dub.logger import logger as log
 opts = load_options()
 
 
@@ -102,7 +102,7 @@ def _ask_voice_for_engine(engine: str) -> str | None:
     """
     all_voices = list_voices_for_engine(engine)
     if not all_voices:
-        print(f"[INFO] Aucune voix détectée pour le moteur '{engine}'.")
+        log.info(f"Aucune voix détectée pour le moteur '{engine}'.")
         return None
 
     # Étape 1 — langue de base
@@ -147,29 +147,45 @@ def _ask_voice_for_engine(engine: str) -> str | None:
     return voices[k2 - 1]["id"]
 
 
-def _ask_dirs_if_needed() -> None:
+def _ask_dirs_if_needed(
+    ask_input: bool | None = None,
+    ask_output: bool | None = None,
+    ask_tmp: bool | None = None,
+) -> None:
     """
-    Si les clés input_dir / output_dir / tmp_dir existent dans options.conf
-    **avec le flag 'd'**, on demande en interactif et on applique immédiatement.
+    Demande optionnelle des dossiers input/output/tmp.
+
+    Priorité:
+      - si ask_* est True/False, on suit ce choix (force/empêche l'affichage) ;
+      - sinon, on suit le flag 'display' d'options.conf ;
+      - sinon, on ne demande pas.
     """
     in_entry = opts.get("input_dir")
     out_entry = opts.get("output_dir")
     tmp_entry = opts.get("tmp_dir")
 
+    def _want(entry, override: bool | None) -> bool:
+        if override is not None:
+            return override
+        return bool(entry and getattr(entry, "display", False))
+
+    want_in = _want(in_entry, ask_input)
+    want_out = _want(out_entry, ask_output)
+    want_tmp = _want(tmp_entry, ask_tmp)
+
     new_in = None
     new_out = None
     new_tmp = None
 
-    if in_entry and getattr(in_entry, "display", False):
+    if want_in and in_entry:
         new_in = ask_option("input_dir", opts, "str", "Dossier d'entrée (input_dir)", in_entry.value)
-    if out_entry and getattr(out_entry, "display", False):
+    if want_out and out_entry:
         new_out = ask_option("output_dir", opts, "str", "Dossier de sortie (output_dir)", out_entry.value)
-    if tmp_entry and getattr(tmp_entry, "display", False):
+    if want_tmp and tmp_entry:
         new_tmp = ask_option("tmp_dir", opts, "str", "Dossier temporaire (tmp_dir)", tmp_entry.value)
 
     if any(v is not None for v in (new_in, new_out, new_tmp)):
         set_base_dirs(new_in, new_out, new_tmp)
-        # `ensure_base_dirs()` sera appelé juste après dans `main()`
 
 
 def _ask_engine_and_voice_if_needed(base_opts: DubOptions) -> tuple[str, str | None]:
@@ -297,7 +313,7 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
                 svcs=svcs
             )
             if outp:
-                print(f"[OK] {input_video_name} → {outp}")
+                log.info(f"{input_video_name} → {outp}")
         except Exception as e:
             print(f"[ERREUR] {input_video_name} → {e}")
 
@@ -311,15 +327,57 @@ def main() -> int:
         # 1) Demander d'abord les dossiers si options.conf marque 'd'
         _ask_dirs_if_needed()
         # 2) Créer/valider les dossiers (sans écraser les overrides, cf. flags)
-        ensure_base_dirs()
 
-        # Petit log de contrôle des chemins effectifs utilisés (dynamiques)
-        print(f"[dirs] \ninput  = {io_fs.INPUT_DIR} \noutput = {io_fs.OUTPUT_DIR} \ntmp    = {io_fs.TMP_DIR}")
+        while True:
+            ensure_base_dirs()
 
-        files = list_input_videos()
-        if not files:
-            print("Aucun fichier éligible trouvé dans input/.")
-            return 1
+            # Petit log de contrôle des chemins effectifs utilisés (dynamiques)
+            print(f"[dirs] \ninput  = {io_fs.INPUT_DIR} \noutput = {io_fs.OUTPUT_DIR} \ntmp    = {io_fs.TMP_DIR}")
+
+            files = list_input_videos()
+            if files:
+                break  # OK → on sort de la boucle et on continue le flux normal
+
+            # Aucun fichier exploitable → mini-menu
+            log.error("Aucun fichier éligible trouvé dans %s", io_fs.INPUT_DIR)
+            print("\nAucun fichier vidéo exploitable trouvé.")
+            print("Extensions acceptées : .mkv, .mp4 (non récursif).")
+            print("Placez les vidéos directement dans le dossier d'entrée.")
+            print("\nQue voulez-vous faire ?")
+            print("    1) Changer le dossier d'entrée")
+            print("    2) Afficher l'aide (rappel des formats attendus)")
+            print("    3) Relancer le test (re-scanner)")
+            print("    4) Quitter")
+
+            choice = input("Choix [3] : ").strip() or "3"
+
+            if choice == "1":
+                new_in = input("Nouveau dossier d'entrée : ").strip()
+                if new_in:
+                    # Applique uniquement l'input_dir, laisse output/tmp inchangés
+                    set_base_dirs(new_in, None, None)
+                    log.info("Dossier d'entrée changé vers: %s", new_in)
+                continue  # on re-scannera au prochain tour
+
+            if choice == "2":
+                print("\nAIDE :")
+                print("- Placez des vidéos .mkv / .mp4 dans le dossier d'entrée.")
+                print("- Les sous-titres .srt sont facultatifs (même nom que la vidéo).")
+                print("- Les sous-dossiers ne sont pas scannés (non récursif).")
+                print("- Évitez les fichiers de taille nulle ou verrouillés.")
+                input("\nAppuyez sur Entrée pour re-scanner...")
+                continue
+
+            if choice == "3":
+                # Relancer le scan sans rien changer
+                continue
+
+            if choice == "4":
+                return 1
+
+            # Entrée invalide → on re-tente
+            print("Choix invalide, on relance le scan.")
+            continue
 
         selected = svcs.choose_files(files)
         if not selected:

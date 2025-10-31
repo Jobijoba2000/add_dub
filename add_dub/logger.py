@@ -60,7 +60,7 @@ def _build_console_handler(console_level_name: str) -> logging.Handler:
     level = getattr(logging, console_level_name.upper(), logging.INFO)
     h = logging.StreamHandler()
     h.setLevel(level)
-    h.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s'))
+    h.setFormatter(logging.Formatter('[%(levelname)s] - %(message)s'))
     return h
 
 

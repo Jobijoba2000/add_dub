@@ -14,7 +14,7 @@ def ask_float(prompt_txt, default):
     s = input(f"{prompt_txt} [{default}]: ").strip()
     try:
         return float(s) if s != "" else float(default)
-    except:
+    except ValueError:
         print("Valeur invalide, on garde le défaut.")
         return float(default)
 
@@ -22,7 +22,7 @@ def ask_int(prompt_txt, default):
     s = input(f"{prompt_txt} [{default}]: ").strip()
     try:
         return int(s) if s != "" else int(default)
-    except:
+    except ValueError:
         print("Valeur invalide, on garde le défaut.")
         return int(default)
 
