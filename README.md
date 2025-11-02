@@ -1,16 +1,22 @@
-# add_dub — doublage TTS à partir de sous-titres (Windows)
+# 🎧 add_dub — Vocaliser les sous-titres de vos vidéos (Windows)
 
-`add_dub` crée automatiquement une **piste audio doublée** (TTS) synchronisée sur vos sous-titres, applique un **ducking** sur l’audio d’origine, puis remuxe le tout dans un **MKV** :
+**add_dub** transforme automatiquement les sous-titres d’une vidéo en **voix parlée (TTS)** et crée une **nouvelle vidéo avec doublage audio**.  
+🎯 L’objectif est simple : permettre à celles et ceux qui ont du mal à lire les sous-titres — par **fatigue visuelle** ou **malvoyance** — de **les écouter** à la place.
 
-- Piste 0 : mix **TTS + audio original**
-- Piste 1 : **audio original** seul
-- **Sous-titres** conservés (avec OCR possible pour les sous-titres image)
+## 📥 En entrée
+🎞️ Une vidéo avec sous-titres intégrés,  
+ou une vidéo accompagnée d’un fichier `.srt`.
 
-Conçu pour l’**accessibilité** (mal-voyants, fatigue de lecture des sous-titres) et pour toute personne souhaitant écouter un doublage automatique.
+## 🎬 En sortie
+Une vidéo au format **MKV** contenant :  
+- **Piste 0** : 🎥 vidéo originale  
+- **Piste 1** : 🔊 mix voix TTS + audio original  
+- **Piste 2** : 🎧 audio original seul  
+- **Piste 3** : 💬 sous-titres
 
 ---
 
-## Télécharger
+## 💾 Télécharger
 
 Version portable:  
 [📥 add_dub_v0.4.1_win64.zip](https://github.com/Jobijoba2000/add_dub/releases/download/v0.4.1/add_dub_v0.4.1_win64.zip)
@@ -21,38 +27,38 @@ Ou bien :
 
 ---
 
-## Installation & premier lancement
+## ⚙️ Installation & premier lancement
 
-1) Décompressez l’archive portable **ou** clonez le dépôt.  
-2) Lancez :
+1️⃣ Décompressez l’archive portable **ou** clonez le dépôt.  
+2️⃣ Lancez :
 
     start_add_dub.bat
 
 Au **premier démarrage**, le script :
-- télécharge/installe la **Toolbox** (Python portable, FFmpeg, MKVToolNix, Subtitle Edit, etc.),
-- crée les dossiers : `input`, `output`, `tmp`, `srt`,
-- génère `options.conf` à partir de `options.example.conf`,
-- démarre **en mode interactif**.
+- 📦 télécharge/installe la **Toolbox** (Python portable, FFmpeg, MKVToolNix, Subtitle Edit, etc.),
+- 📁 crée les dossiers : `input`, `output`, `tmp`, `srt`,
+- 🧩 génère `options.conf` à partir de `options.example.conf`,
+- 🚀 démarre **en mode interactif**.
 
 ---
 
-## Voix TTS prises en charge
+## 🗣️ Voix TTS prises en charge
 
 - **OneCore (Windows)** : très **rapide** et **hors ligne**, nombre de voix dépend du système.  
 - **Edge TTS** : voix **naturelles**, de bonne qualité, **nécessite Internet**.  
 - **gTTS** : simple et léger, voix plus **robotiques**, **nécessite Internet**.
 
-> L’outil sait **lister les voix** disponibles et choisir automatiquement une voix de repli quand c’est possible.
+> 💡 L’outil sait **lister les voix** disponibles et choisir automatiquement une voix de repli quand c’est possible.
 
 ---
 
-## `options.conf` (mode interactif & valeurs par défaut)
+## ⚙️ `options.conf` (mode interactif & valeurs par défaut)
 
 Chaque ligne est de la forme :  
 - `clé = valeur` → la valeur est utilisée telle quelle  
 - `clé = valeur d` → **demander** la valeur au lancement (suffixe `d` pour “demander”)
 
-> Tous les champs **ne tirent pas** bénéfice d’un `d`. Par exemple, `tts_engine` supporte bien le `d`.  
+> ℹ️ Tous les champs **ne tirent pas** bénéfice d’un `d`. Par exemple, `tts_engine` supporte bien le `d`.  
 > `voice_id` doit généralement être renseigné directement (ou laissé vide pour laisser l’outil choisir).
 
 Valeurs par défaut (extrait d’`options.example.conf`) :
@@ -85,58 +91,58 @@ Valeurs par défaut (extrait d’`options.example.conf`) :
     console_level  = INFO        ; DEBUG|INFO|WARNING|ERROR
 
 **Détails pratiques :**
-- `input_dir`, `output_dir`, `tmp_dir`, `srt` : dossiers de base (créés automatiquement).
-- `tts_engine` : `onecore` | `edge` | `gtts` (peut être suffixé de `d`).
-- `voice_id` : identifiant précis de la voix (utile surtout pour **OneCore**). Laisser vide pour laisser l’outil tenter un choix cohérent.
-- `min_rate_tts` / `max_rate_tts` : bornes de vitesse (facteur). Exemple : `1.2` à `1.8`.
-- `db` : ducking du fond (en dB, négatif → atténuation). Exemple : `-5.0`.
-- `offset` (ms) : décalage global **sous-titres/TTS** (positif ou négatif).
-- `offset_video` (ms) : décalage appliqué à la **vidéo**.
-- `bg` / `tts` : gains de mix (ex. `bg=0.8`, `tts=1.1`).
-- `audio_codec` : `aac` | `ac3` | `mp3` | `flac` | `opus` | `vorbis` | `pcm_s16le` …
-- `audio_bitrate` : en kb/s (appliqué aux codecs avec pertes).
-- `orig_audio_lang` : libellé de la piste originale.
-- `ask_test_before_cleanup` : si `true` (ou avec `d`), propose **d’écouter** et remuxer **avant** de supprimer les WAV temporaires.
-- `[logging] console_enable / console_level` : affichage console et niveau.
+- 📂 `input_dir`, `output_dir`, `tmp_dir`, `srt` : dossiers de base (créés automatiquement).
+- 🧠 `tts_engine` : `onecore` | `edge` | `gtts` (peut être suffixé de `d`).
+- 🎙️ `voice_id` : identifiant précis de la voix (utile surtout pour **OneCore**). Laisser vide pour laisser l’outil tenter un choix cohérent.
+- ⏩ `min_rate_tts` / `max_rate_tts` : bornes de vitesse (facteur). Exemple : `1.2` à `1.8`.
+- 🔉 `db` : ducking du fond (en dB, négatif → atténuation). Exemple : `-5.0`.
+- ⏱️ `offset` (ms) : décalage global **sous-titres/TTS** (positif ou négatif).
+- 🎞️ `offset_video` (ms) : décalage appliqué à la **vidéo**.
+- 🎚️ `bg` / `tts` : gains de mix (ex. `bg=0.8`, `tts=1.1`).
+- 🎧 `audio_codec` : `aac` | `ac3` | `mp3` | `flac` | `opus` | `vorbis` | `pcm_s16le` …
+- 💾 `audio_bitrate` : en kb/s (appliqué aux codecs avec pertes).
+- 🗂️ `orig_audio_lang` : libellé de la piste originale.
+- 🎧 `ask_test_before_cleanup` : si `true` (ou avec `d`), propose **d’écouter** et remuxer **avant** de supprimer les WAV temporaires.
+- 🧾 `[logging] console_enable / console_level` : affichage console et niveau.
 
 ---
 
-## Mode interactif
+## 💬 Mode interactif
 
 Lancer simplement :
 
     start_add_dub.bat
 
 Le programme :
-- **trouve** vos fichiers dans `input/` (SRT préféré : `srt/` homonyme > sidecar `.srt` > extraction auto de la 1ʳᵉ piste MKV),
-- **propose** la piste audio source (**index FFmpeg**, base **0**),
-- **guide** le choix du TTS/voix, des gains et décalages,
-- génère le **MKV final** dans `output/`.
+- 🔎 **trouve** vos fichiers dans `input/` (SRT préféré : `srt/` homonyme > sidecar `.srt` > extraction auto de la 1ʳᵉ piste MKV),
+- 🎛️ **propose** la piste audio source (**index FFmpeg**, base **0**),
+- 🎙️ **guide** le choix du TTS/voix, des gains et décalages,
+- 🎬 génère le **MKV final** dans `output/`.
 
 > **Indexation dans l’outil :** l’interface liste les **pistes audio en commençant à 0** (index FFmpeg), et sélectionne par défaut `0`.  
 > Pour les sous-titres intégrés, l’auto-sélection prend la **première piste** (équivalent **0**) si aucun `.srt` n’est trouvé.
 
 ---
 
-## Mode `--batch`
+## ⚡ Mode `--batch`
 
 Traitement sans interaction (utilise `options.conf` si une option n’est pas fournie en CLI) :
 
     start_add_dub.bat --batch
 
-- `--input / -i` accepte **un ou plusieurs chemins** (fichier(s) et/ou dossier(s)).  
-- `--recursive / -r` parcourt **récursivement** les sous-dossiers.  
-- Sélection des sous-titres :
+- 📁 `--input / -i` accepte **un ou plusieurs chemins** (fichier(s) et/ou dossier(s)).  
+- 🔁 `--recursive / -r` parcourt **récursivement** les sous-dossiers.  
+- 🗂️ Sélection des sous-titres :
   - priorité à `srt/<nom>.srt`,
   - sinon sidecar `.srt` à côté de la vidéo,
   - sinon **extraction** de la **1ʳᵉ piste** intégrée.
-- Sélection de la piste audio source : via `--audio-index` (**index FFmpeg**, base **0**).
+- 🔊 Sélection de la piste audio source : via `--audio-index` (**index FFmpeg**, base **0**).
 
 ---
 
-## Toutes les options CLI (avec valeurs & exemples)
+## 🧩 Toutes les options CLI (avec valeurs & exemples)
 
-### Sélection du mode
+### 🧭 Sélection du mode
 - `--interactive`  
   Force l’**interface interactive** (comportement par défaut si aucun mode n’est précisé).  
   Exemple :  
@@ -152,7 +158,7 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
   Exemple :  
     start_add_dub.bat --list-voices
 
-### Entrées / parcours
+### 📂 Entrées / parcours
 - `--input PATH ...` ou `-i PATH ...`  
   Un **ou plusieurs** chemins fichier/dossier.  
   Exemples :  
@@ -165,7 +171,7 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
   Exemple :  
     -i "D:\lot" --recursive
 
-### TTS & voix
+### 🗣️ TTS & voix
 - `--tts-engine {onecore,edge,gtts}`  
   Choix du **moteur TTS** (sinon `options.conf`).  
   Exemples :  
@@ -184,7 +190,7 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
   Exemple :  
     --min-rate-tts 1.2 --max-rate-tts 1.8
 
-### Synchronisation & mix
+### ⏱️ Synchronisation & mix
 - `--offset-ms INT`  
   **Décalage** global des sous-titres/TTS, en **millisecondes** (positif/négatif).  
   Exemples :  
@@ -226,7 +232,7 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
 	--sub mkv:0 (prend la piste 1)   
 	--sub mkv:1 (prend la piste 2)
 
-### Codec & sortie
+### 🎧 Codec & sortie
 - `--audio-codec {aac,ac3,mp3,flac,opus,vorbis,pcm_s16le}`  
   Codec audio de la **piste finale** (mix).  
   Exemples :  
@@ -255,13 +261,13 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
   Exemple :  
     --limit-duration-sec 60
 
-> **Sous-titres (batch)** : pas de `--sub-track` dédié. Le batch suit la priorité  
+> 💡 **Sous-titres (batch)** : pas de `--sub-track` dédié. Le batch suit la priorité  
 > `srt/` > sidecar `.srt` > **extraction de la 1ʳᵉ piste** intégrée (index local 0).  
 > En **interactif**, vous pouvez **choisir** explicitement la source de sous-titres.
 
 ---
 
-## Exemples
+## 🧪 Exemples
 
 - **Interactif (par défaut)** :
   
@@ -289,13 +295,13 @@ Traitement sans interaction (utilise `options.conf` si une option n’est pas fo
 
 ---
 
-## OCR des sous-titres image
+## 🖋️ OCR des sous-titres image
 
 Si vos sous-titres sont au format **image** (PGS, VobSub, etc.), `add_dub` utilise **Subtitle Edit** et les outils de la Toolbox pour **OCRiser** automatiquement vers SRT quand c’est nécessaire.
 
 ---
 
-## Commandes rapides
+## ⚙️ Commandes rapides
 
     start_add_dub.bat --batch      # traitement sans interaction
     start_add_dub.bat -h           # aide et options
@@ -303,6 +309,6 @@ Si vos sous-titres sont au format **image** (PGS, VobSub, etc.), `add_dub` utili
 
 ---
 
-## Licence
+## 📜 Licence
 
 Code sous licence **MIT**. Les dépendances nécessaires sont incluses dans la Toolbox.
