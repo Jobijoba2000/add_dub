@@ -24,8 +24,11 @@ def mkvmerge_identify_json(video_path):
     if not mkvmerge:
         return None
     try:
-        r = subprocess.run([mkvmerge, "-J", video_path],
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        r = subprocess.run(
+            [mkvmerge, "-J", video_path],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="replace", check=True
+        )
         return json.loads(r.stdout)
     except Exception:
         return None
@@ -80,8 +83,11 @@ def audio_video_offset_ms(video_path, audio_track_id):
         raise FileNotFoundError("mkvmerge ou mkvextract introuvable")
 
     # Obtenir l'ID de la piste vidéo de référence
-    result = subprocess.run([mkvmerge, "-J", video_path],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+    result = subprocess.run(
+        [mkvmerge, "-J", video_path],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, encoding="utf-8", errors="replace", check=True
+    )
     info = json.loads(result.stdout)
     video_ids = sorted(t["id"] for t in info.get("tracks", []) if t.get("type") == "video")
     if not video_ids:
@@ -93,7 +99,8 @@ def audio_video_offset_ms(video_path, audio_track_id):
             out_file = Path(td) / f"timecodes_{track_id}.txt"
             r = subprocess.run(
                 [mkvextract, "timecodes_v2", video_path, f"{track_id}:{out_file}"],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, encoding="utf-8", errors="replace"
             )
             if r.returncode != 0:
                 raise RuntimeError(r.stderr.strip())

@@ -194,7 +194,8 @@ def extract_first_subtitle_to_srt_into_input(
             ]
             start = time.perf_counter()
             subprocess.run(
-                cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, encoding="utf-8", errors="replace"
             )
             end = time.perf_counter()
             print(end - start)
@@ -229,7 +230,8 @@ def extract_first_subtitle_to_srt_into_input(
         if os.path.basename(mkvextract).lower() != "mkvextract":
             cmd[0] = mkvextract
         subprocess.run(
-            cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="replace"
         )
 
         tmp_out = os.path.join(tmp_dir, base + ".srt")

@@ -18,14 +18,14 @@ def run_ffmpeg_with_percentage(cmd, duration_source):
     duration = float(subprocess.check_output(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration",
          "-of", "default=nw=1:nk=1", duration_source],
-        text=True
+        text=True, encoding="utf-8", errors="replace"
     ).strip())
 
     p = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,          # flux -progress
         stderr=subprocess.DEVNULL,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         bufsize=1
     )
 
@@ -55,7 +55,10 @@ def get_track_info(video_fullpath):
         "-show_streams",
         video_fullpath,
     ]
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        text=True, encoding="utf-8", errors="replace"
+    )
     data = json.loads(result.stdout) if result.stdout else {}
     audio_tracks = []
     for stream in data.get("streams", []):
@@ -201,6 +204,3 @@ def dub_in_one_pass(
     # Barre de progression (basée sur la durée vidéo)
     run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
     return output_video_path
-
-
-
