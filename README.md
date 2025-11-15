@@ -19,7 +19,7 @@ Une vidéo au format **MKV** contenant :
 ## Télécharger
 
 Version portable:  
-[📥 add_dub_v0.4.1_win64.zip](https://github.com/Jobijoba2000/add_dub/releases/download/v0.4.1/add_dub_v0.4.1_win64.zip)
+[📥 add_dub_v0.4.2_win64.zip](https://github.com/Jobijoba2000/add_dub/releases/download/v0.4.2/add_dub_v0.4.2_win64.zip)
 
 Ou bien :
 
