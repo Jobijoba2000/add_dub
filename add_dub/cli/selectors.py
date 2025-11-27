@@ -7,22 +7,26 @@ from add_dub.adapters.mkvtoolnix import list_mkv_sub_tracks
 from add_dub.core.subtitles import find_sidecar_srt
 from add_dub.logger import logger as log
 
+from add_dub.i18n import t
+
+# ... imports ...
+
 def choose_files(files):
     if not files:
-        print("Aucun fichier éligible trouvé dans input/.")
+        print(t("cli_no_eligible", path="input/"))
         return None
 
     while True:
-        print("\nFichiers éligibles (input/):")
+        print(t("cli_files_list"))
         for idx, f in enumerate(files, start=1):
             print(f"    {idx}. {f}")
 
-        sel = input("Entrez les numéros à traiter (espaces, Entrée=tout, q=annuler) : ").strip().lower()
+        sel = input(t("cli_select_files")).strip().lower()
 
         if sel == "":
             return files
         if sel == "q":
-            print("Aucun fichier sélectionné.")
+            print(t("cli_selection_cancelled"))
             return None
 
         parts = sel.split()
@@ -40,7 +44,7 @@ def choose_files(files):
             indices.append(i)
 
         if not ok or not indices:
-            print("Saisie invalide. Exemple : 1 3 5 (dans l’intervalle 1..%d)." % len(files))
+            print(t("cli_invalid_selection", max=len(files)))
             continue
 
         seen = set()
@@ -59,26 +63,26 @@ def choose_audio_track_ffmpeg_index(video_fullpath):
         log.error("Aucune piste audio trouvée pour %s", video_fullpath)
         return None
 
-    print("\nPistes audio disponibles :")
+    print(t("cli_audio_tracks"))
     for idx, stream in enumerate(tracks):
         ff_idx = stream.get("index")
         tags = stream.get("tags", {}) or {}
         lang = tags.get("language", "und")
         title = tags.get("title", "")
-        print(f"    {idx} : ffmpeg index {ff_idx}, langue={lang}, titre={title}")
+        print(t("cli_track_info", idx=idx, ff_idx=ff_idx, lang=lang, title=title))
 
     while True:
-        chosen = input("Numéro de la piste audio à utiliser (Entrée=0, q=annuler) : ").strip().lower()
+        chosen = input(t("cli_choose_track")).strip().lower()
         if chosen == "":
             return tracks[0].get("index")
         if chosen == "q":
-            print("Sélection de piste annulée.")
+            print(t("cli_track_cancelled"))
             return None
         if chosen.isdigit():
             chosen_idx = int(chosen)
             if 0 <= chosen_idx < len(tracks):
                 return tracks[chosen_idx].get("index")
-        print(f"Saisie invalide. Choisis un nombre entre 0 et {len(tracks) - 1}, ou q pour annuler.")
+        print(t("cli_invalid_track", max=len(tracks) - 1))
 
 
 def choose_subtitle_source(video_fullpath):
@@ -120,14 +124,14 @@ def choose_subtitle_source(video_fullpath):
             choices.append(("mkv", local_idx))
 
     if not choices:
-        print("Aucune source de sous-titres disponible.")
+        print(t("cli_no_subs"))
         return None
 
-    print("\nSources de sous-titres :")
+    print(t("cli_subs_sources"))
     for line in labels:
         print(line)
 
-    s = input(f"Choisir la source ST (0..{len(choices)-1}) [0]: ").strip()
+    s = input(t("cli_choose_sub", max=len(choices)-1)).strip()
     try:
         idx = int(s) if s != "" else 0
     except Exception:

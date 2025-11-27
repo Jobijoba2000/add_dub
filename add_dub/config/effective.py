@@ -67,6 +67,7 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
     output_dir = str(_conf_value(opts, "output_dir", getattr(cfg, "OUTPUT_DIR", "output")))
     tmp_dir = str(_conf_value(opts, "tmp_dir", getattr(cfg, "TMP_DIR", "tmp")))
     # srt_dir est **fixe** côté io.fs (cfg.SRT_DIR), pas exposé ici
+    language = str(_conf_value(opts, "language", getattr(cfg, "LANGUAGE", "auto")))
 
     return {
         "tts_engine": tts_engine,
@@ -86,6 +87,7 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
         "tmp_dir": tmp_dir,
         # --- NOUVEAU ---
         "ask_test_before_cleanup": ask_test_before_cleanup,
+        "language": language,
     }
 
 

@@ -36,6 +36,7 @@ TTS_ENGINE = "onecore"
 VOICE_ID = get_system_default_voice_id()
 MIN_RATE_TTS = 1.0
 MAX_RATE_TTS = 1.8
+LANGUAGE = "auto"
 
 # OUTPUT
 AUDIO_CODEC_FINAL = "ac3"      # "aac", "mp3", "ac3", "flac", "opus", "vorbis", "pcm_s16le"

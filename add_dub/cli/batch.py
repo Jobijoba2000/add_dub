@@ -12,6 +12,7 @@ from add_dub.core.subtitles import (
     list_input_videos,
     resolve_srt_for_video,
     find_sidecar_srt,
+    _srt_in_srt_dir_for_video,
 )
 from add_dub.core.codecs import final_audio_codec_args, subtitle_codec_for_container
 from add_dub.core.tts_generate import generate_dub_audio
@@ -21,8 +22,11 @@ from add_dub.core.tts_registry import (
 )
 from add_dub.adapters.ffmpeg import get_track_info  # ffprobe
 from add_dub.config.opts_loader import load_options
-from add_dub.config.effective import effective_values
+from add_dub.i18n import t
 
+from add_dub.config.effective import effective_values
+from add_dub.core.services import Services
+import add_dub.io.fs as io_fs
 
 # --------------------------
 # Dossiers (batch = sans prompt)
@@ -54,7 +58,7 @@ def _gather_targets(paths: Optional[List[str]], recursive: bool) -> List[str]:
 
     if not paths:
         for name in list_input_videos():
-            results.append(os.path.join(INPUT_DIR, name))
+            results.append(os.path.join(io_fs.INPUT_DIR, name))
         return results
 
     exts = (".mkv", ".mp4", ".avi", ".mov")
@@ -82,12 +86,12 @@ def _gather_targets(paths: Optional[List[str]], recursive: bool) -> List[str]:
             continue
 
         # Nom relatif par rapport à INPUT_DIR (ex: juste "foo.mkv")
-        candidate = os.path.join(INPUT_DIR, p)
+        candidate = os.path.join(io_fs.INPUT_DIR, p)
         if os.path.isfile(candidate) and candidate.lower().endswith(exts):
             results.append(candidate)
         elif os.path.isdir(candidate):
             for name in list_input_videos():
-                results.append(os.path.join(INPUT_DIR, name))
+                results.append(os.path.join(io_fs.INPUT_DIR, name))
 
     # Déduplique en préservant l'ordre
     seen = set()
@@ -108,13 +112,6 @@ def _build_services(args):
     - choose_audio_track : index global de la première piste audio (ffprobe).
     - choose_subtitle_source : SRT sidecar prioritaire, sinon piste MKV demandée (défaut 0).
     """
-    class Svcs:
-        pass
-
-    svcs = Svcs()
-    svcs.resolve_srt_for_video = resolve_srt_for_video
-    svcs.generate_dub_audio = generate_dub_audio
-
     def _choose_files(files: Iterable[str]) -> List[str]:
         return list(files)
 
@@ -139,6 +136,14 @@ def _build_services(args):
     def _choose_subtitle_source(input_video_path: str):
         mode = (getattr(args, "sub_mode", "auto") or "auto").lower()
         if mode == "srt":
+            # Priorité 1 : srt/
+            in_srt = _srt_in_srt_dir_for_video(input_video_path)
+            if in_srt:
+                return ("srt", in_srt)
+            # Priorité 2 : sidecar
+            sidecar = find_sidecar_srt(input_video_path)
+            if sidecar:
+                return ("srt", sidecar)
             return ("srt", None)
         if mode == "mkv":
             try:
@@ -148,10 +153,13 @@ def _build_services(args):
             return ("mkv", idx)
         return _auto_sub_choice(input_video_path)
 
-    svcs.choose_files = _choose_files
-    svcs.choose_audio_track = _choose_audio_track
-    svcs.choose_subtitle_source = _choose_subtitle_source
-    return svcs
+    return Services(
+        resolve_srt_for_video=resolve_srt_for_video,
+        generate_dub_audio=generate_dub_audio,
+        choose_files=_choose_files,
+        choose_audio_track=_choose_audio_track,
+        choose_subtitle_source=_choose_subtitle_source,
+    )
 
 
 # --------------------------
@@ -196,10 +204,6 @@ def _make_options(args) -> DubOptions:
         offset_video_ms=args.offset_video_ms,
     )
 
-
-# --------------------------
-# Entrée principale
-# --------------------------
 def main(args) -> int:
     # Applique les dossiers depuis options.conf (pas de prompt en batch)
     _apply_dirs_from_conf()
@@ -207,7 +211,7 @@ def main(args) -> int:
 
     targets = _gather_targets(args.input, args.recursive)
     if not targets:
-        print("Aucune vidéo détectée. Place des fichiers dans ./input ou indique --input.")
+        print(t("cli_no_video"))
         return 2
 
     svcs = _build_services(args)
@@ -215,18 +219,18 @@ def main(args) -> int:
 
     any_error = False
     for path in targets:
-        print(f"[BATCH] {path}")
+        print(t("cli_batch_start", path=path))
         if args.dry_run:
             sub_choice = svcs.choose_subtitle_source(path)
             aud_idx = opts.audio_ffmpeg_index if opts.audio_ffmpeg_index is not None else svcs.choose_audio_track(path)
-            print(f"  -> subtitles choice: {sub_choice}")
-            print(f"  -> audio_index (ffprobe global): {aud_idx}")
-            print(f"  -> tts_engine: {opts.tts_engine}")
-            print(f"  -> voice: {opts.voice_id}")
-            print(f"  -> codec: {opts.audio_codec} @ {opts.audio_bitrate} kb/s")
-            print(f"  -> bg_mix={opts.bg_mix}, tts_mix={opts.tts_mix}, ducking_db={opts.db_reduct}")
-            print(f"  -> min_rate_tts={opts.min_rate_tts}, max_rate_tts={opts.max_rate_tts}")
-            print(f"  -> offset_ms={opts.offset_ms}, offset_video_ms={opts.offset_video_ms}")
+            print(t("cli_sub_choice", choice=sub_choice))
+            print(t("cli_audio_index", index=aud_idx))
+            print(t("cli_tts_engine", engine=opts.tts_engine))
+            print(t("cli_voice", voice=opts.voice_id))
+            print(t("cli_codec", codec=opts.audio_codec, bitrate=opts.audio_bitrate))
+            print(t("cli_mix", bg_mix=opts.bg_mix, tts_mix=opts.tts_mix, ducking_db=opts.db_reduct))
+            print(t("cli_rates", min=opts.min_rate_tts, max=opts.max_rate_tts))
+            print(t("cli_offsets", offset=opts.offset_ms, offset_video=opts.offset_video_ms))
             continue
 
         run_opts = replace(opts)

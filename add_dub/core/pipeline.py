@@ -19,7 +19,7 @@ from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
 from pprint import pprint
 from add_dub.logger import (log_call, log_time)
-
+from add_dub.i18n import t
 
 @log_time
 @log_call
@@ -38,7 +38,7 @@ def process_one_video(
     Retourne le chemin de la vidéo finale, ou None si annulé.
     """
 
-    print(input_video_name)
+    print(t("pipeline_process", name=input_video_name))
 
     base, ext = os.path.splitext(os.path.basename(input_video_path))
 
@@ -57,7 +57,7 @@ def process_one_video(
     # 3) Résolution vers un SRT exploitable
     srt_path = svcs.resolve_srt_for_video(input_video_path, sub_choice)
     if not srt_path:
-        print(f"Impossible d'obtenir un SRT pour {input_video_name}.")
+        print(t("pipeline_no_srt", name=input_video_name))
         return None
 
     # 4) Nettoyage SRT
@@ -68,7 +68,7 @@ def process_one_video(
 
     # 6) Extraction audio d'origine → **tmp/**
     orig_wav = join_tmp(f"{base}_orig.wav")
-    print("\nExtraction de l'audio d'origine (WAV PCM)...")
+    print(t("pipeline_extract_audio"))
     extract_audio_track(
         input_video_path,
         audio_idx,
@@ -85,12 +85,12 @@ def process_one_video(
     # 7) Parsing SRT (sert aussi au ducking)
     subtitles = parse_srt_file(srt_path, duration_limit_sec=limit_duration_sec)
     if not subtitles:
-        print("Aucun sous-titre exploitable.")
+        print(t("pipeline_no_subs_usable"))
         return None
 
     # 8) Génération TTS alignée → **tmp/**
     tts_wav = join_tmp(f"{test_prefix}{base}_tts.wav")
-    print("\nGénération TTS (WAV)...")
+    print(t("pipeline_gen_tts"))
     svcs.generate_dub_audio(
         srt_file=srt_path,
         output_wav=tts_wav,
@@ -101,7 +101,7 @@ def process_one_video(
 
     # 9) Ducking → **tmp/**
     ducked_wav = join_tmp(f"{test_prefix}{base}_ducked.wav")
-    print("\nDucking de l'audio original pendant les dialogues...")
+    print(t("pipeline_ducking"))
     lower_audio_during_subtitles(
         audio_file=orig_wav,
         subtitles=subtitles,
@@ -140,7 +140,7 @@ def process_one_video(
     dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
     final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}", output_dir_path)
 
-    print("\nMixage/Encodage/Mux final...")
+    print(t("pipeline_mux"))
     dub_in_one_pass(
         video_fullpath=input_video_path,
         bg_wav=ducked_wav,
@@ -153,12 +153,12 @@ def process_one_video(
 
     # 11) (NOUVEAU) Option de test AVANT nettoyage + re-mux rapide si besoin
     if getattr(opts, "ask_test_before_cleanup", False):
-        print("\n=== TEST AVANT NETTOYAGE ===")
-        print(f"Fichier généré : {final_video}")
-        print("Ouvrez la vidéo et vérifiez les niveaux (bg / tts).")
+        print(t("pipeline_test_header"))
+        print(t("pipeline_test_file", path=final_video))
+        print(t("pipeline_test_check"))
         while True:
-            resp = input("Souhaitez-vous ajuster les niveaux et refaire le mux ? (o/n) : ").strip().lower()
-            if resp not in ("o", "oui", "y", "yes", "n", "non"):
+            resp = input(t("pipeline_test_ask")).strip().lower()
+            if resp not in ("o", "oui", "y", "yes", "n", "non", "s", "si"):
                 continue
             if resp in ("n", "non"):
                 break
@@ -170,19 +170,19 @@ def process_one_video(
                 try:
                     return float(raw)
                 except Exception:
-                    print("Valeur invalide, on conserve la valeur actuelle.")
+                    print(t("ui_invalid_value"))
                     return default_val
 
             # Saisie des nouveaux niveaux
-            new_bg = _ask_float("Nouveau niveau BG (volume background, ex. 1.0, 2.5)", opts.bg_mix)
-            new_tts = _ask_float("Nouveau niveau TTS (volume voix, ex. 1.0, 3.0)", opts.tts_mix)
+            new_bg = _ask_float(t("pipeline_test_ask_bg"), opts.bg_mix)
+            new_tts = _ask_float(t("pipeline_test_ask_tts"), opts.tts_mix)
 
             # Mise à jour en mémoire
             opts.bg_mix = new_bg
             opts.tts_mix = new_tts
 
             # Re-mux **sans** régénérer TTS/ducking (on réutilise les WAV temporaires)
-            print("\nRe-mux avec nouveaux niveaux...")
+            print(t("pipeline_test_remux"))
             dub_in_one_pass(
                 video_fullpath=input_video_path,
                 bg_wav=ducked_wav,
@@ -192,8 +192,8 @@ def process_one_video(
                 output_video_path=final_video,  # on écrase, -y est passé dans la commande
                 opts=opts,
             )
-            print(f"Re-mux terminé → {final_video}")
-            print("Réouvrez la vidéo pour vérifier. CTRL+C pour quitter, sinon poursuivez.")
+            print(t("pipeline_test_done", path=final_video))
+            print(t("pipeline_test_continue"))
 
     # 12) Nettoyage des **tmp/**
     for f in (orig_wav, tts_wav, ducked_wav):

@@ -11,6 +11,7 @@ import tempfile
 import add_dub.io.fs as io_fs  # ← module, pas des valeurs copiées
 from add_dub.adapters.mkvtoolnix import mkv_has_subtitle_track, mkvmerge_identify_json
 from add_dub.adapters.subtitle_edit import subtitle_edit_ocr, vobsub2srt_ocr
+from add_dub.i18n import t
 
 
 def _find_exe(candidates):
@@ -155,12 +156,12 @@ def extract_first_subtitle_to_srt_into_input(
     """
     info = mkvmerge_identify_json(video_fullpath)
     if not info:
-        print("MKVToolNix requis pour identifier les pistes (mkvmerge).")
+        print(t("sub_mkvtoolnix_required"))
         return None
 
     sub_tracks = [t for t in info.get("tracks", []) if t.get("type") == "subtitles"]
     if not sub_tracks:
-        print("Aucune piste de sous-titres intégrée.")
+        print(t("sub_no_tracks"))
         return None
 
     if local_sub_index < 0 or local_sub_index >= len(sub_tracks):
@@ -201,11 +202,11 @@ def extract_first_subtitle_to_srt_into_input(
             print(end - start)
             if os.path.exists(target_srt) and os.path.getsize(target_srt) > 0:
                 strip_subtitle_tags_inplace(target_srt)
-                print(f"SRT extrait (texte) -> {target_srt}")
+                print(t("sub_extract_text_success", path=target_srt))
                 return target_srt
-            print("Échec extraction SRT (texte).")
+            print(t("sub_extract_text_failed"))
         except subprocess.CalledProcessError as e:
-            print("Erreur ffmpeg extraction ST texte:", (e.stderr or "")[-400:])
+            print(t("sub_ffmpeg_error", err=(e.stderr or "")[-400:]))
         return None
 
     # Bitmap (PGS/VobSub) -> mkvextract + OCR
@@ -217,7 +218,7 @@ def extract_first_subtitle_to_srt_into_input(
         ]
     )
     if not mkvextract:
-        print("mkvextract introuvable.")
+        print(t("sub_mkvextract_not_found"))
         return None
 
     tmp_dir = tempfile.mkdtemp(prefix="subs_")
@@ -241,7 +242,7 @@ def extract_first_subtitle_to_srt_into_input(
             os.makedirs(os.path.dirname(target_srt), exist_ok=True)
             os.replace(tmp_out, target_srt)
             strip_subtitle_tags_inplace(target_srt)
-            print(f"SRT OCR (Subtitle Edit) -> {target_srt}")
+            print(t("sub_ocr_success", method="Subtitle Edit", path=target_srt))
             return target_srt
 
         if ext == ".sub":
@@ -250,10 +251,10 @@ def extract_first_subtitle_to_srt_into_input(
                 os.makedirs(os.path.dirname(target_srt), exist_ok=True)
                 os.replace(produced, target_srt)
                 strip_subtitle_tags_inplace(target_srt)
-                print(f"SRT OCR (vobsub2srt) -> {target_srt}")
+                print(t("sub_ocr_success", method="vobsub2srt", path=target_srt))
                 return target_srt
 
-        print("Aucun OCR disponible.")
+        print(t("sub_no_ocr"))
         return None
     finally:
         try:
@@ -287,10 +288,14 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple) -> str 
         if srt_path:
             strip_subtitle_tags_inplace(srt_path)
             return srt_path
-        print(f"[AUTO] Échec extraction SRT depuis la piste MKV sélectionnée pour {video_fullpath}.")
+        print(t("sub_auto_extract_failed", video=video_fullpath))
         return None
 
     # CAS 2 — Choix SRT (depuis srt/ ou sidecar)
+    # Si un chemin spécifique a été passé (ex: via le sélecteur interactif ou batch amélioré), on l'utilise.
+    if kind == "srt" and value:
+        strip_subtitle_tags_inplace(value)
+        return value
     # 2.1) srt/<base>.srt déjà présent → on l'utilise tel quel
     srt_in_srt = _srt_in_srt_dir_for_video(video_fullpath)
     if srt_in_srt:
@@ -312,5 +317,5 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple) -> str 
         strip_subtitle_tags_inplace(srt_path)
         return srt_path
 
-    print(f"[AUTO] SRT introuvable pour {video_fullpath}.")
+    print(t("sub_auto_not_found", video=video_fullpath))
     return None

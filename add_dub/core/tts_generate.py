@@ -14,25 +14,22 @@ from add_dub.workers import tts_worker
 from add_dub.logger import (log_call, log_time)
 from add_dub.core.tts_registry import normalize_engine
 
+from add_dub.i18n import t
 
-def _coerce_gtts_lang(voice_or_lang: str) -> str:
+# ... imports ...
+
+def _coerce_gtts_lang(voice_id: str) -> str:
     """
-    Convertit une voix OneCore/Edge en code langue court 'fr', 'en', etc. pour gTTS.
+    Nettoie l'ID de voix pour gTTS qui attend un code langue simple (fr, en, es...).
+    Si l'ID ressemble à un path OneCore, on fallback sur 'fr' (ou on pourrait parser).
     """
-    v = str(voice_or_lang or "").strip()
-    if not v:
+    if not voice_id:
         return "en"
-    if "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech_OneCore\\Voices\\Tokens\\" in v:
-        import re
-        m = re.search(r"_([a-z]{2})[A-Z]{2}_", v)
-        if m:
-            return m.group(1).lower()
+    # Si c'est un path OneCore (contient \ ou /), on ne peut pas l'utiliser tel quel pour gTTS
+    if "\\" in voice_id or "/" in voice_id:
         return "en"
-    if "-" in v and len(v.split("-")[0]) == 2:
-        return v.split("-")[0].lower()
-    if len(v) == 2:
-        return v.lower()
-    return "en"
+    # Sinon on suppose que c'est déjà un code langue
+    return voice_id
 
 
 def _load_segment_as_array(
@@ -43,7 +40,17 @@ def _load_segment_as_array(
     trim_lead_ms: int,
     target_ms: int,
 ) -> np.ndarray:
-    seg = AudioSegment.from_file(path)
+    """
+    Charge un fichier audio (path), le convertit au format cible,
+    coupe le début (trim_lead_ms) et limite la durée (target_ms).
+    Retourne un tableau numpy int16 (samples, channels).
+    """
+    try:
+        seg = AudioSegment.from_file(path)
+    except Exception:
+        return np.zeros((0, target_ch), dtype=np.int16)
+
+    # Conversion format
     if seg.frame_rate != target_sr:
         seg = seg.set_frame_rate(target_sr)
     if seg.channels != target_ch:
@@ -51,33 +58,48 @@ def _load_segment_as_array(
     if seg.sample_width != target_sw:
         seg = seg.set_sample_width(target_sw)
 
+    # Trim début
     if trim_lead_ms > 0:
-        seg = seg[trim_lead_ms:] if trim_lead_ms < len(seg) else AudioSegment.silent(duration=0, frame_rate=target_sr)
+        seg = seg[trim_lead_ms:]
 
-    if len(seg) > target_ms:
+    # Trim fin (durée max)
+    if target_ms > 0:
         seg = seg[:target_ms]
-    elif len(seg) < target_ms:
-        seg = seg + AudioSegment.silent(duration=(target_ms - len(seg)), frame_rate=target_sr)
 
-    raw = seg.raw_data
-    dtype = np.int16 if target_sw == 2 else (np.int8 if target_sw == 1 else np.int32)
-    arr = np.frombuffer(raw, dtype=dtype)
-    arr = arr.reshape(-1, target_ch)
+    # Conversion numpy
+    # AudioSegment.get_array_of_samples() retourne un array.array
+    samples = seg.get_array_of_samples()
+    arr = np.array(samples, dtype=np.int16)
 
-    if dtype == np.int8:
-        arr = (arr.astype(np.int16) << 8)
-    elif dtype == np.int32:
-        arr = (arr >> 16).astype(np.int16)
+    # Reshape (N, channels)
+    if target_ch > 1:
+        # Attention: pydub entrelace les canaux [L, R, L, R...]
+        # Si la longueur n'est pas multiple de channels, on tronque
+        rem = arr.size % target_ch
+        if rem != 0:
+            arr = arr[:-rem]
+        arr = arr.reshape((-1, target_ch))
+    else:
+        arr = arr.reshape((-1, 1))
 
     return arr
 
 
-def _export_int16_wav(array_int16: np.ndarray, sr: int, ch: int, out_path: str) -> None:
+def _export_int16_wav(arr: np.ndarray, sr: int, ch: int, out_path: str) -> None:
+    """
+    Exporte un tableau numpy int16 vers un fichier WAV via pydub.
+    """
+    # Aplatir si stéréo
+    if ch > 1:
+        flat = arr.flatten()
+    else:
+        flat = arr.flatten()
+
     seg = AudioSegment(
-        array_int16.tobytes(),
+        flat.tobytes(),
         frame_rate=sr,
-        sample_width=2,
-        channels=ch,
+        sample_width=2,  # int16 = 2 bytes
+        channels=ch
     )
     seg.export(out_path, format="wav")
 
@@ -110,10 +132,9 @@ def generate_dub_audio(
 
     max_workers = min(20, max(1, cpu_count()))
     results: List[Optional[Tuple[str, int, int]]] = [None] * len(jobs)
-
     total = len(jobs)
     done = 0
-    print(f"\rTTS: 0% [0/{total}]", end="", flush=True)
+    print(t("tts_progress", pct=0, done=0, total=total), end="", flush=True)
 
     FREEZE_TIMEOUT = 5
 
@@ -126,7 +147,7 @@ def generate_dub_audio(
             done_set, pending = wait(pending, timeout=FREEZE_TIMEOUT, return_when=FIRST_COMPLETED)
 
             if not done_set:
-                print("\n[WARN] Aucune avancée TTS. Relance synchrone des segments restants...")
+                print(t("tts_warn_freeze"))
                 for fut in list(pending):
                     job = fut_to_job[fut]
                     try:
@@ -137,7 +158,7 @@ def generate_dub_audio(
                     results[idx] = (path, s_ms, e_ms)
                     done += 1
                     pct = int(done * 100 / total)
-                    print(f"\rTTS: {pct}% [{done}/{total}]", end="", flush=True)
+                    print(t("tts_progress", pct=pct, done=done, total=total), end="", flush=True)
                 pending.clear()
                 break
 
@@ -150,7 +171,7 @@ def generate_dub_audio(
                 results[idx] = (path, s_ms, e_ms)
                 done += 1
                 pct = int(done * 100 / total)
-                print(f"\rTTS: {pct}% [{done}/{total}]", end="", flush=True)
+                print(t("tts_progress", pct=pct, done=done, total=total), end="", flush=True)
 
     finally:
         ex.shutdown(wait=False, cancel_futures=True)

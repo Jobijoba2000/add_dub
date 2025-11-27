@@ -1,4 +1,5 @@
-# add_dub/cli/ui.py
+from add_dub.i18n import t
+
 def ask_mode():
     ans = input("\nMode (A)uto / (M)anuel ? [A]: ").strip().lower()
     return "manual" if ans.startswith("m") else "auto"
@@ -15,7 +16,7 @@ def ask_float(prompt_txt, default):
     try:
         return float(s) if s != "" else float(default)
     except ValueError:
-        print("Valeur invalide, on garde le défaut.")
+        print(t("ui_invalid_value"))
         return float(default)
 
 def ask_int(prompt_txt, default):
@@ -23,7 +24,7 @@ def ask_int(prompt_txt, default):
     try:
         return int(s) if s != "" else int(default)
     except ValueError:
-        print("Valeur invalide, on garde le défaut.")
+        print(t("ui_invalid_value"))
         return int(default)
 
 def ask_str(prompt_txt, default):

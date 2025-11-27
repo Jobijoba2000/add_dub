@@ -35,9 +35,65 @@ from add_dub.core.tts_registry import (
     list_voices_for_engine,
     resolve_voice_with_fallbacks,
 )
+from add_dub.i18n import init_language, t
 from add_dub.logger import logger as log
-opts = load_options()
 
+# ---------------------------------------------------------------------------
+# Helpers locaux
+# ---------------------------------------------------------------------------
+
+def _lang_base(lang_code: str) -> str:
+    if not lang_code:
+        return ""
+    return lang_code.split("-")[0].lower()
+
+def _group_by_lang_base(voices: list[dict]) -> list[tuple[str, list[dict]]]:
+    """
+    Regroupe une liste de voix par leur langue de base (ex: 'fr', 'en').
+    Retourne une liste de tuples (lang_base, [voix...]) triée par lang_base.
+    """
+    groups = {}
+    for v in voices:
+        lang = v.get("lang", "")
+        base = _lang_base(lang)
+        if base not in groups:
+            groups[base] = []
+        groups[base].append(v)
+    
+    # On trie les clés (langues)
+    sorted_keys = sorted(groups.keys())
+    return [(k, groups[k]) for k in sorted_keys]
+
+def _display_name_short(name: str) -> str:
+    """
+    Nettoie un peu le nom de la voix pour l'affichage (enlève 'Microsoft', etc.)
+    """
+    # Ex: "Microsoft Guy Online (Natural) - English (United States)"
+    # On veut juste "Guy (Natural)"
+    s = name
+    if "Microsoft " in s:
+        s = s.replace("Microsoft ", "")
+    if " Online" in s:
+        s = s.replace(" Online", "")
+    # Souvent la partie après " - " est la langue, on peut la masquer si on l'affiche déjà
+    if " - " in s:
+        s = s.split(" - ")[0]
+    return s.strip()
+
+def _read_index(prompt: str, max_idx: int, default_idx: int = 1) -> int:
+    while True:
+        raw = input(f"{prompt} [{default_idx}] : ").strip()
+        if not raw:
+            return default_idx
+        if raw.lower() == "q":
+            return -1
+        try:
+            val = int(raw)
+            if 1 <= val <= max_idx:
+                return val
+        except ValueError:
+            pass
+        print(t("ui_invalid_value"))
 
 def build_services() -> Services:
     return Services(
@@ -48,72 +104,22 @@ def build_services() -> Services:
         choose_subtitle_source=choose_subtitle_source,
     )
 
-
-# -------------------------------
-# Aides pour sélection langue/locale/voix (moteur-agnostique)
-# -------------------------------
-
-def _lang_base(tag: str | None) -> str:
-    if not tag:
-        return ""
-    tag = tag.strip()
-    if not tag:
-        return ""
-    return tag.split("-")[0].lower()
-
-
-def _group_by_lang_base(voices: list[dict]) -> list[tuple[str, list[dict]]]:
-    buckets: dict[str, list[dict]] = {}
-    for v in voices:
-        b = _lang_base(v.get("lang"))
-        buckets.setdefault(b, []).append(v)
-    return sorted(buckets.items(), key=lambda kv: kv[0] or "~")
-
-
-def _display_name_short(d: str) -> str:
-    s = (d or "").strip()
-    if s.lower().startswith("microsoft "):
-        s = s.split(" ", 1)[1].strip()
-    return s or d
-
-
-def _read_index(prompt: str, maximum: int, default_index_one_based: int = 1) -> int:
-    """
-    Lit un entier 1..maximum, sinon renvoie default_index_one_based.
-    Retourne un index **1-based**.
-    """
-    s = input(prompt).strip()
-    if s.isdigit():
-        k = int(s)
-        if 1 <= k <= maximum:
-            return k
-    return default_index_one_based
-
-
 def _ask_voice_for_engine(engine: str) -> str | None:
-    """
-    Sélection en 3 étapes :
-      1) Choisir la **langue de base** (fr, en, es, ...).
-      2) Si plusieurs locales existent pour cette langue (fr-FR, fr-CA, ...),
-         demander la **locale** précise. Sinon, prendre l'unique locale.
-      3) Lister ensuite **uniquement** les voix de la locale choisie.
-    Remarque: pour gTTS, la "locale" est généralement juste le code de langue
-    (ex. 'fr'), donc l'étape 2 affichera souvent une seule variante.
-    """
+    # ...
     all_voices = list_voices_for_engine(engine)
     if not all_voices:
-        log.info(f"Aucune voix détectée pour le moteur '{engine}'.")
+        log.info(t("cli_no_voice"))
         return None
 
     # Étape 1 — langue de base
     groups = _group_by_lang_base(all_voices)
-    print("\nLangues TTS disponibles :")
+    print(t("cli_lang_avail"))
     for idx, (base, vs) in enumerate(groups, start=1):
         variants = sorted(set(v["lang"] for v in vs if v.get("lang")))
         label = f"{base} ({', '.join(variants)})" if base else "inconnue"
         print(f"    {idx}. {label}")
 
-    lang_idx = _read_index("Saisir le numéro de la langue [1] : ", len(groups), 1)
+    lang_idx = _read_index(t("cli_choose_lang"), len(groups), 1)
     base_lang, voices_in_base = groups[lang_idx - 1]
 
     # Étape 2 — locale (si plusieurs)
@@ -122,10 +128,10 @@ def _ask_voice_for_engine(engine: str) -> str | None:
     if len(locales) <= 1:
         chosen_locale = locales[0] if locales else ""
     else:
-        print("\nVariantes disponibles pour", base_lang or "(inconnue)", ":")
+        print(t("cli_variants_avail", lang=base_lang or "(inconnue)"))
         for i, loc in enumerate(locales, start=1):
             print(f"    {i}. {loc}")
-        loc_idx = _read_index("Saisir le numéro de la variante [1] : ", len(locales), 1)
+        loc_idx = _read_index(t("cli_choose_variant"), len(locales), 1)
         chosen_locale = locales[loc_idx - 1]
 
     # Filtrer strictement sur la locale retenue
@@ -136,11 +142,11 @@ def _ask_voice_for_engine(engine: str) -> str | None:
         voices = voices_in_base
 
     # Étape 3 — voix
-    print("\nVoix disponibles :")
+    print(t("cli_voices_avail"))
     for i, v in enumerate(voices, start=1):
         print(f"    {i}. {_display_name_short(v['display_name'])} | voice_id={v['id']} | lang={v['lang']}")
 
-    k2 = _read_index("Saisir le numéro de la voix (ou Entrée pour annuler) : ", len(voices), -1)
+    k2 = _read_index(t("cli_choose_voice"), len(voices), -1)
     if k2 == -1:
         # Entrée vide → annuler
         return None
@@ -152,56 +158,37 @@ def _ask_dirs_if_needed(
     ask_output: bool | None = None,
     ask_tmp: bool | None = None,
 ) -> None:
-    """
-    Demande optionnelle des dossiers input/output/tmp.
-
-    Priorité:
-      - si ask_* est True/False, on suit ce choix (force/empêche l'affichage) ;
-      - sinon, on suit le flag 'display' d'options.conf ;
-      - sinon, on ne demande pas.
-    """
+    opts = load_options()
     in_entry = opts.get("input_dir")
     out_entry = opts.get("output_dir")
     tmp_entry = opts.get("tmp_dir")
 
-    def _want(entry, override: bool | None) -> bool:
-        if override is not None:
-            return override
-        return bool(entry and getattr(entry, "display", False))
+    want_in = ask_input if ask_input is not None else (in_entry.display if in_entry else False)
+    want_out = ask_output if ask_output is not None else (out_entry.display if out_entry else False)
+    want_tmp = ask_tmp if ask_tmp is not None else (tmp_entry.display if tmp_entry else False)
 
-    want_in = _want(in_entry, ask_input)
-    want_out = _want(out_entry, ask_output)
-    want_tmp = _want(tmp_entry, ask_tmp)
-
-    new_in = None
-    new_out = None
-    new_tmp = None
-
+    new_in, new_out, new_tmp = None, None, None
     if want_in and in_entry:
-        new_in = ask_option("input_dir", opts, "str", "Dossier d'entrée (input_dir)", in_entry.value)
+        new_in = ask_option("input_dir", opts, "str", t("opt_input_dir"), in_entry.value)
     if want_out and out_entry:
-        new_out = ask_option("output_dir", opts, "str", "Dossier de sortie (output_dir)", out_entry.value)
+        new_out = ask_option("output_dir", opts, "str", t("opt_output_dir"), out_entry.value)
     if want_tmp and tmp_entry:
-        new_tmp = ask_option("tmp_dir", opts, "str", "Dossier temporaire (tmp_dir)", tmp_entry.value)
+        new_tmp = ask_option("tmp_dir", opts, "str", t("opt_tmp_dir"), tmp_entry.value)
 
     if any(v is not None for v in (new_in, new_out, new_tmp)):
         set_base_dirs(new_in, new_out, new_tmp)
 
 
 def _ask_engine_and_voice_if_needed(base_opts: DubOptions) -> tuple[str, str | None]:
-    """
-    Si options.conf met 'd' sur tts_engine, on demande le moteur PUIS la voix de ce moteur.
-    Sinon, on ne demande rien ici. On renvoie (engine, maybe_voice).
-    """
+    opts = load_options()
     engine_entry = opts.get("tts_engine")
-    current_engine = normalize_engine(base_opts.tts_engine)
-
+    current_engine = base_opts.tts_engine
     if engine_entry and getattr(engine_entry, "display", False):
-        print("\nChoix du moteur TTS :")
-        print("    1) OneCore (local)")
-        print("    2) Edge TTS (cloud)")
-        print("    3) gTTS (cloud, non officiel)")
-        s = input("Saisir le numéro du moteur [1] : ").strip()
+        print(t("cli_engine_choice"))
+        print(t("cli_engine_1"))
+        print(t("cli_engine_2"))
+        print(t("cli_engine_3"))
+        s = input(t("cli_choose_engine")).strip()
         if s == "2":
             current_engine = "edge"
         elif s == "3":
@@ -230,7 +217,7 @@ def _ask_config_for_video(
         aidx = svcs.choose_audio_track(input_video_path)
         sc = svcs.choose_subtitle_source(input_video_path)
         if sc is None:
-            print("Aucune source de sous-titres choisie.")
+            print(t("cli_no_sub_chosen"))
             return None
 
     # 1) Moteur + (éventuellement) voix si 'd' sur tts_engine
@@ -240,16 +227,17 @@ def _ask_config_for_video(
     chosen_voice = voice_from_wizard if voice_from_wizard else (base_opts.voice_id or None)
 
     # 3) Les autres options utilisateur
-    oal = ask_option("orig_audio_lang", opts, "str", "Langue originale", base_opts.orig_audio_lang)
-    db = ask_option("db", opts, "float", "Réduction (ducking) en dB", base_opts.db_reduct)
-    off = ask_option("offset", opts, "int", "Décalage ST/TTS (ms, négatif = plus tôt)", base_opts.offset_ms)
-    offvid = ask_option("offset_video", opts, "int", "Décalage vidéo (ms, négatif = plus tôt)", base_opts.offset_video_ms)
-    bg = ask_option("bg", opts, "float", "Niveau BG (1.0 = inchangé)", base_opts.bg_mix)
-    tts = ask_option("tts", opts, "float", "Niveau TTS (1.0 = inchangé)", base_opts.tts_mix)
-    min_rate_tts = ask_option("min_rate_tts", opts, "float", "Vitesse TTS minimal (1.0 = inchangé)", base_opts.min_rate_tts)
-    max_rate_tts = ask_option("max_rate_tts", opts, "float", "Vitesse TTS maximal (1.8 = inchangé)", base_opts.max_rate_tts)
-    ac = ask_option("audio_codec", opts, "str", "Codec audio", base_opts.audio_codec)
-    ab = ask_option("audio_bitrate", opts, "int", "Bitrate", base_opts.audio_bitrate)
+    opts = load_options()
+    oal = ask_option("orig_audio_lang", opts, "str", t("opt_orig_lang"), base_opts.orig_audio_lang)
+    db = ask_option("db", opts, "float", t("opt_ducking"), base_opts.db_reduct)
+    off = ask_option("offset", opts, "int", t("opt_offset"), base_opts.offset_ms)
+    offvid = ask_option("offset_video", opts, "int", t("opt_offset_video"), base_opts.offset_video_ms)
+    bg = ask_option("bg", opts, "float", t("opt_bg_mix"), base_opts.bg_mix)
+    tts_val = ask_option("tts", opts, "float", t("opt_tts_mix"), base_opts.tts_mix)
+    min_rate_tts = ask_option("min_rate_tts", opts, "float", t("opt_min_rate"), base_opts.min_rate_tts)
+    max_rate_tts = ask_option("max_rate_tts", opts, "float", t("opt_max_rate"), base_opts.max_rate_tts)
+    ac = ask_option("audio_codec", opts, "str", t("opt_codec"), base_opts.audio_codec)
+    ab = ask_option("audio_bitrate", opts, "int", t("opt_bitrate"), base_opts.audio_bitrate)
 
     # 4) Validation & fallbacks (silencieux) selon le moteur choisi
     lang_hint_base = _lang_base(oal) if oal else ""
@@ -260,7 +248,7 @@ def _ask_config_for_video(
     )
 
     if chosen_voice is None:
-        print("[ERREUR] Aucune voix TTS valide disponible (même en fallback OneCore).")
+        print(t("cli_no_voice"))
         return None
 
     return replace(
@@ -271,7 +259,7 @@ def _ask_config_for_video(
         db_reduct=db,
         offset_ms=off,
         bg_mix=bg,
-        tts_mix=tts,
+        tts_mix=tts_val,
         min_rate_tts=min_rate_tts,
         max_rate_tts=max_rate_tts,
         audio_codec=ac,
@@ -289,9 +277,9 @@ def _cleanup_test_outputs(output_path: str | None) -> None:
     try:
         if os.path.isfile(output_path):
             os.remove(output_path)
-            print(f"[TEST] Fichier supprimé : {output_path}")
+            print(t("pipeline_test_deleted", path=output_path))
     except Exception as e:
-        print(f"[TEST] Impossible de supprimer le fichier de test ({output_path}) : {e}")
+        print(t("pipeline_test_del_err", path=output_path, err=e))
 
 
 def run_interactive(selected: list[str], svcs: Services) -> int:
@@ -315,13 +303,14 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
             if outp:
                 log.info(f"{input_video_name} → {outp}")
         except Exception as e:
-            print(f"[ERREUR] {input_video_name} → {e}")
+            print(t("cli_error", msg=f"{input_video_name} → {e}"))
 
-    print("\nTerminé.")
+    print(t("cli_done"))
     return 0
 
 
 def main() -> int:
+    init_language()
     svcs = build_services()
     while True:
         # 1) Demander d'abord les dossiers si options.conf marque 'd'
@@ -332,7 +321,7 @@ def main() -> int:
             ensure_base_dirs()
 
             # Petit log de contrôle des chemins effectifs utilisés (dynamiques)
-            print(f"[dirs] \ninput  = {io_fs.INPUT_DIR} \noutput = {io_fs.OUTPUT_DIR} \ntmp    = {io_fs.TMP_DIR}")
+            print(t("cli_dirs", input=io_fs.INPUT_DIR, output=io_fs.OUTPUT_DIR, tmp=io_fs.TMP_DIR))
 
             files = list_input_videos()
             if files:
@@ -340,32 +329,29 @@ def main() -> int:
 
             # Aucun fichier exploitable → mini-menu
             log.error("Aucun fichier éligible trouvé dans %s", io_fs.INPUT_DIR)
-            print("\nAucun fichier vidéo exploitable trouvé.")
-            print("Extensions acceptées : .mkv, .mp4 (non récursif).")
-            print("Placez les vidéos directement dans le dossier d'entrée.")
-            print("\nQue voulez-vous faire ?")
-            print("    1) Changer le dossier d'entrée")
-            print("    2) Afficher l'aide (rappel des formats attendus)")
-            print("    3) Relancer le test (re-scanner)")
-            print("    4) Quitter")
+            print(t("cli_no_eligible_short"))
+            print(t("cli_help_formats"))
+            print(t("cli_help_input"))
+            print(t("cli_menu_title"))
+            print(t("cli_menu_change_input"))
+            print(t("cli_menu_help"))
+            print(t("cli_menu_rescan"))
+            print(t("cli_menu_quit"))
 
-            choice = input("Choix [3] : ").strip() or "3"
+            choice = input(t("cli_input_choice")).strip() or "3"
 
             if choice == "1":
-                new_in = input("Nouveau dossier d'entrée : ").strip()
+                new_in = input(t("cli_new_input")).strip()
                 if new_in:
                     # Applique uniquement l'input_dir, laisse output/tmp inchangés
                     set_base_dirs(new_in, None, None)
                     log.info("Dossier d'entrée changé vers: %s", new_in)
+                    print(t("cli_input_changed", path=new_in))
                 continue  # on re-scannera au prochain tour
 
             if choice == "2":
-                print("\nAIDE :")
-                print("- Placez des vidéos .mkv / .mp4 dans le dossier d'entrée.")
-                print("- Les sous-titres .srt sont facultatifs (même nom que la vidéo).")
-                print("- Les sous-dossiers ne sont pas scannés (non récursif).")
-                print("- Évitez les fichiers de taille nulle ou verrouillés.")
-                input("\nAppuyez sur Entrée pour re-scanner...")
+                print(t("cli_help_details"))
+                input(t("cli_press_enter"))
                 continue
 
             if choice == "3":
@@ -376,16 +362,16 @@ def main() -> int:
                 return 1
 
             # Entrée invalide → on re-tente
-            print("Choix invalide, on relance le scan.")
+            print(t("cli_invalid_choice"))
             continue
 
         selected = svcs.choose_files(files)
         if not selected:
-            print("Aucun fichier sélectionné.")
+            print(t("cli_no_selection"))
             return 1
 
         code = run_interactive(selected, svcs)
 
-        choix = input("Voulez-vous générer une autre vidéo ? (o/n) : ").strip().lower()
-        if not choix.startswith("o"):
+        choix = input(t("cli_ask_another")).strip().lower()
+        if not choix.startswith("o") and not choix.startswith("y") and not choix.startswith("s") and not choix.startswith("j"):
             return code
