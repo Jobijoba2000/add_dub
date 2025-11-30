@@ -38,7 +38,7 @@ def subtitle_edit_ocr(ocr_input, output_path, cwd=None):
 def vobsub2srt_ocr(base_noext, lang="fr", cwd=None):
     """
     Utilise vobsub2srt si dispo. Retourne chemin .srt produit ou None.
-    base_noext = chemin sans extension (ex: C:\...\video)
+    base_noext = chemin sans extension (ex: C:\\...\\video)
     """
     exe = _find_exe(["vobsub2srt", "vobsub2srt.exe"])
     if not exe:

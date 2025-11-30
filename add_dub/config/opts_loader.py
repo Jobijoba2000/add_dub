@@ -47,16 +47,16 @@ def _ensure_options_file(path: str) -> None:
     try:
         if os.path.isfile(example):
             shutil.copyfile(example, path)
-            print(t("opts_loader_info_copy", path=path, example=example))
+            print(f"[INFO] '{path}' not found: copying '{example}'.")
         else:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(
                     "# options.conf\n"
                     "# language = auto\n"
                 )
-            print(t("opts_loader_info_created", path=path))
+            print(f"[INFO] '{path}' not found: minimal file created.")
     except Exception as e:
-        print(t("opts_loader_warn_prep", path=path, e=e))
+        print(f"[WARN] Cannot prepare '{path}': {e}")
 
 def load_options() -> Dict[str, OptEntry]:
     path = os.getenv("ADD_DUB_OPTIONS", "options.conf")
