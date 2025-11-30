@@ -1,4 +1,9 @@
 numpy==2.1.3
+numpy==2.1.3
+pydub==0.25.1
+winrt-runtime>=3.2.1
+numpy==2.1.3
+numpy==2.1.3
 pydub==0.25.1
 winrt-runtime>=3.2.1
 winrt-Windows.Foundation>=3.2.1
@@ -7,3 +12,13 @@ winrt-Windows.Storage.Streams>=3.2.1
 winrt-Windows.Media.SpeechSynthesis>=3.2.1
 edge-tts
 gTTS
+fasttext-wheel
+tqdm
+transformers==4.46.3
+sacremoses
+transformers
+nltk
+sentencepiece
+protobuf
+protobuf
+langdetect

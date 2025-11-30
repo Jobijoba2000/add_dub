@@ -47,24 +47,16 @@ def _ensure_options_file(path: str) -> None:
     try:
         if os.path.isfile(example):
             shutil.copyfile(example, path)
-            print(f"[INFO] '{path}' introuvable : copie de '{example}'.")
+            print(t("opts_loader_info_copy", path=path, example=example))
         else:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(
-                    "# options.conf créé automatiquement.\n"
-                    "# Exemple :\n"
-                    "# voice_id = d\n"
-                    "# audio_codec = \"ac3\"\n"
-                    "# audio_bitrate = 256\n"
-                    "# db = -5.0 d\n"
-                    "# offset = 0 d\n"
-                    "# bg = 1.0 d\n"
-                    "# tts = 1.0 d\n"
-                    "# orig_audio_lang = \"Original\" d\n"
+                    "# options.conf\n"
+                    "# language = auto\n"
                 )
-            print(f"[INFO] '{path}' introuvable : fichier minimal créé.")
+            print(t("opts_loader_info_created", path=path))
     except Exception as e:
-        print(f"[WARN] Impossible de préparer '{path}': {e}")
+        print(t("opts_loader_warn_prep", path=path, e=e))
 
 def load_options() -> Dict[str, OptEntry]:
     path = os.getenv("ADD_DUB_OPTIONS", "options.conf")

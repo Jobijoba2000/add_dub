@@ -202,6 +202,11 @@ def _make_options(args) -> DubOptions:
         audio_codec_args=audio_args,
         sub_codec=sub_codec,
         offset_video_ms=args.offset_video_ms,
+        translate=args.translate,
+        translate_to=args.translate_to,
+        translate_from=args.translate_from,
+        batch_mode=True,
+        overwrite=args.overwrite,
     )
 
 def main(args) -> int:

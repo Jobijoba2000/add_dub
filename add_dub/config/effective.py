@@ -61,6 +61,8 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
     min_rate_tts = float(_conf_value(opts, "min_rate_tts", getattr(cfg, "MIN_RATE_TTS", 1.0)))
     max_rate_tts = float(_conf_value(opts, "max_rate_tts", getattr(cfg, "MAX_RATE_TTS", 1.8)))
     ask_test_before_cleanup = bool(_conf_value(opts, "ask_test_before_cleanup", getattr(cfg, "ASK_TEST_BEFORE_CLEANUP", False)))
+    translate = bool(_conf_value(opts, "translate", getattr(cfg, "TRANSLATE", False)))
+    translate_to = str(_conf_value(opts, "translate_to", getattr(cfg, "TRANSLATE_TO", "fr")))
 
     # ↓↓↓ nouveaux (dirs)
     input_dir = str(_conf_value(opts, "input_dir", getattr(cfg, "INPUT_DIR", "input")))
@@ -87,6 +89,8 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
         "tmp_dir": tmp_dir,
         # --- NOUVEAU ---
         "ask_test_before_cleanup": ask_test_before_cleanup,
+        "translate": translate,
+        "translate_to": translate_to,
         "language": language,
     }
 
@@ -108,6 +112,8 @@ def build_default_opts() -> DubOptions:
     voice_id = _conf_value(opts, "voice_id", getattr(cfg, "VOICE_ID", None))
     tts_engine = _normalized_tts_engine(_conf_value(opts, "tts_engine", getattr(cfg, "TTS_ENGINE", None)))
     ask_test_before_cleanup = bool(_conf_value(opts, "ask_test_before_cleanup", getattr(cfg, "ASK_TEST_BEFORE_CLEANUP", False)))
+    translate = bool(_conf_value(opts, "translate", getattr(cfg, "TRANSLATE", False)))
+    translate_to = str(_conf_value(opts, "translate_to", getattr(cfg, "TRANSLATE_TO", "fr")))
 
     return DubOptions(
         audio_ffmpeg_index=None,
@@ -128,4 +134,6 @@ def build_default_opts() -> DubOptions:
         offset_video_ms=int(_conf_value(opts, "offset_video", cfg.OFFSET_VIDEO)),
         # --- NOUVEAU ---
         ask_test_before_cleanup=ask_test_before_cleanup,
+        translate=translate,
+        translate_to=translate_to,
     )

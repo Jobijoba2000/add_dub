@@ -30,12 +30,12 @@ if not exist "%ROOT%input"  mkdir "%ROOT%input"  >nul 2>&1
 if not exist "%ROOT%output" mkdir "%ROOT%output" >nul 2>&1
 if not exist "%ROOT%tmp"    mkdir "%ROOT%tmp"    >nul 2>&1
 
-echo [ETAPE] Preparation...
+echo [STEP] Preparation...
 
 rem --- Lecture version requise ------------------------------------------------
 if not exist "%ROOT%%REQ_FILE%" (
-    echo [ERREUR] Fichier %REQ_FILE% manquant a la racine du projet.
-    echo         Ajoutez un numero ^(ex. 1^) puis relancez.
+    echo [ERROR] File %REQ_FILE% missing at project root.
+    echo         Add a number ^(e.g. 1^) then restart.
     pause
     exit /b 1
 )
@@ -64,7 +64,7 @@ if "%NEED_TOOLS%"=="1" set "CURRENT=0"
 
 rem --- Telechargement / deploiement toolbox si necessaire --------------------
 if %CURRENT% LSS %REQUIRED% (
-    echo [INFO] Toolbox locale=%CURRENT% / requise=%REQUIRED% → telechargement...
+    echo [INFO] Local Toolbox=%CURRENT% / Required=%REQUIRED% -^> downloading...
 
     set "URL=https://github.com/%OWNER%/%REPO%/releases/download/toolbox-v%REQUIRED%/%TOOLBOX_ZIP%"
     set "TMPDL=%ROOT%tmp\toolbox_%REQUIRED%.zip"
@@ -75,20 +75,20 @@ if %CURRENT% LSS %REQUIRED% (
 
     call :download "!URL!" "!TMPDL!"
     if errorlevel 1 (
-        echo [ERREUR] Echec du telechargement de la toolbox.
+        echo [ERROR] Toolbox download failed.
         echo         URL : !URL!
-        echo         Verifiez le tag toolbox-v%REQUIRED% et la presence de %TOOLBOX_ZIP%.
+        echo         Check tag toolbox-v%REQUIRED% and presence of %TOOLBOX_ZIP%.
         if exist "!UNPACK!" rd /s /q "!UNPACK!" >nul 2>&1
         if exist "!TMPDL!" del /q "!TMPDL!" >nul 2>&1
         pause
         exit /b 1
     )
-    echo [OK] Archive telechargee.
+    echo [OK] Archive downloaded.
 
-    echo [ETAPE] Decompression en zone temporaire...
+    echo [STEP] Unpacking to temporary area...
     powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Expand-Archive -LiteralPath '!TMPDL!' -DestinationPath '!UNPACK!' -Force"
     if errorlevel 1 (
-        echo [ERREUR] Echec de la decompression du ZIP.
+        echo [ERROR] ZIP unpacking failed.
         if exist "!UNPACK!" rd /s /q "!UNPACK!" >nul 2>&1
         if exist "!TMPDL!" del /q "!TMPDL!" >nul 2>&1
         pause
@@ -96,28 +96,28 @@ if %CURRENT% LSS %REQUIRED% (
     )
 
     if not exist "!UNPACK!\tools\python\python.exe" (
-        echo [ERREUR] Toolbox invalide : python portable introuvable dans tools\python.
+        echo [ERROR] Invalid Toolbox: portable python not found in tools\python.
         goto :unpack_fail
     )
     if not exist "!UNPACK!\tools\ffmpeg\bin\ffmpeg.exe" (
-        echo [ERREUR] Toolbox invalide : ffmpeg introuvable dans tools\ffmpeg\bin.
+        echo [ERROR] Invalid Toolbox: ffmpeg not found in tools\ffmpeg\bin.
         goto :unpack_fail
     )
     if not exist "!UNPACK!\tools\MKVToolNix\mkvmerge.exe" (
-        echo [ERREUR] Toolbox invalide : mkvmerge introuvable dans tools\MKVToolNix.
+        echo [ERROR] Invalid Toolbox: mkvmerge not found in tools\MKVToolNix.
         goto :unpack_fail
     )
 
-    echo [ETAPE] Deploiement des outils ^(copie controlee^)...
+    echo [STEP] Deploying tools ^(controlled copy^)...
     robocopy "!UNPACK!\tools" "%ROOT%tools" /E /R:1 /W:1 >nul
     if errorlevel 8 (
-        echo [ERREUR] Echec de copie du dossier tools.
+        echo [ERROR] Failed to copy tools folder.
         goto :unpack_fail
     )
     if exist "!UNPACK!\licenses" (
         robocopy "!UNPACK!\licenses" "%ROOT%licenses" /E /R:1 /W:1 >nul
         if errorlevel 8 (
-            echo [ERREUR] Echec de copie du dossier licenses.
+            echo [ERROR] Failed to copy licenses folder.
             goto :unpack_fail
         )
     )
@@ -130,17 +130,17 @@ if %CURRENT% LSS %REQUIRED% (
     rem       - /XO : ignore les fichiers plus anciens cote destination
     rem     → Tout fichier deja present dans %ROOT%input|output est conserve tel quel.
     if exist "!UNPACK!\input" (
-        echo [INFO] Fusion non destructive de input/ depuis la toolbox...
+        echo [INFO] Non-destructive merge of input/ from toolbox...
         robocopy "!UNPACK!\input" "%ROOT%input" /E /R:1 /W:1 /XC /XN /XO >nul
         if errorlevel 8 (
-            echo [AVERTISSEMENT] Robocopy a signale des anomalies lors de la copie de input/.
+            echo [WARNING] Robocopy reported anomalies while copying input/.
         )
     )
     if exist "!UNPACK!\output" (
-        echo [INFO] Fusion non destructive de output/ depuis la toolbox...
+        echo [INFO] Non-destructive merge of output/ from toolbox...
         robocopy "!UNPACK!\output" "%ROOT%output" /E /R:1 /W:1 /XC /XN /XO >nul
         if errorlevel 8 (
-            echo [AVERTISSEMENT] Robocopy a signale des anomalies lors de la copie de output/.
+            echo [WARNING] Robocopy reported anomalies while copying output/.
         )
     )
 
@@ -156,10 +156,10 @@ if %CURRENT% LSS %REQUIRED% (
     set "CURRENT=0"
     if exist "%ROOT%%CUR_FILE%" set /p CURRENT=<"%ROOT%%CUR_FILE%"
     if "!CURRENT!" NEQ "%REQUIRED%" (
-        echo [AVERTISSEMENT] Mismatch version toolbox : installee=!CURRENT! / requise=%REQUIRED%.
-        echo               Controlez %CUR_FILE% et le contenu du ZIP.
+        echo [WARNING] Toolbox version mismatch: installed=!CURRENT! / required=%REQUIRED%.
+        echo               Check %CUR_FILE% and ZIP content.
     ) else (
-        echo [OK] Toolbox v%REQUIRED% operationnelle.
+        echo [OK] Toolbox v%REQUIRED% operational.
     )
 )
 
@@ -169,52 +169,62 @@ set "FFMPEG_BINARY=%ROOT%tools\ffmpeg\bin\ffmpeg.exe"
 
 rem --- Verifications minimales -----------------------------------------------
 if not exist "%PY_EXE%" (
-    echo [ERREUR] Python portable introuvable : %PY_EXE%
+    echo [ERROR] Portable Python not found: %PY_EXE%
     pause
     exit /b 1
 )
 if not exist "%FF_EXE%" (
-    echo [ERREUR] FFmpeg introuvable : %FF_EXE%
+    echo [ERROR] FFmpeg not found: %FF_EXE%
     pause
     exit /b 1
 )
 if not exist "%ROOT%add_dub\__main__.py" (
-    echo [ERREUR] Module introuvable : add_dub\__main__.py
+    echo [ERROR] Module not found: add_dub\__main__.py
     pause
     exit /b 1
 )
 
 rem --- venv -------------------------------------------------------------------
 if not exist "%ROOT%.venv\Scripts\python.exe" (
-    echo [ETAPE] Creation de l'environnement virtuel...
+    echo [STEP] Creating virtual environment...
     "%PY_EXE%" -m venv "%ROOT%.venv"
     if errorlevel 1 (
-        echo [ERREUR] Impossible de creer le venv avec %PY_EXE%
+        echo [ERROR] Unable to create venv with %PY_EXE%
         pause
         exit /b 1
     )
-    echo [OK] venv pret.
+    echo [OK] venv ready.
 )
 
 call "%ROOT%.venv\Scripts\activate.bat"
 
 rem --- Dependances ------------------------------------------------------------
-if exist "%ROOT%requirements.txt" (
-    if not exist "%ROOT%.venv\.deps_ok" (
-        echo [ETAPE] Installation des dependances...
+if exist "%ROOT%requirements.txt" if not exist "%ROOT%.venv\.deps_ok" (
+        echo [STEP] Installing dependencies...
         python -m pip install --disable-pip-version-check --no-input --upgrade pip || goto fail
         python -m pip install --disable-pip-version-check --no-input -r "%ROOT%requirements.txt" || goto fail
+        if not exist "%ROOT%.venv\.torch_cpu_fixed" (
+            echo [FIX] Cleaning up potential incompatible PyTorch versions...
+            python -m pip uninstall -y torch torchvision torchaudio
+            echo [FIX] Installing CPU-only PyTorch...
+            python -m pip install --disable-pip-version-check --no-input torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu || goto fail
+            echo fixed> "%ROOT%.venv\.torch_cpu_fixed"
+        )
+        python -m pip install --disable-pip-version-check --no-input --no-deps easynmt || goto fail
         echo ok> "%ROOT%.venv\.deps_ok"
-        echo [OK] Dependances installees.
-    )
+        echo [OK] Dependencies installed.
 ) else (
-    echo [INFO] requirements.txt absent — etape ignoree.
+    if exist "%ROOT%.venv\.deps_ok" (
+        echo [INFO] Dependencies already installed - skipping check.
+    ) else (
+        echo [INFO] requirements.txt missing - step skipped.
+    )
 )
 
 rem --- Boucle d'execution -----------------------------------------------------
 :loop
 echo.
-echo → Lancement du module add_dub
+echo -^> Launching add_dub module
 
 rem Si des arguments sont passes au .bat, on les relaie au module Python
 if "%~1"=="" (
@@ -227,18 +237,18 @@ if errorlevel 1 goto fail
 echo.
 
 call "%ROOT%.venv\Scripts\deactivate.bat" 2>nul
-echo Environnement virtuel desactive.
+echo Virtual environment deactivated.
 pause
 exit /b 0
 
 :fail
-echo [ERREUR] Une etape a echoue. Consultez les messages ci-dessus.
+echo [ERROR] A step failed. Check messages above.
 call "%ROOT%.venv\Scripts\deactivate.bat" 2>nul
 pause
 exit /b 1
 
 :unpack_fail
-echo [ERREUR] Deploiement de la toolbox interrompu. Rien n'a ete ecrase dans votre projet.
+echo [ERROR] Toolbox deployment interrupted. Nothing was overwritten in your project.
 if exist "!UNPACK!" rd /s /q "!UNPACK!" >nul 2>&1
 if exist "!TMPDL!" del /q "!TMPDL!" >nul 2>&1
 pause
@@ -249,11 +259,11 @@ rem --- Fonction download(URL, OUTFILE) ---------------------------------------
     set "DL_URL=%~1"
     set "DL_OUT=%~2"
     if not defined DL_URL (
-        echo [ERREUR] URL de telechargement vide. Abandon.
+        echo [ERROR] Download URL empty. Aborting.
         exit /b 1
     )
     if not defined DL_OUT (
-        echo [ERREUR] Chemin de sortie vide pour le telechargement. Abandon.
+        echo [ERROR] Download output path empty. Aborting.
         exit /b 1
     )
     if exist "%DL_OUT%" del /q "%DL_OUT%" >nul 2>&1

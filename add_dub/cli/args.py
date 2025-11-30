@@ -6,6 +6,7 @@ import re
 from typing import Tuple, List
 
 from add_dub.config.effective import effective_values
+from add_dub.i18n import t, init_language
 
 
 def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
@@ -14,70 +15,58 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     Si l'utilisateur ne passe pas un flag, il récupère ces valeurs "effectives".
     """
     fused = effective_values()
+    init_language()
 
     parser = argparse.ArgumentParser(
         prog="add_dub",
-        description="AdDub — Ajout de doublage TTS sur vidéos."
+        description=t("help_desc")
     )
 
     # Modes
     g_mode = parser.add_mutually_exclusive_group()
-    g_mode.add_argument("--interactive", action="store_true", help="Lance l'interface interactive (défaut).")
-    g_mode.add_argument("--batch", action="store_true", help="Traite sans interaction.")
+    g_mode.add_argument("--interactive", action="store_true", help=t("help_interactive"))
+    g_mode.add_argument("--batch", action="store_true", help=t("help_batch"))
 
-    # Actions utilitaires
-    parser.add_argument("--list-voices", action="store_true", help="Affiche les voix disponibles et quitte.")
+    # --- Groupes d'arguments pour plus de clarté ---
+    
+    # 1. Input / Output
+    g_io = parser.add_argument_group(t("grp_io"))
+    g_io.add_argument("--input", "-i", nargs="+", metavar="PATH", help=t("help_input"))
+    g_io.add_argument("--output-dir", metavar="PATH", default=None, help=t("help_output_dir"))
+    g_io.add_argument("--recursive", "-r", action="store_true", help=t("help_recursive"))
+    g_io.add_argument("--overwrite", action="store_true", help=t("help_overwrite"))
+    g_io.add_argument("--dry-run", action="store_true", help=t("help_dry_run"))
 
-    # Cibles (batch)
-    parser.add_argument("--input", "-i", nargs="+", metavar="PATH",
-                        help="Fichiers vidéo ou dossiers à traiter. En dossier: parcourt les vidéos détectables.")
-    parser.add_argument("--recursive", "-r", action="store_true", help="Parcourt les dossiers récursivement (batch).")
+    # 2. Audio Configuration
+    g_audio = parser.add_argument_group(t("grp_audio"))
+    g_audio.add_argument("--tts-engine", choices=["onecore", "edge", "gtts"], default=fused["tts_engine"], help=t("help_tts_engine"))
+    g_audio.add_argument("--voice", metavar="ID", default=fused["voice"], help=t("help_voice"))
+    g_audio.add_argument("--audio-index", type=int, metavar="IDX", default=None, help=t("help_audio_index"))
+    g_audio.add_argument("--audio-codec", metavar="CODEC", default=fused["audio_codec"], 
+                         choices=["ac3", "aac", "libopus", "opus", "flac", "libvorbis", "vorbis", "pcm_s16le"],
+                         help=t("help_audio_codec"))
+    g_audio.add_argument("--audio-bitrate", type=int, metavar="KBPS", default=fused["audio_bitrate"], help=t("help_audio_bitrate"))
 
-    # Sélection technique
-    parser.add_argument("--tts-engine",
-                        choices=["onecore", "edge", "gtts"],
-                        default=fused["tts_engine"],
-                        help="Moteur TTS à utiliser (par défaut: options.conf → effective).")
-    parser.add_argument("--audio-index", type=int, default=None,
-                        help="Index global FFmpeg de la piste audio source (ffprobe->streams[index]).")
-    parser.add_argument("--voice", metavar="VOICE_ID", default=fused["voice"],
-                        help="Identifiant de la voix TTS à utiliser (optionnel).")
+    # 3. Subtitles
+    g_sub = parser.add_argument_group(t("grp_sub"))
+    g_sub.add_argument("--sub", metavar="SRC", default="auto", help=t("help_sub"))
 
-    # Sous-titres — un seul argument: auto (défaut), srt, mkv, mkv:N
-    parser.add_argument("--sub",
-                        default="auto",
-                        help="Source des sous-titres: auto (défaut), srt, mkv, mkv:N (ex. mkv:4).")
+    # 4. Translation
+    g_trans = parser.add_argument_group(t("grp_trans"))
+    g_trans.add_argument("--translate", action="store_true", help=t("help_translate"))
+    g_trans.add_argument("--translate-to", metavar="LANG", default=fused["translate_to"], help=t("help_translate_to"))
+    g_trans.add_argument("--translate-from", metavar="LANG", default=None, help=t("help_translate_from"))
 
-    # Mixages / niveaux / calages — defaults issus de la fusion conf→defaults
-    parser.add_argument("--offset-ms", type=int, default=fused["offset_ms"],
-                        help="Décalage global des sous-titres/voix (ms).")
-    parser.add_argument("--offset-video-ms", type=int, default=fused["offset_video_ms"],
-                        help="Décalage de la vidéo (ms) appliqué dans le mux final.")
-    parser.add_argument("--ducking-db", type=float, default=fused["ducking_db"],
-                        help="Réduction du fond (dB) pendant la voix (ducking).")
-    parser.add_argument("--bg-mix", type=float, default=fused["bg_mix"],
-                        help="Gain de la piste 'fond' (après aformat/resample), multiplicatif.")
-    parser.add_argument("--tts-mix", type=float, default=fused["tts_mix"],
-                        help="Gain de la piste 'tts' (après aformat/resample), multiplicatif.")
-    parser.add_argument("--min-rate-tts", type=float, default=fused["min_rate_tts"],
-                        help="Vitesse minimale de lecture TTS (facteur).")
-    parser.add_argument("--max-rate-tts", type=float, default=fused["max_rate_tts"],
-                        help="Vitesse maximale de lecture TTS (facteur).")
-
-    # Codecs / sortie
-    parser.add_argument("--audio-codec", default=fused["audio_codec"],
-                        choices=["ac3", "aac", "libopus", "opus", "flac", "libvorbis", "vorbis", "pcm_s16le"],
-                        help="Codec audio cible pour la piste doublage+original.")
-    parser.add_argument("--audio-bitrate", type=int, default=fused["audio_bitrate"],
-                        help="Bitrate audio (kb/s) pour le codec cible (si pertinent).")
-    parser.add_argument("--output-dir", default=None, metavar="PATH",
-                        help="Dossier de sortie (défaut: ./output).")
-
-    # Flags booléens (inchangés)
-    parser.add_argument("--overwrite", action="store_true", help="Écrase les sorties existantes si présent.")
-    parser.add_argument("--dry-run", action="store_true", help="Montre ce qui serait fait sans écrire les fichiers.")
-    parser.add_argument("--limit-duration-sec", type=int, default=None,
-                        help="Limite la durée traitée (tests rapides).")
+    # 5. Mixing & Timing (Advanced)
+    g_mix = parser.add_argument_group(t("grp_mix"))
+    g_mix.add_argument("--ducking-db", type=float, metavar="DB", default=fused["ducking_db"], help=t("help_ducking_db"))
+    g_mix.add_argument("--bg-mix", type=float, metavar="VOL", default=fused["bg_mix"], help=t("help_bg_mix"))
+    g_mix.add_argument("--tts-mix", type=float, metavar="VOL", default=fused["tts_mix"], help=t("help_tts_mix"))
+    g_mix.add_argument("--offset-ms", type=int, metavar="MS", default=fused["offset_ms"], help=t("help_offset_ms"))
+    g_mix.add_argument("--offset-video-ms", type=int, metavar="MS", default=fused["offset_video_ms"], help=t("help_offset_video_ms"))
+    g_mix.add_argument("--min-rate-tts", type=float, metavar="RATE", default=fused["min_rate_tts"], help=t("help_min_rate_tts"))
+    g_mix.add_argument("--max-rate-tts", type=float, metavar="RATE", default=fused["max_rate_tts"], help=t("help_max_rate_tts"))
+    g_mix.add_argument("--limit-duration-sec", type=int, metavar="SEC", default=None, help=t("help_limit_duration"))
 
     args, unknown = parser.parse_known_args(argv)
 

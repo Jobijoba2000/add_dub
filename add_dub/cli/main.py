@@ -11,7 +11,7 @@ from add_dub.core.pipeline import process_one_video
 from add_dub.core.codecs import final_audio_codec_args
 from add_dub.core.tts_generate import generate_dub_audio
 
-from add_dub.cli.ui import ask_option
+from add_dub.cli.ui import ask_option, ask_translation_options
 from add_dub.cli.selectors import (
     choose_audio_track_ffmpeg_index,
     choose_files,
@@ -82,7 +82,7 @@ def _display_name_short(name: str) -> str:
 
 def _read_index(prompt: str, max_idx: int, default_idx: int = 1) -> int:
     while True:
-        raw = input(f"{prompt} [{default_idx}] : ").strip()
+        raw = input(t("ui_prompt_default", prompt=prompt, default=default_idx)).strip()
         if not raw:
             return default_idx
         if raw.lower() == "q":
@@ -239,7 +239,10 @@ def _ask_config_for_video(
     ac = ask_option("audio_codec", opts, "str", t("opt_codec"), base_opts.audio_codec)
     ab = ask_option("audio_bitrate", opts, "int", t("opt_bitrate"), base_opts.audio_bitrate)
 
-    # 4) Validation & fallbacks (silencieux) selon le moteur choisi
+    # 4) Traduction
+    do_trans, trans_to, trans_from = ask_translation_options(base_opts)
+
+    # 5) Validation & fallbacks (silencieux) selon le moteur choisi
     lang_hint_base = _lang_base(oal) if oal else ""
     chosen_voice = resolve_voice_with_fallbacks(
         engine=engine,
@@ -268,6 +271,9 @@ def _ask_config_for_video(
         voice_id=chosen_voice,
         audio_codec_args=final_audio_codec_args(ac, f"{ab}k"),
         offset_video_ms=offvid,
+        translate=do_trans,
+        translate_to=trans_to,
+        translate_from=trans_from,
     )
 
 

@@ -30,6 +30,11 @@ class DubOptions:
 
     # --- NOUVEAU ---
     ask_test_before_cleanup: bool = False             # si True, proposer un test & re-mux avant suppression des WAV
+    translate: bool = False                           # si True, traduire les sous-titres
+    translate_to: str = "fr"                          # langue cible de traduction
+    translate_from: Optional[str] = None              # langue source (pour éviter l'auto-détection)
+    batch_mode: bool = False                          # si True, pas d'interaction utilisateur (prompts)
+    overwrite: bool = False                           # si True, écrase les fichiers existants (y compris traduction)
 
 
 __all__ = ["DubOptions", "Services"]

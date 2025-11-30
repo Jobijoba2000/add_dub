@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from add_dub.core.options import DubOptions
 from add_dub.logger import (log_call, log_time)
+from add_dub.i18n import t
 
 
 def run_ffmpeg_with_percentage(cmd, duration_source):
@@ -118,24 +119,17 @@ def dub_in_one_pass(
       4: (avec -itsoffset) sous-titres SRT
     Sorties mappées:
       - 0:v:0  (copié ou transcodé selon extension)
-      - [a_mix] (piste audio #0, mix BG+TTS, encodée)
-      - 3:a:0   (piste audio #1, original, encodé)
-      - 4:0     (piste sous-titres)
     """
-    
-    # Sanity rapide sur les entrées audio
-    if os.path.getsize(bg_wav) == 0 or os.path.getsize(tts_wav) == 0:
-        print("Un des fichiers (BG/TTS) est vide. Impossible de mixer.")
-        return
-
-    # Offsets
-    offset_s = _n.int_to_scaled_str(opts.offset_ms)
-    offset_video_s = _n.int_to_scaled_str(opts.offset_video_ms)
+    # Calcul des offsets en secondes
+    offset_s = (opts.offset_ms or 0) / 1000.0
+    offset_video_s = (opts.offset_video_ms or 0) / 1000.0
 
     # Titrages
-    dub_title = f"{opts.orig_audio_lang} doublé en Français"
-    orig_title = opts.orig_audio_lang
-    sub_title = "Français"
+    lang_orig = opts.orig_audio_lang or "Original"
+    lang_dest = opts.translate_to or "Dubbed"
+    dub_title = f"{lang_orig} -> {lang_dest}"
+    orig_title = lang_orig
+    sub_title = lang_dest
 
     # Choix de copie/transcodage vidéo selon extension
     extension_source = Path(video_fullpath).suffix.lower()
@@ -158,7 +152,7 @@ def dub_in_one_pass(
         "-nostats", "-progress", "pipe:1",
 
         # 0: vidéo (avec offset vidéo)
-        "-itsoffset", offset_video_s, "-i", video_fullpath,
+        "-itsoffset", str(offset_video_s), "-i", video_fullpath,
 
         # 1: BG wav, 2: TTS wav, 3: original wav
         "-i", bg_wav,
@@ -166,7 +160,7 @@ def dub_in_one_pass(
         "-i", original_wav,
 
         # 4: sous-titres (avec offset ST)
-        "-itsoffset", offset_s, "-i", subtitle_srt_path,
+        "-itsoffset", str(offset_s), "-i", subtitle_srt_path,
 
         # Filter pour fabriquer [a_mix]
         "-filter_complex", filter_str,

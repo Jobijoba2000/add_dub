@@ -10,8 +10,8 @@ from add_dub.config.defaults import get_system_default_voice_id  # re-export
 # Typage (et pour accéder aux bornes min/max depuis l'instance)
 from add_dub.core.options import DubOptions
 from add_dub.logger import (log_call, log_time)
+from add_dub.i18n import t
 import time
-import asyncio
 
 # OneCore (WinRT)
 try:
@@ -214,25 +214,26 @@ def is_valid_voice_id(voice_id: str | None) -> bool:
     Affiche un avertissement si une valeur non vide (ex: depuis options.conf) est invalide.
     """
     if not voice_id:
-        # Absence de valeur: pas d'avertissement ici.
-        print("pas de voice_id")
-        return False
+        return True
 
     if SpeechSynthesizer is None:
-        print("[WARN] WinRT/SpeechSynthesizer indisponible : impossible de valider 'voice_id' défini dans options.conf.")
-        return False
+        print(t("tts_warn_winrt_unavailable"))
+        return True
 
-    try:
-        voices = list(SpeechSynthesizer.all_voices)
-    except Exception:
-        print("[WARN] Impossible d'énumérer les voix OneCore : validation de 'voice_id' (options.conf) non réalisée.")
-        return False
+    voices = _get_voice_list()
+    if not voices:
+        print(t("tts_warn_enum_fail"))
+        return True
 
     vid = str(voice_id).strip()
+    found = False
     for v in voices:
-        if getattr(v, "id", "") == vid:
-            return True
-
-    # Valeur non vide mais introuvable → avertissement explicite
-    print(f"[WARN] 'voice_id' invalide dans options.conf : '{vid}'. Voix introuvable sur ce système.")
-    return False
+        v_id = getattr(v, "id", "")
+        if vid == v_id:
+            found = True
+            break
+    
+    if not found:
+        print(t("tts_warn_invalid_voiceid", vid=vid))
+        return False
+    return True

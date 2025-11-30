@@ -59,3 +59,7 @@ SRT_DIR = "srt"
 # Demander à l’utilisateur de tester la vidéo AVANT de supprimer les WAV temporaires,
 # et permettre un re-mux rapide en ajustant bg/tts.
 ASK_TEST_BEFORE_CLEANUP = False
+
+# TRANSLATION
+TRANSLATE = False
+TRANSLATE_TO = "fr"

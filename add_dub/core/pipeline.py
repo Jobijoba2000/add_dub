@@ -63,6 +63,73 @@ def process_one_video(
     # 4) Nettoyage SRT
     strip_subtitle_tags_inplace(srt_path)
 
+    # --- TRADUCTION (si demandée) ---
+    # --- TRADUCTION (si demandée) ---
+    if opts.translate and opts.translate_to:
+        from add_dub.core.translation import translate_subtitles, write_srt_file
+        from add_dub.core.subtitles import parse_srt_file as _parse_srt_simple
+        from add_dub.cli.ui import ask_yes_no
+        from add_dub.io.fs import join_srt
+        
+        print(t("pipeline_translating", lang=opts.translate_to))
+        
+        # Check for existing translated SRT
+        base_srt = os.path.basename(srt_path)
+        # Save in srt/ folder for persistence and easy access
+        new_srt_path = join_srt(f"{base_srt}.{opts.translate_to}.srt")
+        
+        reuse_existing = False
+        if os.path.exists(new_srt_path) and not getattr(opts, "overwrite", False):
+            # Ask user if they want to reuse it (unless batch mode)
+            print(t("pipeline_trans_found", path=new_srt_path))
+            
+            should_reuse = False
+            if opts.batch_mode:
+                should_reuse = True
+            elif ask_yes_no(t("pipeline_trans_reuse"), default=True):
+                should_reuse = True
+                
+            if should_reuse:
+                reuse_existing = True
+                print(t("pipeline_trans_reusing"))
+                srt_path = new_srt_path
+        
+        if not reuse_existing:
+            try:
+                # On lit le SRT source
+                subs_source = _parse_srt_simple(srt_path)
+                if subs_source:
+                    # Determine source language
+                    # Priority: 1. User specified (opts.translate_from)
+                    #           2. Filename guess (Sub(Fre))
+                    #           3. None (Auto-detect)
+                    
+                    source_lang = opts.translate_from
+                    
+                    if not source_lang:
+                        lower_name = input_video_name.lower()
+                        if "sub(fre)" in lower_name or "sub(fr)" in lower_name:
+                            source_lang = "fr"
+                        elif "sub(eng)" in lower_name or "sub(en)" in lower_name:
+                            source_lang = "en"
+                    
+                    # On traduit
+                    subs_translated = translate_subtitles(subs_source, opts.translate_to, source_lang=source_lang)
+                    
+                    write_srt_file(subs_translated, new_srt_path)
+                    
+                    # On met à jour srt_path pour que la suite du pipeline utilise le traduit
+                    srt_path = new_srt_path
+                    print(t("pipeline_trans_done", path=srt_path))
+                else:
+                    print(t("pipeline_trans_err", err="Empty source SRT"))
+            except Exception as e:
+                print(t("pipeline_trans_err", err=e))
+                # On continue avec le SRT d'origine en cas d'erreur
+                pass
+    # --------------------------------
+    # --------------------------------
+
     # 5) Libellé langue d'origine
     orig_audio_lang = opts.orig_audio_lang or "Original"
 
@@ -164,7 +231,7 @@ def process_one_video(
                 break
 
             def _ask_float(prompt: str, default_val: float) -> float:
-                raw = input(f"{prompt} (Entrée pour garder {default_val}) : ").strip()
+                raw = input(t("ui_prompt_default", prompt=prompt, default=default_val)).strip()
                 if not raw:
                     return default_val
                 try:
