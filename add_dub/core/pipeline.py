@@ -8,7 +8,7 @@ from typing import Optional
 from pydub import AudioSegment
 
 from add_dub.io.fs import join_input, join_output, join_tmp
-from add_dub.core.subtitles import parse_srt_file, strip_subtitle_tags_inplace
+from add_dub.core.subtitles import parse_srt_file, strip_subtitle_tags_inplace, shift_subtitle_timestamps
 from add_dub.core.ducking import lower_audio_during_subtitles
 from add_dub.adapters.ffmpeg import (
     extract_audio_track,
@@ -62,6 +62,14 @@ def process_one_video(
 
     # 4) Nettoyage SRT
     strip_subtitle_tags_inplace(srt_path)
+
+    # 4b) Décalage physique des sous-titres (si demandé)
+    if opts.offset_ms != 0:
+        print(t("pipeline_offset_shift", ms=opts.offset_ms))
+        srt_path = shift_subtitle_timestamps(srt_path, opts.offset_ms)
+        # On remet l'offset à 0 pour la suite du pipeline (TTS, ducking, mux)
+        # car le fichier SRT est maintenant "physiquement" calé.
+        opts.offset_ms = 0
 
     # --- TRADUCTION (si demandée) ---
     # --- TRADUCTION (si demandée) ---

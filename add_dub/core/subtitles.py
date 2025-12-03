@@ -319,3 +319,69 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple) -> str 
 
     print(t("sub_auto_not_found", video=video_fullpath))
     return None
+
+
+def shift_subtitle_timestamps(srt_path: str, offset_ms: int) -> str:
+    """
+    Lit un fichier SRT, décale tous les timestamps de offset_ms,
+    et écrit le résultat dans un nouveau fichier temporaire (dans srt/).
+    Retourne le chemin du nouveau fichier.
+    """
+    if offset_ms == 0:
+        return srt_path
+
+    subs = parse_srt_file(srt_path)
+    if not subs:
+        return srt_path
+
+    new_subs = []
+    for start, end, text in subs:
+        s = start * 1000 + offset_ms
+        e = end * 1000 + offset_ms
+        
+        # Si la fin est avant 0, on jette le sous-titre
+        if e <= 0:
+            continue
+        
+        # Si le début est avant 0, on le ramène à 0
+        if s < 0:
+            s = 0
+            
+        # Si après correction, durée nulle ou négative, on jette
+        if e <= s:
+            continue
+            
+        new_subs.append((s / 1000.0, e / 1000.0, text))
+
+    if not new_subs:
+        # Si tout est coupé, on renvoie un SRT vide ou l'original (au choix)
+        # Mieux vaut un SRT vide valide
+        base, ext = os.path.splitext(srt_path)
+        new_path = f"{base}.shifted{ext}"
+        with open(new_path, "w", encoding="utf-8") as f:
+            f.write("")
+        return new_path
+
+    # Génération du nouveau contenu
+    lines = []
+    for idx, (start, end, text) in enumerate(new_subs, 1):
+        # Format: 00:00:00,000
+        def _fmt(sec):
+            ms = int(round((sec % 1) * 1000))
+            s = int(sec)
+            m, s = divmod(s, 60)
+            h, m = divmod(m, 60)
+            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+        lines.append(str(idx))
+        lines.append(f"{_fmt(start)} --> {_fmt(end)}")
+        lines.append(text)
+        lines.append("")
+
+    base, ext = os.path.splitext(srt_path)
+    new_path = f"{base}.shifted{ext}"
+    with open(new_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    
+    return new_path
+
