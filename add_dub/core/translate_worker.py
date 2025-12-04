@@ -32,7 +32,26 @@ def main():
             json.dump([], f)
         sys.exit(0)
 
+    # Handle 'auto' source language
+    if source_lang and source_lang.lower() == "auto":
+        source_lang = None
+
+    # Auto-detect source language from content if not provided
+    # This allows us to check if the specific language pair is supported by opus-mt
+    if not source_lang and texts:
+        try:
+            from langdetect import detect
+            # Use a sample of the first few texts
+            sample = " ".join([str(t) for t in texts[:10] if t])
+            if sample:
+                detected = detect(sample)
+                log.info(f"Detected source language from content: {detected}")
+                source_lang = detected
+        except Exception as e:
+            log.warning(f"Language detection failed: {e}")
+
     # Load EasyNMT
+    model = None
     try:
         # Ensure NLTK data is available
         import nltk
@@ -46,8 +65,18 @@ def main():
             nltk.download('punkt_tab')
 
         from easynmt import EasyNMT
-        log.info("Loading EasyNMT model (opus-mt) on CPU...")
-        model = EasyNMT('opus-mt', device='cpu')
+        
+        # Try loading opus-mt first (faster)
+        try:
+            log.info("Loading EasyNMT model (opus-mt) on CPU...")
+            model = EasyNMT('opus-mt', device='cpu')
+            # Test if model exists for this pair by trying a dummy translation
+            # This triggers the download/load check immediately
+            model.translate("test", target_lang=target_lang, source_lang=source_lang or "en")
+        except Exception as e:
+            log.warning(f"opus-mt failed ({e}), trying m2m_100_418M fallback...")
+            model = EasyNMT('m2m_100_418M', device='cpu')
+            
     except Exception as e:
         log.error(f"Failed to load EasyNMT: {e}")
         sys.exit(1)

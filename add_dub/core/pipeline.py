@@ -94,7 +94,10 @@ def process_one_video(
             should_reuse = False
             if opts.batch_mode:
                 should_reuse = True
-            elif ask_yes_no(t("pipeline_trans_reuse"), default=True):
+            elif not opts.ask_reuse_subs:
+                # Si configuré pour ne pas demander, on utilise la valeur par défaut
+                should_reuse = opts.reuse_translated_subs
+            elif ask_yes_no(t("pipeline_trans_reuse"), default=opts.reuse_translated_subs):
                 should_reuse = True
                 
             if should_reuse:
@@ -113,13 +116,29 @@ def process_one_video(
                     #           3. None (Auto-detect)
                     
                     source_lang = opts.translate_from
+                    if source_lang and source_lang.lower() == "auto":
+                        source_lang = None
                     
                     if not source_lang:
+                        # 1. Guess from filename
                         lower_name = input_video_name.lower()
                         if "sub(fre)" in lower_name or "sub(fr)" in lower_name:
                             source_lang = "fr"
                         elif "sub(eng)" in lower_name or "sub(en)" in lower_name:
                             source_lang = "en"
+                        
+                        # 2. Detect from content (langdetect)
+                        if not source_lang:
+                            try:
+                                from langdetect import detect
+                                # Concatenate a sample of text for better detection
+                                sample_text = " ".join([s[2] for s in subs_source[:50]])
+                                detected = detect(sample_text)
+                                if detected:
+                                    source_lang = detected
+                                    print(f" [Auto-Detect] Language detected: {source_lang}")
+                            except Exception as e:
+                                print(f" [Auto-Detect] Failed: {e}")
                     
                     # On traduit
                     subs_translated = translate_subtitles(subs_source, opts.translate_to, source_lang=source_lang)

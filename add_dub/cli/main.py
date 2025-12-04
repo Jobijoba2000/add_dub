@@ -240,7 +240,7 @@ def _ask_config_for_video(
     ab = ask_option("audio_bitrate", opts, "int", t("opt_bitrate"), base_opts.audio_bitrate)
 
     # 4) Traduction
-    do_trans, trans_to, trans_from = ask_translation_options(base_opts)
+    do_trans, trans_to, trans_from = ask_translation_options(base_opts, opts)
 
     # 5) Validation & fallbacks (silencieux) selon le moteur choisi
     lang_hint_base = _lang_base(oal) if oal else ""

@@ -42,26 +42,54 @@ def ask_option(
     # kind == "str"
     return ask_string(prompt, str(default))
 
-def ask_translation_options(base_opts):
+def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
     """
     Demande si on veut traduire, et si oui, vers quelle langue.
     Met à jour base_opts et retourne les valeurs choisies.
     """
     # 1. Ask translate?
-    do_trans = ask_yes_no(t("cli_ask_translate"), default=base_opts.translate)
-    base_opts.translate = do_trans
+    # Si 'translate' est dans options.conf sans 'd', on ne demande pas.
+    entry_trans = opts.get("translate")
+    should_ask_trans = True
+    if entry_trans and not entry_trans.display:
+        should_ask_trans = False
+        base_opts.translate = bool(entry_trans.value)
     
-    if do_trans:
+    if should_ask_trans:
+        do_trans = ask_yes_no(t("cli_ask_translate"), default=base_opts.translate)
+        base_opts.translate = do_trans
+    
+    if base_opts.translate:
         # 2. Target lang
-        target = ask_string(t("cli_ask_translate_lang", default=base_opts.translate_to), default=base_opts.translate_to)
-        base_opts.translate_to = target
+        # Si 'translate_to' est dans options.conf sans 'd', on ne demande pas.
+        entry_to = opts.get("translate_to")
+        should_ask_to = True
+        if entry_to and not entry_to.display:
+            should_ask_to = False
+            base_opts.translate_to = str(entry_to.value)
+        
+        if should_ask_to:
+            target = ask_string(t("cli_ask_translate_lang", default=base_opts.translate_to), default=base_opts.translate_to)
+            base_opts.translate_to = target
         
         # 3. Source lang (optional)
-        src_def = base_opts.translate_from or ""
-        src = ask_string(t("cli_ask_translate_from", default=src_def if src_def else "auto"), default=src_def)
-        if src and src.lower() != "auto":
-            base_opts.translate_from = src
-        else:
-            base_opts.translate_from = None
+        # Si 'translate_from' est dans options.conf sans 'd', on ne demande pas.
+        entry_from = opts.get("translate_from")
+        should_ask_from = True
+        if entry_from and not entry_from.display:
+            should_ask_from = False
+            val = str(entry_from.value).strip()
+            if val.lower() == "none" or val.lower() == "auto" or not val:
+                base_opts.translate_from = None
+            else:
+                base_opts.translate_from = val
+        
+        if should_ask_from:
+            src_def = base_opts.translate_from or ""
+            src = ask_string(t("cli_ask_translate_from", default=src_def if src_def else "auto"), default=src_def)
+            if src and src.lower() != "auto":
+                base_opts.translate_from = src
+            else:
+                base_opts.translate_from = None
             
     return base_opts.translate, base_opts.translate_to, base_opts.translate_from

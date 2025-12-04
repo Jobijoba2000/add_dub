@@ -63,6 +63,11 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
     ask_test_before_cleanup = bool(_conf_value(opts, "ask_test_before_cleanup", getattr(cfg, "ASK_TEST_BEFORE_CLEANUP", False)))
     translate = bool(_conf_value(opts, "translate", getattr(cfg, "TRANSLATE", False)))
     translate_to = str(_conf_value(opts, "translate_to", getattr(cfg, "TRANSLATE_TO", "fr")))
+    translate_from = _conf_value(opts, "translate_from", getattr(cfg, "TRANSLATE_FROM", None))
+    if translate_from:
+        translate_from = str(translate_from).strip()
+        if translate_from.lower() == "auto" or not translate_from:
+            translate_from = None
 
     # ↓↓↓ nouveaux (dirs)
     input_dir = str(_conf_value(opts, "input_dir", getattr(cfg, "INPUT_DIR", "input")))
@@ -91,6 +96,7 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
         "ask_test_before_cleanup": ask_test_before_cleanup,
         "translate": translate,
         "translate_to": translate_to,
+        "translate_from": translate_from,
         "language": language,
     }
 
@@ -114,6 +120,21 @@ def build_default_opts() -> DubOptions:
     ask_test_before_cleanup = bool(_conf_value(opts, "ask_test_before_cleanup", getattr(cfg, "ASK_TEST_BEFORE_CLEANUP", False)))
     translate = bool(_conf_value(opts, "translate", getattr(cfg, "TRANSLATE", False)))
     translate_to = str(_conf_value(opts, "translate_to", getattr(cfg, "TRANSLATE_TO", "fr")))
+    translate_from = _conf_value(opts, "translate_from", getattr(cfg, "TRANSLATE_FROM", None))
+    if translate_from:
+        translate_from = str(translate_from).strip()
+        if translate_from.lower() == "auto" or not translate_from:
+            translate_from = None
+
+    # Reuse subs logic
+    entry_reuse = opts.get("reuse_translated_subs")
+    if entry_reuse:
+        reuse_translated_subs = bool(entry_reuse.value)
+        ask_reuse_subs = entry_reuse.display
+    else:
+        # Default: True, and Ask
+        reuse_translated_subs = True
+        ask_reuse_subs = True
 
     return DubOptions(
         audio_ffmpeg_index=None,
@@ -136,4 +157,7 @@ def build_default_opts() -> DubOptions:
         ask_test_before_cleanup=ask_test_before_cleanup,
         translate=translate,
         translate_to=translate_to,
+        translate_from=translate_from,
+        reuse_translated_subs=reuse_translated_subs,
+        ask_reuse_subs=ask_reuse_subs,
     )
