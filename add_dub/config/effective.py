@@ -132,8 +132,8 @@ def build_default_opts() -> DubOptions:
         reuse_translated_subs = bool(entry_reuse.value)
         ask_reuse_subs = entry_reuse.display
     else:
-        # Default: True, and Ask
-        reuse_translated_subs = True
+        # Default from cfg
+        reuse_translated_subs = getattr(cfg, "REUSE_TRANSLATED_SUBS", True)
         ask_reuse_subs = True
 
     return DubOptions(
