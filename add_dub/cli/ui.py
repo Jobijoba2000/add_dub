@@ -92,4 +92,46 @@ def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
             else:
                 base_opts.translate_from = None
             
+
     return base_opts.translate, base_opts.translate_to, base_opts.translate_from
+
+def ask_choice(
+    prompt: str,
+    choices: list[tuple[str, str]],
+    default_val: str | None = None
+) -> str | None:
+    """
+    Affiche une liste numérotée de choix et retourne la valeur choisie.
+    
+    choices: liste de tuples (valeur, label). Ex: [("aac", "AAC"), ("mp3", "MP3")]
+    default_val: valeur par défaut si l'utilisateur fait Entrée vide.
+                 Si None, Entrée vide retourne None (pas de changement).
+    
+    Retourne la 'valeur' sélectionnée.
+    """
+    print(f"\n{prompt}")
+    
+    # Affichage
+    for idx, (val, label) in enumerate(choices, start=1):
+        print(f"    {idx}) {label}")
+        
+    def_label = ""
+    if default_val is not None:
+        # Trouver le label du default si possible
+        found = next((lbl for v, lbl in choices if v == default_val), default_val)
+        def_label = f" [{found}]"
+        
+    while True:
+        raw = input(f"Choice{def_label}: ").strip()
+        
+        if not raw:
+            return default_val
+            
+        try:
+            idx = int(raw)
+            if 1 <= idx <= len(choices):
+                return choices[idx-1][0]
+        except ValueError:
+            pass
+            
+        print("Invalid choice.")

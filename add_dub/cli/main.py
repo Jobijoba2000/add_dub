@@ -21,7 +21,7 @@ from add_dub.cli.selectors import (
 from add_dub.config import cfg
 from add_dub.helpers.time import measure_duration as _md
 from add_dub.helpers.console import ask_yes_no
-from add_dub.config.opts_loader import load_options
+from add_dub.config.opts_loader import load_options, save_option
 
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
@@ -35,8 +35,9 @@ from add_dub.core.tts_registry import (
     normalize_engine,
     list_voices_for_engine,
     resolve_voice_with_fallbacks,
+    resolve_voice_with_fallbacks,
 )
-from add_dub.i18n import init_language, t
+from add_dub.i18n import init_language, t, get_available_languages
 from add_dub.logger import logger as log
 
 # ---------------------------------------------------------------------------
@@ -237,8 +238,52 @@ def _ask_config_for_video(
     tts_val = ask_option("tts", opts, "float", t("opt_tts_mix"), base_opts.tts_mix)
     min_rate_tts = ask_option("min_rate_tts", opts, "float", t("opt_min_rate"), base_opts.min_rate_tts)
     max_rate_tts = ask_option("max_rate_tts", opts, "float", t("opt_max_rate"), base_opts.max_rate_tts)
-    ac = ask_option("audio_codec", opts, "str", t("opt_codec"), base_opts.audio_codec)
-    ab = ask_option("audio_bitrate", opts, "int", t("opt_bitrate"), base_opts.audio_bitrate)
+    max_rate_tts = ask_option("max_rate_tts", opts, "float", t("opt_max_rate"), base_opts.max_rate_tts)
+    
+    # Codec Audio (Numbered Choice)
+    # Liste des codecs supportés (basé sur codecs.py)
+    # "aac", "mp3", "ac3", "flac", "opus", "vorbis", "pcm_s16le"
+    supported_codecs = [
+        ("aac", "AAC"),
+        ("ac3", "AC3"),
+        ("mp3", "MP3"),
+        ("flac", "FLAC"),
+        ("pcm_s16le", "PCM"),
+    ]
+    
+    ac = base_opts.audio_codec
+    ac_entry = opts.get("audio_codec")
+    if ac_entry and ac_entry.display:
+        # On utilise ask_choice
+        # Si vide => on garde base_opts.audio_codec (qui vient de effective.py)
+        # On ne sauvegarde PAS dans options.conf
+        from add_dub.cli.ui import ask_choice
+        chosen_ac = ask_choice(t("opt_codec"), supported_codecs, default_val=ac)
+        if chosen_ac:
+            ac = chosen_ac
+
+    # Bitrate Audio (Numbered Choice)
+    # Liste des bitrates courants
+    supported_bitrates = [
+        ("64", "64k"),
+        ("96", "96k"),
+        ("128", "128k"),
+        ("192", "192k"),
+        ("256", "256k"),
+        ("320", "320k"),
+        ("448", "448k"),
+        ("640", "640k"),
+    ]
+    
+    ab = base_opts.audio_bitrate
+    ab_entry = opts.get("audio_bitrate")
+    if ab_entry and ab_entry.display:
+        # Conversion int -> str pour ask_choice
+        def_ab_str = str(ab)
+        from add_dub.cli.ui import ask_choice
+        chosen_ab_str = ask_choice(t("opt_bitrate"), supported_bitrates, default_val=def_ab_str)
+        if chosen_ab_str:
+            ab = int(chosen_ab_str)
 
     # 4) Traduction
     do_trans, trans_to, trans_from = ask_translation_options(base_opts, opts)
@@ -316,7 +361,67 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
     return 0
 
 
+def ask_language_if_needed() -> None:
+    opts = load_options()
+    lang_opt = opts.get("language")
+
+    # Si pas d'option ou pas de display flag, on ne fait rien
+    if not lang_opt or not lang_opt.display:
+        return
+
+    # Préparation de la liste avec Auto en premier (0)
+    # Mais ask_choice commence à 1.
+    # On va tricher un peu ou adapter ask_choice ?
+    # Le user veut "Auto" et "Vide = pas de changement".
+    # On va faire une liste custom :
+    # 1. Auto (System Default)
+    # 2. ... langues ...
+    
+    langs = get_available_languages()
+    # langs est [("fr", "French"), ...]
+    
+    choices = [("auto", "Auto (System Default)")] + langs
+    
+    # On utilise notre helper ask_choice
+    # Si l'utilisateur ne rentre rien, on veut garder la valeur actuelle (qui est dans options.conf)
+    # Mais ask_choice retourne default_val si vide.
+    # Ici, si vide => on ne touche à rien.
+    
+    print("\nSelect Interface Language:")
+    for idx, (code, name) in enumerate(choices, start=0):
+        print(f"    {idx}) {name} [{code}]")
+        
+    print("    (Leave empty to keep current setting)")
+
+    choice_code = None
+    while True:
+        raw = input("Choice: ").strip()
+        if not raw:
+            # Empty => keep current
+            return
+            
+        try:
+            idx = int(raw)
+            if 0 <= idx < len(choices):
+                choice_code = choices[idx][0]
+                break
+        except ValueError:
+            pass
+        print("Invalid choice.")
+
+    # On sauvegarde la valeur
+    save_option("language", choice_code, display=True)
+    
+    # On applique la langue tout de suite
+    init_language()
+    
+    # Demande si on veut ne plus demander
+    if ask_yes_no(t("ui_ask_save_lang_choice"), default=False):
+        save_option("language", choice_code, display=False)
+
+
 def main() -> int:
+    ask_language_if_needed()
     init_language()
     svcs = build_services()
     while True:

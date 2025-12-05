@@ -10,10 +10,6 @@ def final_audio_ext(audio_codec_final: str) -> str:
         return ".ac3"
     if codec == "flac":
         return ".flac"
-    if codec == "opus":
-        return ".opus"
-    if codec == "vorbis":
-        return ".ogg"
     if codec == "pcm_s16le":
         return ".wav"
     return ".m4a"
@@ -38,10 +34,6 @@ def final_audio_codec_args(audio_codec_final: str, audio_bitrate: str | None) ->
         args = ["-c:a", "ac3"]
     elif codec == "flac":
         args = ["-c:a", "flac"]
-    elif codec == "opus":
-        args = ["-c:a", "libopus"]
-    elif codec == "vorbis":
-        args = ["-c:a", "libvorbis"]
     elif codec == "pcm_s16le":
         args = ["-c:a", "pcm_s16le"]
     else:

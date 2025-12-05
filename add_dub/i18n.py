@@ -167,6 +167,7 @@ TRANSLATIONS = {
         "ui_prompt_mode": "\nMode (A)uto / (M)anuel ? [A]: ",
         "ui_prompt_yes_no": "{prompt} [{default}]: ",
         "ui_prompt_default": "{prompt} [{default}]: ",
+        "ui_ask_save_lang_choice": "Voulez-vous conserver ce choix de langue et ne plus le demander ?",
     },
     "en": {
         "cli_no_video": "No video detected. Place files in ./input or use --input.",
@@ -327,6 +328,7 @@ TRANSLATIONS = {
         "ui_prompt_mode": "\nMode (A)uto / (M)anual? [A]: ",
         "ui_prompt_yes_no": "{prompt} [{default}]: ",
         "ui_prompt_default": "{prompt} [{default}]: ",
+        "ui_ask_save_lang_choice": "Do you want to keep this language choice and not ask again?",
     },
     "es": {
         "cli_no_video": "No se detectó ningún video. Coloque archivos en ./input o use --input.",
@@ -2896,3 +2898,42 @@ def t(key: str, **kwargs: Any) -> str:
         return text.format(**kwargs)
     except Exception:
         return text
+
+
+def get_available_languages() -> list[tuple[str, str]]:
+    """
+    Retourne la liste des langues disponibles sous forme de tuples (code, nom complet).
+    Ex: [("fr", "French"), ("en", "English"), ...]
+    """
+    # Mapping manuel pour l'affichage propre
+    # On se base sur les clés de TRANSLATIONS
+    names = {
+        "fr": "French",
+        "en": "English",
+        "es": "Spanish",
+        "de": "German",
+        "it": "Italian",
+        "ja": "Japanese",
+        "pt": "Portuguese",
+        "nl": "Dutch",
+        "pl": "Polish",
+        "ru": "Russian",
+        "uk": "Ukrainian",
+        "tr": "Turkish",
+        "sv": "Swedish",
+        "cs": "Czech",
+        "el": "Greek",
+        "zh": "Chinese",
+        "ar": "Arabic",
+        "ko": "Korean",
+    }
+    
+    available = []
+    for code in TRANSLATIONS.keys():
+        name = names.get(code, code.upper())
+        available.append((code, name))
+        
+    # Tri par code ou nom ? Le user veut "fr - French"
+    # On peut trier par code pour l'instant
+    available.sort(key=lambda x: x[0])
+    return available
