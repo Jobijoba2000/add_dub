@@ -38,9 +38,9 @@ def ask_yes_no(prompt, default=False):
     default=True => [Y/n], default=False => [y/N]
     """
     if default:
-        y_n = "O/n"
+        y_n = "Y/n"
     else:
-        y_n = "o/N"
+        y_n = "y/N"
     
     final_prompt = t("ui_prompt_yes_no", prompt=prompt, default=y_n)
     val = input(final_prompt).strip().lower()

@@ -20,6 +20,7 @@ from add_dub.core.services import Services
 from pprint import pprint
 from add_dub.logger import (log_call, log_time)
 from add_dub.i18n import t
+from add_dub.helpers.console import ask_yes_no
 
 @log_time
 @log_call
@@ -251,10 +252,7 @@ def process_one_video(
         print(t("pipeline_test_file", path=final_video))
         print(t("pipeline_test_check"))
         while True:
-            resp = input(t("pipeline_test_ask")).strip().lower()
-            if resp not in ("o", "oui", "y", "yes", "n", "non", "s", "si"):
-                continue
-            if resp in ("n", "non"):
+            if not ask_yes_no(t("pipeline_test_ask"), default=False):
                 break
 
             def _ask_float(prompt: str, default_val: float) -> float:

@@ -20,6 +20,7 @@ from add_dub.cli.selectors import (
 
 from add_dub.config import cfg
 from add_dub.helpers.time import measure_duration as _md
+from add_dub.helpers.console import ask_yes_no
 from add_dub.config.opts_loader import load_options
 
 from add_dub.core.options import DubOptions
@@ -378,6 +379,5 @@ def main() -> int:
 
         code = run_interactive(selected, svcs)
 
-        choix = input(t("cli_ask_another")).strip().lower()
-        if not choix.startswith("o") and not choix.startswith("y") and not choix.startswith("s") and not choix.startswith("j"):
+        if not ask_yes_no(t("cli_ask_another"), default=True):
             return code
