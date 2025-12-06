@@ -4,7 +4,7 @@ import math
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait, FIRST_COMPLETED
 from typing import List, Tuple, Optional
-from pprint import pprint
+from add_dub.core.ui import UIInterface
 import numpy as np
 from pydub import AudioSegment
 
@@ -113,6 +113,7 @@ def generate_dub_audio(
     *,
     duration_limit_sec: Optional[int] = None,
     target_total_duration_ms: Optional[int] = None,
+    ui: Optional[UIInterface] = None,
 ) -> str:
     """
     Génère la piste TTS alignée sur le SRT et retourne le chemin du WAV généré.
@@ -134,7 +135,10 @@ def generate_dub_audio(
     results: List[Optional[Tuple[str, int, int]]] = [None] * len(jobs)
     total = len(jobs)
     done = 0
-    print(t("tts_progress", pct=0, done=0, total=total), end="", flush=True)
+    if ui:
+        ui.progress(0)
+    else:
+        log.info(t("tts_progress", pct=0, done=0, total=total))
 
     FREEZE_TIMEOUT = 5
 
@@ -147,7 +151,10 @@ def generate_dub_audio(
             done_set, pending = wait(pending, timeout=FREEZE_TIMEOUT, return_when=FIRST_COMPLETED)
 
             if not done_set:
-                print(t("tts_warn_freeze"))
+                if ui:
+                    ui.message(t("tts_warn_freeze"))
+                else:
+                    log.warning(t("tts_warn_freeze"))
                 for fut in list(pending):
                     job = fut_to_job[fut]
                     try:
@@ -158,7 +165,11 @@ def generate_dub_audio(
                     results[idx] = (path, s_ms, e_ms)
                     done += 1
                     pct = int(done * 100 / total)
-                    print(t("tts_progress", pct=pct, done=done, total=total), end="", flush=True)
+                    if ui:
+                        ui.progress(pct)
+                    else:
+                        # Avoid spamming logs with progress updates
+                        pass
                 pending.clear()
                 break
 
@@ -171,7 +182,11 @@ def generate_dub_audio(
                 results[idx] = (path, s_ms, e_ms)
                 done += 1
                 pct = int(done * 100 / total)
-                print(t("tts_progress", pct=pct, done=done, total=total), end="", flush=True)
+                if ui:
+                    ui.progress(pct)
+                else:
+                    # Avoid spamming logs with progress updates
+                    pass
 
     finally:
         ex.shutdown(wait=False, cancel_futures=True)
@@ -271,5 +286,5 @@ def generate_dub_audio(
 
     _export_int16_wav(final_buf, target_sr, target_ch, output_wav)
 
-    print()
+
     return output_wav

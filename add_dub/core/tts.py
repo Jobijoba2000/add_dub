@@ -9,7 +9,7 @@ from add_dub.config.defaults import get_system_default_voice_id  # re-export
 
 # Typage (et pour accéder aux bornes min/max depuis l'instance)
 from add_dub.core.options import DubOptions
-from add_dub.logger import (log_call, log_time)
+from add_dub.logger import (log_call, log_time, logger as log)
 from add_dub.i18n import t
 import time
 
@@ -217,12 +217,12 @@ def is_valid_voice_id(voice_id: str | None) -> bool:
         return True
 
     if SpeechSynthesizer is None:
-        print(t("tts_warn_winrt_unavailable"))
+        log.warning(t("tts_warn_winrt_unavailable"))
         return True
 
     voices = _get_voice_list()
     if not voices:
-        print(t("tts_warn_enum_fail"))
+        log.warning(t("tts_warn_enum_fail"))
         return True
 
     vid = str(voice_id).strip()
@@ -234,6 +234,6 @@ def is_valid_voice_id(voice_id: str | None) -> bool:
             break
     
     if not found:
-        print(t("tts_warn_invalid_voiceid", vid=vid))
+        log.warning(t("tts_warn_invalid_voiceid", vid=vid))
         return False
     return True

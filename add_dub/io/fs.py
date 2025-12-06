@@ -5,7 +5,8 @@ from add_dub.config.effective import effective_values
 from add_dub.config import cfg
 
 # Racine du projet (le .bat fait déjà `cd /d "%~dp0"`)
-ROOT = os.getcwd()
+# Note: Relies on CWD being the project root.
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Valeurs de secours si non définies dans defaults.py
 _DEF_INPUT_DIR = getattr(cfg, "INPUT_DIR", "input")

@@ -17,10 +17,8 @@ from add_dub.adapters.ffmpeg import (
 import re
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
-from pprint import pprint
 from add_dub.logger import (log_call, log_time)
 from add_dub.i18n import t
-from add_dub.helpers.console import ask_yes_no
 
 @log_time
 @log_call
@@ -39,7 +37,7 @@ def process_one_video(
     Retourne le chemin de la vidéo finale, ou None si annulé.
     """
 
-    print(t("pipeline_process", name=input_video_name))
+    svcs.ui.message(t("pipeline_process", name=input_video_name))
 
     base, ext = os.path.splitext(os.path.basename(input_video_path))
 
@@ -56,9 +54,9 @@ def process_one_video(
             return None
 
     # 3) Résolution vers un SRT exploitable
-    srt_path = svcs.resolve_srt_for_video(input_video_path, sub_choice)
+    srt_path = svcs.resolve_srt_for_video(input_video_path, sub_choice, ui=svcs.ui)
     if not srt_path:
-        print(t("pipeline_no_srt", name=input_video_name))
+        svcs.ui.error(t("pipeline_no_srt", name=input_video_name))
         return None
 
     # 4) Nettoyage SRT
@@ -66,21 +64,19 @@ def process_one_video(
 
     # 4b) Décalage physique des sous-titres (si demandé)
     if opts.offset_ms != 0:
-        print(t("pipeline_offset_shift", ms=opts.offset_ms))
+        svcs.ui.message(t("pipeline_offset_shift", ms=opts.offset_ms))
         srt_path = shift_subtitle_timestamps(srt_path, opts.offset_ms)
         # On remet l'offset à 0 pour la suite du pipeline (TTS, ducking, mux)
         # car le fichier SRT est maintenant "physiquement" calé.
         opts.offset_ms = 0
 
     # --- TRADUCTION (si demandée) ---
-    # --- TRADUCTION (si demandée) ---
     if opts.translate and opts.translate_to:
         from add_dub.core.translation import translate_subtitles, write_srt_file
         from add_dub.core.subtitles import parse_srt_file as _parse_srt_simple
-        from add_dub.cli.ui import ask_yes_no
         from add_dub.io.fs import join_srt
         
-        print(t("pipeline_translating", lang=opts.translate_to))
+        svcs.ui.message(t("pipeline_translating", lang=opts.translate_to))
         
         # Check for existing translated SRT
         base_srt = os.path.basename(srt_path)
@@ -90,7 +86,7 @@ def process_one_video(
         reuse_existing = False
         if os.path.exists(new_srt_path) and not getattr(opts, "overwrite", False):
             # Ask user if they want to reuse it (unless batch mode)
-            print(t("pipeline_trans_found", path=new_srt_path))
+            svcs.ui.message(t("pipeline_trans_found", path=new_srt_path))
             
             should_reuse = False
             if opts.batch_mode:
@@ -98,12 +94,12 @@ def process_one_video(
             elif not opts.ask_reuse_subs:
                 # Si configuré pour ne pas demander, on utilise la valeur par défaut
                 should_reuse = opts.reuse_translated_subs
-            elif ask_yes_no(t("pipeline_trans_reuse"), default=opts.reuse_translated_subs):
+            elif svcs.ui.ask_yes_no(t("pipeline_trans_reuse"), default=opts.reuse_translated_subs):
                 should_reuse = True
                 
             if should_reuse:
                 reuse_existing = True
-                print(t("pipeline_trans_reusing"))
+                svcs.ui.message(t("pipeline_trans_reusing"))
                 srt_path = new_srt_path
         
         if not reuse_existing:
@@ -137,22 +133,22 @@ def process_one_video(
                                 detected = detect(sample_text)
                                 if detected:
                                     source_lang = detected
-                                    print(f" [Auto-Detect] Language detected: {source_lang}")
+                                    svcs.ui.message(f" [Auto-Detect] Language detected: {source_lang}")
                             except Exception as e:
-                                print(f" [Auto-Detect] Failed: {e}")
+                                svcs.ui.error(f" [Auto-Detect] Failed: {e}")
                     
                     # On traduit
-                    subs_translated = translate_subtitles(subs_source, opts.translate_to, source_lang=source_lang)
+                    subs_translated = translate_subtitles(subs_source, opts.translate_to, source_lang=source_lang, ui=svcs.ui)
                     
                     write_srt_file(subs_translated, new_srt_path)
                     
                     # On met à jour srt_path pour que la suite du pipeline utilise le traduit
                     srt_path = new_srt_path
-                    print(t("pipeline_trans_done", path=srt_path))
+                    svcs.ui.message(t("pipeline_trans_done", path=srt_path))
                 else:
-                    print(t("pipeline_trans_err", err="Empty source SRT"))
+                    svcs.ui.error(t("pipeline_trans_err", err="Empty source SRT"))
             except Exception as e:
-                print(t("pipeline_trans_err", err=e))
+                svcs.ui.error(t("pipeline_trans_err", err=e))
                 # On continue avec le SRT d'origine en cas d'erreur
                 pass
     # --------------------------------
@@ -163,7 +159,7 @@ def process_one_video(
 
     # 6) Extraction audio d'origine → **tmp/**
     orig_wav = join_tmp(f"{base}_orig.wav")
-    print(t("pipeline_extract_audio"))
+    svcs.ui.message(t("pipeline_extract_audio"))
     extract_audio_track(
         input_video_path,
         audio_idx,
@@ -180,23 +176,24 @@ def process_one_video(
     # 7) Parsing SRT (sert aussi au ducking)
     subtitles = parse_srt_file(srt_path, duration_limit_sec=limit_duration_sec)
     if not subtitles:
-        print(t("pipeline_no_subs_usable"))
+        svcs.ui.error(t("pipeline_no_subs_usable"))
         return None
 
     # 8) Génération TTS alignée → **tmp/**
     tts_wav = join_tmp(f"{test_prefix}{base}_tts.wav")
-    print(t("pipeline_gen_tts"))
+    svcs.ui.message(t("pipeline_gen_tts"))
     svcs.generate_dub_audio(
         srt_file=srt_path,
         output_wav=tts_wav,
         opts=opts,
         duration_limit_sec=limit_duration_sec,
         target_total_duration_ms=orig_len_ms,
+        ui=svcs.ui,
     )
 
     # 9) Ducking → **tmp/**
     ducked_wav = join_tmp(f"{test_prefix}{base}_ducked.wav")
-    print(t("pipeline_ducking"))
+    svcs.ui.message(t("pipeline_ducking"))
     lower_audio_during_subtitles(
         audio_file=orig_wav,
         subtitles=subtitles,
@@ -235,7 +232,7 @@ def process_one_video(
     dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
     final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}", output_dir_path)
 
-    print(t("pipeline_mux"))
+    svcs.ui.message(t("pipeline_mux"))
     dub_in_one_pass(
         video_fullpath=input_video_path,
         bg_wav=ducked_wav,
@@ -248,33 +245,23 @@ def process_one_video(
 
     # 11) (NOUVEAU) Option de test AVANT nettoyage + re-mux rapide si besoin
     if getattr(opts, "ask_test_before_cleanup", False):
-        print(t("pipeline_test_header"))
-        print(t("pipeline_test_file", path=final_video))
-        print(t("pipeline_test_check"))
+        svcs.ui.message(t("pipeline_test_header"))
+        svcs.ui.message(t("pipeline_test_file", path=final_video))
+        svcs.ui.message(t("pipeline_test_check"))
         while True:
-            if not ask_yes_no(t("pipeline_test_ask"), default=False):
+            if not svcs.ui.ask_yes_no(t("pipeline_test_ask"), default=False):
                 break
 
-            def _ask_float(prompt: str, default_val: float) -> float:
-                raw = input(t("ui_prompt_default", prompt=prompt, default=default_val)).strip()
-                if not raw:
-                    return default_val
-                try:
-                    return float(raw)
-                except Exception:
-                    print(t("ui_invalid_value"))
-                    return default_val
-
             # Saisie des nouveaux niveaux
-            new_bg = _ask_float(t("pipeline_test_ask_bg"), opts.bg_mix)
-            new_tts = _ask_float(t("pipeline_test_ask_tts"), opts.tts_mix)
+            new_bg = svcs.ui.ask_float(t("pipeline_test_ask_bg"), opts.bg_mix)
+            new_tts = svcs.ui.ask_float(t("pipeline_test_ask_tts"), opts.tts_mix)
 
             # Mise à jour en mémoire
             opts.bg_mix = new_bg
             opts.tts_mix = new_tts
 
             # Re-mux **sans** régénérer TTS/ducking (on réutilise les WAV temporaires)
-            print(t("pipeline_test_remux"))
+            svcs.ui.message(t("pipeline_test_remux"))
             dub_in_one_pass(
                 video_fullpath=input_video_path,
                 bg_wav=ducked_wav,
@@ -284,8 +271,8 @@ def process_one_video(
                 output_video_path=final_video,  # on écrase, -y est passé dans la commande
                 opts=opts,
             )
-            print(t("pipeline_test_done", path=final_video))
-            print(t("pipeline_test_continue"))
+            svcs.ui.message(t("pipeline_test_done", path=final_video))
+            svcs.ui.message(t("pipeline_test_continue"))
 
     # 12) Nettoyage des **tmp/**
     for f in (orig_wav, tts_wav, ducked_wav):

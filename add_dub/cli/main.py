@@ -35,10 +35,10 @@ from add_dub.core.tts_registry import (
     normalize_engine,
     list_voices_for_engine,
     resolve_voice_with_fallbacks,
-    resolve_voice_with_fallbacks,
 )
 from add_dub.i18n import init_language, t, get_available_languages
 from add_dub.logger import logger as log
+from add_dub.core.ui import ConsoleUI
 
 # ---------------------------------------------------------------------------
 # Helpers locaux
@@ -104,6 +104,7 @@ def build_services() -> Services:
         choose_files=choose_files,
         choose_audio_track=choose_audio_track_ffmpeg_index,
         choose_subtitle_source=choose_subtitle_source,
+        ui=ConsoleUI(),
     )
 
 def _ask_voice_for_engine(engine: str) -> str | None:
@@ -237,7 +238,6 @@ def _ask_config_for_video(
     bg = ask_option("bg", opts, "float", t("opt_bg_mix"), base_opts.bg_mix)
     tts_val = ask_option("tts", opts, "float", t("opt_tts_mix"), base_opts.tts_mix)
     min_rate_tts = ask_option("min_rate_tts", opts, "float", t("opt_min_rate"), base_opts.min_rate_tts)
-    max_rate_tts = ask_option("max_rate_tts", opts, "float", t("opt_max_rate"), base_opts.max_rate_tts)
     max_rate_tts = ask_option("max_rate_tts", opts, "float", t("opt_max_rate"), base_opts.max_rate_tts)
     
     # Codec Audio (Numbered Choice)

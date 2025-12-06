@@ -1,20 +1,24 @@
 
 import os
-from typing import List, Tuple
-from add_dub.logger import logger as log
-from add_dub.i18n import t
+
 
 import sys
 import json
 import subprocess
 import tempfile
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from add_dub.logger import logger as log
 from add_dub.i18n import t
+from add_dub.core.ui import UIInterface
 
 # Note: We no longer import EasyNMT here to avoid crashes in the main process.
 
-def translate_subtitles(subtitles: List[Tuple[float, float, str]], target_lang: str, source_lang: str = None) -> List[Tuple[float, float, str]]:
+def translate_subtitles(
+    subtitles: List[Tuple[float, float, str]], 
+    target_lang: str, 
+    source_lang: str = None,
+    ui: Optional[UIInterface] = None
+) -> List[Tuple[float, float, str]]:
     """
     Traduit une liste de sous-titres (start, end, text) vers la langue cible.
     Exécute la traduction dans un sous-processus isolé pour éviter les crashs (PyTorch/Windows).
@@ -64,7 +68,12 @@ def translate_subtitles(subtitles: List[Tuple[float, float, str]], target_lang: 
             if line:
                 line = line.strip()
                 if line.startswith("PROGRESS:"):
-                    print(t("trans_log_progress", pct=line.split(':')[1]), end="\r")
+                    pct = float(line.split(':')[1])
+                    if ui:
+                        ui.progress(pct)
+                    else:
+                        # Avoid spamming logs with progress
+                        pass
                 else:
                     # Log other output (logs, warnings) as debug info
                     # This ensures we drain the buffer and don't deadlock
@@ -96,7 +105,8 @@ def translate_subtitles(subtitles: List[Tuple[float, float, str]], target_lang: 
         if os.path.exists(output_path):
             os.remove(output_path)
 
-    print("") # Newline after progress
+    # if not ui:
+    #     print("") # Newline after progress
     log.info(t("trans_log_completed"))
 
     new_subs = []

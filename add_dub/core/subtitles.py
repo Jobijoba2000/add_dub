@@ -12,6 +12,9 @@ import add_dub.io.fs as io_fs  # ← module, pas des valeurs copiées
 from add_dub.adapters.mkvtoolnix import mkv_has_subtitle_track, mkvmerge_identify_json
 from add_dub.adapters.subtitle_edit import subtitle_edit_ocr, vobsub2srt_ocr
 from add_dub.i18n import t
+from add_dub.logger import logger as log
+from typing import Optional
+from add_dub.core.ui import UIInterface
 
 
 def _find_exe(candidates):
@@ -148,7 +151,7 @@ def list_input_videos():
 
 
 def extract_first_subtitle_to_srt_into_input(
-    video_fullpath: str, local_sub_index: int = 0, ocr_lang: str = "fr"
+    video_fullpath: str, local_sub_index: int = 0, ocr_lang: str = "fr", ui: Optional[UIInterface] = None
 ) -> str | None:
     """
     ⚠️ Comportement : extraction/convert texte/ocr → **toujours** dans srt/<video_base>.srt
@@ -156,12 +159,14 @@ def extract_first_subtitle_to_srt_into_input(
     """
     info = mkvmerge_identify_json(video_fullpath)
     if not info:
-        print(t("sub_mkvtoolnix_required"))
+        if ui: ui.error(t("sub_mkvtoolnix_required"))
+        else: log.error(t("sub_mkvtoolnix_required"))
         return None
 
     sub_tracks = [t for t in info.get("tracks", []) if t.get("type") == "subtitles"]
     if not sub_tracks:
-        print(t("sub_no_tracks"))
+        if ui: ui.error(t("sub_no_tracks"))
+        else: log.error(t("sub_no_tracks"))
         return None
 
     if local_sub_index < 0 or local_sub_index >= len(sub_tracks):
@@ -199,14 +204,18 @@ def extract_first_subtitle_to_srt_into_input(
                 text=True, encoding="utf-8", errors="replace"
             )
             end = time.perf_counter()
-            print(end - start)
+            # print(end - start) # Debug timing removed or logged if needed
             if os.path.exists(target_srt) and os.path.getsize(target_srt) > 0:
                 strip_subtitle_tags_inplace(target_srt)
-                print(t("sub_extract_text_success", path=target_srt))
+                if ui: ui.message(t("sub_extract_text_success", path=target_srt))
+                else: log.info(t("sub_extract_text_success", path=target_srt))
                 return target_srt
-            print(t("sub_extract_text_failed"))
+            if ui: ui.error(t("sub_extract_text_failed"))
+            else: log.error(t("sub_extract_text_failed"))
         except subprocess.CalledProcessError as e:
-            print(t("sub_ffmpeg_error", err=(e.stderr or "")[-400:]))
+            msg = t("sub_ffmpeg_error", err=(e.stderr or "")[-400:])
+            if ui: ui.error(msg)
+            else: log.error(msg)
         return None
 
     # Bitmap (PGS/VobSub) -> mkvextract + OCR
@@ -218,7 +227,8 @@ def extract_first_subtitle_to_srt_into_input(
         ]
     )
     if not mkvextract:
-        print(t("sub_mkvextract_not_found"))
+        if ui: ui.error(t("sub_mkvextract_not_found"))
+        else: log.error(t("sub_mkvextract_not_found"))
         return None
 
     tmp_dir = tempfile.mkdtemp(prefix="subs_")
@@ -242,7 +252,8 @@ def extract_first_subtitle_to_srt_into_input(
             os.makedirs(os.path.dirname(target_srt), exist_ok=True)
             os.replace(tmp_out, target_srt)
             strip_subtitle_tags_inplace(target_srt)
-            print(t("sub_ocr_success", method="Subtitle Edit", path=target_srt))
+            if ui: ui.message(t("sub_ocr_success", method="Subtitle Edit", path=target_srt))
+            else: log.info(t("sub_ocr_success", method="Subtitle Edit", path=target_srt))
             return target_srt
 
         if ext == ".sub":
@@ -251,10 +262,12 @@ def extract_first_subtitle_to_srt_into_input(
                 os.makedirs(os.path.dirname(target_srt), exist_ok=True)
                 os.replace(produced, target_srt)
                 strip_subtitle_tags_inplace(target_srt)
-                print(t("sub_ocr_success", method="vobsub2srt", path=target_srt))
+                if ui: ui.message(t("sub_ocr_success", method="vobsub2srt", path=target_srt))
+                else: log.info(t("sub_ocr_success", method="vobsub2srt", path=target_srt))
                 return target_srt
 
-        print(t("sub_no_ocr"))
+        if ui: ui.error(t("sub_no_ocr"))
+        else: log.error(t("sub_no_ocr"))
         return None
     finally:
         try:
@@ -263,7 +276,7 @@ def extract_first_subtitle_to_srt_into_input(
             pass
 
 
-def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple) -> str | None:
+def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Optional[UIInterface] = None) -> str | None:
     """
     Politique unifiée (jamais d'écriture dans le dossier source) :
 
@@ -283,12 +296,13 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple) -> str 
         except Exception:
             local_idx = 0
         srt_path = extract_first_subtitle_to_srt_into_input(
-            video_fullpath, local_sub_index=local_idx
+            video_fullpath, local_sub_index=local_idx, ui=ui
         )
         if srt_path:
             strip_subtitle_tags_inplace(srt_path)
             return srt_path
-        print(t("sub_auto_extract_failed", video=video_fullpath))
+        if ui: ui.error(t("sub_auto_extract_failed", video=video_fullpath))
+        else: log.error(t("sub_auto_extract_failed", video=video_fullpath))
         return None
 
     # CAS 2 — Choix SRT (depuis srt/ ou sidecar)
@@ -311,13 +325,14 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple) -> str 
 
     # 2.3) En dernier recours : tenter d'extraire la première piste intégrée si disponible
     srt_path = extract_first_subtitle_to_srt_into_input(
-        video_fullpath, local_sub_index=0
+        video_fullpath, local_sub_index=0, ui=ui
     )
     if srt_path:
         strip_subtitle_tags_inplace(srt_path)
         return srt_path
 
-    print(t("sub_auto_not_found", video=video_fullpath))
+    if ui: ui.error(t("sub_auto_not_found", video=video_fullpath))
+    else: log.error(t("sub_auto_not_found", video=video_fullpath))
     return None
 
 
