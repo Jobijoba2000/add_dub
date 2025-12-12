@@ -299,7 +299,7 @@ def synthesize_tts_for_subtitle(
             max_rate = 1.8
         if max_rate < 1.0:
             max_rate = 1.0  # sécurité: pas de plafond < 1 pour accélérer
-
+        
         factor = min(needed_factor, max_rate)
 
         try:
