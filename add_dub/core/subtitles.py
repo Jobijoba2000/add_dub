@@ -306,10 +306,13 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Opt
         return None
 
     # CAS 2 — Choix SRT (depuis srt/ ou sidecar)
-    # Si un chemin spécifique a été passé (ex: via le sélecteur interactif ou batch amélioré), on l'utilise.
+    # Si un chemin spécifique a été passé, on vérifie qu'il correspond bien à cette vidéo.
     if kind == "srt" and value:
-        strip_subtitle_tags_inplace(value)
-        return value
+        video_base = os.path.splitext(os.path.basename(video_fullpath))[0].lower()
+        srt_base = os.path.splitext(os.path.basename(value))[0].lower()
+        if os.path.exists(value) and (video_base in srt_base or srt_base in video_base):
+            strip_subtitle_tags_inplace(value)
+            return value
     # 2.1) srt/<base>.srt déjà présent → on l'utilise tel quel
     srt_in_srt = _srt_in_srt_dir_for_video(video_fullpath)
     if srt_in_srt:

@@ -2,7 +2,7 @@
 import os
 import subprocess
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 from pydub import AudioSegment
@@ -36,6 +36,7 @@ def process_one_video(
     Traite UNE vidéo avec les options et services fournis.
     Retourne le chemin de la vidéo finale, ou None si annulé.
     """
+    opts = replace(opts)
 
     svcs.ui.message(t("pipeline_process", name=input_video_name))
 
