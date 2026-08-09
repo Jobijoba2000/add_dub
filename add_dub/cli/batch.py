@@ -238,10 +238,9 @@ def main(args) -> int:
             print(t("cli_offsets", offset=opts.offset_ms, offset_video=opts.offset_video_ms))
             continue
 
-        run_opts = replace(opts)
-        if run_opts.audio_ffmpeg_index is None:
-            run_opts.audio_ffmpeg_index = svcs.choose_audio_track(path)
-        run_opts.sub_choice = svcs.choose_subtitle_source(path)
+        aud_idx = opts.audio_ffmpeg_index if opts.audio_ffmpeg_index is not None else svcs.choose_audio_track(path)
+        sub_ch = svcs.choose_subtitle_source(path)
+        run_opts = replace(opts, audio_ffmpeg_index=aud_idx, sub_choice=sub_ch)
 
         out = process_one_video(
             input_video_path=path,

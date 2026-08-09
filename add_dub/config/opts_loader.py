@@ -58,6 +58,19 @@ def _ensure_options_file(path: str) -> None:
     except Exception as e:
         print(f"[WARN] Cannot prepare '{path}': {e}")
 
+KNOWN_KEYS = {
+    "input_dir", "output_dir", "tmp_dir",
+    "language",
+    "tts_engine", "voice_id", "min_rate_tts", "max_rate_tts",
+    "db", "offset", "offset_video", "bg", "tts",
+    "audio_codec", "audio_bitrate", "orig_audio_lang",
+    "ask_test_before_cleanup",
+    "translate", "translate_to", "translate_from", "reuse_translated_subs",
+    "logging.console_enable", "logging.console_level",
+    "logging.file_enable", "logging.file_level",
+    "logging.file_name", "logging.dir",
+}
+
 def load_options() -> Dict[str, OptEntry]:
     path = os.getenv("ADD_DUB_OPTIONS", "options.conf")
     _ensure_options_file(path)
@@ -92,6 +105,9 @@ def load_options() -> Dict[str, OptEntry]:
             key = m.group("key").strip().lower()
             if current_section:
                 key = f"{current_section}.{key}"
+
+            if key not in KNOWN_KEYS:
+                print(f"[WARN options.conf] Clé inconnue ou non reconnue : '{key}'")
 
             val = _coerce(m.group("val"))
             display = (m.group("flag") or "").lower() == "d"

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional, Iterable
 
 
-@dataclass
+@dataclass(frozen=True)
 class DubOptions:
     """
     Options de configuration transmises à travers tout le pipeline.

@@ -348,7 +348,7 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
         try:
             video_opts = replace(opts_local)
             if len(selected) > 1 and video_opts.sub_choice and video_opts.sub_choice[0] == "srt":
-                video_opts.sub_choice = ("srt", None)
+                video_opts = replace(video_opts, sub_choice=("srt", None))
 
             outp = process_one_video(
                 input_video_path=join_input(input_video_name),

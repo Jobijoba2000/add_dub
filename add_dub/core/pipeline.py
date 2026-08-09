@@ -69,7 +69,7 @@ def process_one_video(
         srt_path = shift_subtitle_timestamps(srt_path, opts.offset_ms)
         # On remet l'offset à 0 pour la suite du pipeline (TTS, ducking, mux)
         # car le fichier SRT est maintenant "physiquement" calé.
-        opts.offset_ms = 0
+        opts = replace(opts, offset_ms=0)
 
     # --- TRADUCTION (si demandée) ---
     if opts.translate and opts.translate_to:
@@ -258,8 +258,7 @@ def process_one_video(
             new_tts = svcs.ui.ask_float(t("pipeline_test_ask_tts"), opts.tts_mix)
 
             # Mise à jour en mémoire
-            opts.bg_mix = new_bg
-            opts.tts_mix = new_tts
+            opts = replace(opts, bg_mix=new_bg, tts_mix=new_tts)
 
             # Re-mux **sans** régénérer TTS/ducking (on réutilise les WAV temporaires)
             svcs.ui.message(t("pipeline_test_remux"))

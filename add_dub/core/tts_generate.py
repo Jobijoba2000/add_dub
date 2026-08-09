@@ -8,6 +8,7 @@ from add_dub.core.ui import UIInterface
 import numpy as np
 from pydub import AudioSegment
 
+from dataclasses import replace
 from add_dub.core.options import DubOptions
 from add_dub.core.subtitles import parse_srt_file
 from add_dub.workers import tts_worker
@@ -125,7 +126,7 @@ def generate_dub_audio(
 
     # Ajustement gTTS si nécessaire
     if normalize_engine(opts.tts_engine) == "gtts":
-        opts.voice_id = _coerce_gtts_lang(opts.voice_id or "fr")
+        opts = replace(opts, voice_id=_coerce_gtts_lang(opts.voice_id or "fr"))
 
     jobs: List[Tuple[int, int, int, str, str, DubOptions]] = []
     for idx, (start, end, text) in enumerate(subtitles):
