@@ -1,5 +1,7 @@
 # add_dub — Subtitle Vocalization & Automated Voice-Over for Windows
 
+📖 **[Consulter la Documentation Officielle & le Manuel d'Utilisation](https://jobijoba2000.github.io/add_dub/)**
+
 **add_dub** is a powerful tool that automatically transforms video subtitles into **spoken voice (TTS)** and creates a **new video with audio voice-over**.
 Its primary goal is to make content accessible to those who have difficulty reading subtitles—whether due to **visual fatigue**, **visual impairment**, or simply preference—by allowing them to **listen** instead.
 
