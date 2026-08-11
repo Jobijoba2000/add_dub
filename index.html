@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manuel & Guide d'Utilisation — AddDub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --bg-sidebar: #161b22;
+            --bg-card: #1c2128;
+            --bg-code: #161b22;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-purple: #bc8cff;
+            --accent-orange: #d29922;
+            --text-main: #c9d1d9;
+            --text-heading: #f0f6fc;
+            --text-muted: #8b949e;
+            --border-color: #30363d;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.8;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        code, pre {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Subtle Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        /* Sidebar Navigation */
+        aside.sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 24px 16px;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-heading);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-brand span {
+            background: var(--accent-blue);
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-main);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .nav-group-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin: 20px 0 8px 8px;
+        }
+
+        .nav-items {
+            list-style: none;
+        }
+
+        .nav-items a {
+            display: block;
+            padding: 7px 12px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 13.5px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .nav-items a:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--accent-blue);
+        }
+
+        /* Main Content */
+        main.content {
+            flex: 1;
+            min-width: 0;
+            padding: 48px 64px 100px;
+            max-width: 920px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin: 52px 0 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            scroll-margin-top: 30px;
+        }
+
+        h3 {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-heading);
+            margin: 28px 0 12px;
+        }
+
+        p {
+            margin-bottom: 18px;
+            font-size: 15px;
+            color: #c9d1d9;
+        }
+
+        ul, ol {
+            margin-bottom: 22px;
+            padding-left: 24px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        /* Code & Callouts */
+        pre {
+            background-color: var(--bg-code);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 18px;
+            overflow-x: auto;
+            margin-bottom: 24px;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+
+        code {
+            background-color: rgba(110, 118, 129, 0.2);
+            color: #f0f6fc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13.5px;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .callout {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 28px;
+            border-left: 4px solid;
+            background: var(--bg-card);
+        }
+
+        .callout-info { border-left-color: var(--accent-blue); }
+        .callout-tip { border-left-color: var(--accent-green); }
+        .callout-warning { border-left-color: var(--accent-orange); }
+
+        .callout-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 15px;
+            color: var(--text-heading);
+        }
+
+        /* Documentation Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0 32px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        th, td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13.5px;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.04);
+            font-weight: 600;
+            color: var(--text-heading);
+        }
+
+        .badge-d {
+            display: inline-block;
+            background: rgba(210, 153, 34, 0.25);
+            color: #f2cc60;
+            border: 1px solid rgba(210, 153, 34, 0.5);
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .step-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        .step-title {
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            AddDub Manuel <span>v2.0</span>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="docSearch" placeholder="Rechercher..." onkeyup="filterNav()">
+        </div>
+
+        <div class="nav-group-title">1. Présentation & Rôle</div>
+        <ul class="nav-items">
+            <li><a href="#part1-presentation">Qu'est-ce que AddDub ?</a></li>
+            <li><a href="#part1-public">À qui s'adresse cet outil ?</a></li>
+        </ul>
+
+        <div class="nav-group-title">2. Installation & Dépendances</div>
+        <ul class="nav-items">
+            <li><a href="#part2-install">Installation initiale</a></li>
+            <li><a href="#part2-venv">Le rôle de l'environnement .venv</a></li>
+            <li><a href="#part2-toolbox">La Toolbox multimédia intégrée</a></li>
+            <li><a href="#part2-pytorch">PyTorch et la traduction par IA</a></li>
+        </ul>
+
+        <div class="nav-group-title">3. Aperçu des Modes</div>
+        <ul class="nav-items">
+            <li><a href="#part3-overview">Mode Interactif vs Mode Batch</a></li>
+            <li><a href="#part3-examples">Exemples de commandes courantes</a></li>
+        </ul>
+
+        <div class="nav-group-title">4. Le Mode Interactif</div>
+        <ul class="nav-items">
+            <li><a href="#part4-interactive">Le parcours pas à pas</a></li>
+        </ul>
+
+        <div class="nav-group-title">5. Le Mode Batch & Options</div>
+        <ul class="nav-items">
+            <li><a href="#part5-options">Toutes les options en détail</a></li>
+            <li><a href="#part5-batch-examples">Exemples concrets d'utilisation</a></li>
+        </ul>
+
+        <div class="nav-group-title">6. Le fichier options.conf</div>
+        <ul class="nav-items">
+            <li><a href="#part6-options-conf">Rôle et fonctionnement</a></li>
+            <li><a href="#part6-flag-d">Le drapeau 'd' de mise en forme</a></li>
+            <li><a href="#part6-keys">Description de chaque option</a></li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+        <h1>Guide Complet d'Utilisation de AddDub</h1>
+        <p>Bienvenue dans le manuel officiel de <strong>AddDub</strong>. Ce document a été conçu pour vous accompagner pas à pas dans l'installation, la découverte et la maîtrise de votre outil de vocalisation vidéo.</p>
+
+        <!-- PART 1 -->
+        <h2 id="part1-presentation">Partie 1 : Présentation Générale et Rôle de l'Outil</h2>
+        
+        <h3>Qu'est-ce que AddDub ?</h3>
+        <p>AddDub est une application conçue pour transformer des sous-titres écrits en une véritable bande sonore parlée. Lorsque vous lui confiez une vidéo accompagnée de sous-titres (qu'ils soient enregistrés dans un fichier `.srt` séparé ou directement encapsulés dans une vidéo `.mkv`), AddDub extrait le texte, fait appel à un moteur de synthèse vocale (TTS) pour générer les voix, puis assemble le tout avec le son original de la vidéo.</p>
+        
+        <p>Pour vous éviter de longues heures d'attente lors du traitement, l'application utilise une technique appelée le <strong>passthrough vidéo (<code>-c:v copy</code>)</strong>. Cela signifie que l'image de votre vidéo originale n'est jamais ré-encodée ni modifiée : AddDub se contente de recopier les images telles quelles et de créer la nouvelle piste audio. L'opération est ainsi particulièrement fluide et préserve la qualité d'origine de votre fichier.</p>
+
+        <h3 id="part1-public">À qui s'adresse cet outil ?</h3>
+        <p>AddDub a été pensé pour offrir une vraie solution d'accessibilité et un confort de visionnage au quotidien :</p>
+        <ul>
+            <li><strong>L'accessibilité pour les personnes malvoyantes :</strong> L'outil permet de rendre accessibles des vidéos qui ne bénéficient pas d'un doublage audio officiel, en offrant une lecture vocale claire des dialogues et des traductions.</li>
+            <li><strong>Le soulagement de la fatigue visuelle :</strong> Pour toutes les personnes qui trouvent éprouvant de devoir fixer sans interruption le bas de l'écran pour lire des sous-titres pendant une longue vidéo ou un film complet, AddDub permet de reposer ses yeux tout en profitant pleinement de l'œuvre.</li>
+            <li><strong>Le visionnage en toute liberté :</strong> Il devient possible de suivre une vidéo étrangère sous-titrée tout en vaquant à d'autres occupations dans la pièce, sans être contraint de garder le regard bloqué sur l'écran.</li>
+        </ul>
+
+        <!-- PART 2 -->
+        <h2 id="part2-install">Partie 2 : Installation et Dépendances Techniques</h2>
+
+        <h3>Installation initiale pas à pas</h3>
+        <p>Pour installer l'application sur votre ordinateur sous Windows, la procédure est très simple :</p>
+        <pre><code># 1. Récupérer le projet avec git
+git clone https://github.com/jobijoba2000/add_dub.git
+
+# 2. Entrer dans le répertoire du projet
+cd add_dub
+
+# 3. Lancer le script de préparation
+start_add_dub.bat</code></pre>
+
+        <h3 id="part2-venv">Comprendre le rôle de l'environnement `.venv`</h3>
+        <p>Lors de son tout premier lancement, le script `start_add_dub.bat` prépare un environnement Python isolé dans un sous-dossier nommé <code>.venv</code>. Cet environnement contient toutes les bibliothèques logicielles nécessaires au bon fonctionnement d'AddDub.</p>
+
+        <div class="callout callout-warning">
+            <div class="callout-title">⚠️ Remarque essentielle sur le déplacement du dossier</div>
+            <p>Une fois l'installation terminée, <strong>il ne faut pas déplacer le dossier `add_dub` vers un autre emplacement de votre disque dur</strong> (par exemple en le faisant glisser d'un dossier à un autre).</p>
+            <p>En effet, sous Windows, l'environnement Python enregistre les chemins d'accès complets de votre disque dur lors de son installation. Si vous déplacez le dossier du projet, l'application ne parviendra plus à retrouver ses composants et refusera de démarrer. Si vous devez absolument changer le projet de place, il suffit de supprimer le sous-dossier <code>.venv</code> et de relancer <code>start_add_dub.bat</code> pour que l'installation se réadapte automatiquement au nouvel emplacement.</p>
+        </div>
+
+        <h3 id="part2-toolbox">La Toolbox multimédia intégrée</h3>
+        <p>Afin de vous éviter la corvée d'installer manuellement de multiples logiciels complexes ou d'aller modifier les réglages avancés de votre système Windows, AddDub intègre sa propre <strong>Toolbox</strong> d'outils portables.</p>
+        <p>Le script s'assure ainsi d'avoir sous la main les composants indispensables :</p>
+        <ul>
+            <li><strong>FFmpeg et FFprobe :</strong> Ces outils permettent d'analyser le contenu de vos fichiers vidéo, d'en extraire le son original, de préparer la baisse de volume sous les voix et de fabriquer la piste audio finale.</li>
+            <li><strong>MKVToolNix :</strong> Spécialement conçu pour manipuler les fichiers au format Matroska (`.mkv`), cet outil extrait les sous-titres encapsulés en un clin d'œil.</li>
+            <li><strong>SubtitleEdit :</strong> Un assistant chargé de nettoyer et d'adapter les formats de sous-titres texte lorsqu'ils présentent des mises en forme particulières.</li>
+        </ul>
+
+        <h3 id="part2-pytorch">PyTorch et la traduction automatique par IA</h3>
+        <p>Si vous souhaitez traduire des sous-titres d'une langue étrangère vers le français avant d'effectuer la vocalisation, AddDub s'appuie sur des modèles d'intelligence artificielle.</p>
+        <p>Pour faire fonctionner ces modèles, l'application utilise la bibliothèque <strong>PyTorch</strong>. Afin de ne pas surcharger inutilement votre disque dur lors du premier téléchargement du projet, les fichiers de traduction ne sont téléchargés que la toute première fois où vous demandez une traduction dans une langue précise. Ils sont ensuite conservés en mémoire sur votre ordinateur pour toutes vos utilisations futures.</p>
+
+        <!-- PART 3 -->
+        <h2 id="part3-overview">Partie 3 : Aperçu des Modes d'Exécution</h2>
+
+        <p>AddDub met à votre disposition deux manières de travailler :</p>
+        <ul>
+            <li><strong>Le Mode Interactif :</strong> Il prend la forme d'un assistant conversationnel qui vous pose des questions simples dans la console pour choisir votre vidéo, ajuster les voix et régler le son. C'est le mode idéal quand on souhaite traiter une vidéo de temps en temps.</li>
+            <li><strong>Le Mode Batch (<code>--batch</code>) :</strong> C'est le mode automatique. Il travaille en toute autonomie sans jamais vous poser de question, ce qui s'avère parfait pour traiter de grands répertoires contenant de nombreux fichiers.</li>
+        </ul>
+
+        <h3 id="part3-examples">Exemples de commandes courantes en Mode Batch</h3>
+
+        <div class="step-block">
+            <div class="step-title">Exemple 1 : Traitement simple d'un dossier complet</div>
+            <pre><code>start_add_dub.bat --batch -i "C:\MesVideos" --output-dir "C:\MesVideos\Sortie"</code></pre>
+            <p>Dans cet exemple, l'application parcourt le dossier spécifié et enregistre toutes les vidéos doublées dans le répertoire de sortie.</p>
+        </div>
+
+        <div class="step-block">
+            <div class="step-title">Exemple 2 : Parcours des sous-dossiers en conservant l'arborescence (-r -t)</div>
+            <pre><code>start_add_dub.bat --batch -i "C:\MesVideos" -r -t --output-dir "C:\MesVideos\Sortie"</code></pre>
+            <p>Grâce aux options <code>-r</code> (récursif) et <code>-t</code> (conserver l'arborescence), l'application explore tous les sous-dossiers et recrée la même organisation de dossiers dans le répertoire destination.</p>
+        </div>
+
+        <div class="step-block">
+            <div class="step-title">Exemple 3 : Reprise d'un travail interrompu (--skip-existing)</div>
+            <pre><code>start_add_dub.bat --batch -i "C:\MesVideos" -r -t --skip-existing --output-dir "C:\MesVideos\Sortie"</code></pre>
+            <p>Si vous avez interrompu un traitement en cours de route, cette commande vérifie les vidéos déjà terminées dans le dossier de sortie et les passe automatiquement <strong>avant d'effectuer la synthèse vocale</strong>, vous faisant gagner un temps précieux.</p>
+        </div>
+
+        <div class="step-block">
+            <div class="step-title">Exemple 4 : Utilisation d'une voix spécifique avec atténuation du son d'origine</div>
+            <pre><code>start_add_dub.bat --batch -i "video.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural" --ducking-db -8.0</code></pre>
+            <p>Permet de traiter un fichier précis en utilisant la voix naturelle Denise et en baissant le fond sonore de 8 décibels lorsque la voix s'exprime.</p>
+        </div>
+
+        <!-- PART 4 -->
+        <h2 id="part4-interactive">Partie 4 : Le Mode Interactif en Détail</h2>
+        <p>Si vous lancez le script <code>start_add_dub.bat</code> directement sans préciser le mode batch, l'assistant interactif s'ouvre. Il vous accompagne à travers les étapes suivantes :</p>
+
+        <ol>
+            <li><strong>La sélection du fichier :</strong> L'assistant scanne votre dossier d'entrée et vous présente la liste des vidéos trouvées, en vous invitant à choisir celle que vous souhaitez traiter.</li>
+            <li><strong>L'analyse des pistes audio :** L'outil examine le fichier vidéo et vous dresse l'inventaire des pistes de son présentes (par exemple la version originale ou la piste secondaire), puis vous demande quelle piste doit servir de fond.</li>
+            <li><strong>Le choix des sous-titres :** AddDub cherche s'il existe des fichiers de sous-titres `.srt` à côté de la vidéo ou si des pistes de sous-titres sont logées à l'intérieur du fichier vidéo, et vous laisse choisir votre source préférée.</li>
+            <li><strong>Le choix de la voix et du moteur :** L'assistant vous propose de choisir parmi les voix disponibles sur votre système ou en ligne.</li>
+            <li><strong>Les réglages sonores :** Vous pouvez valider ou ajuster le niveau d'atténuation du fond sonore ainsi que les légers décalages temporels si nécessaire.</li>
+            <li><strong>La vérification avant finalisation :** Si vous avez activé l'option de test dans vos préférences, l'application vous propose de faire une écoute du résultat. Si le volume ne vous convient pas tout à fait, vous pouvez le modifier immédiatement : AddDub recompose le mixage sonore en un instant <strong>sans avoir à refaire toute la synthèse vocale</strong>.</li>
+        </ol>
+
+        <!-- PART 5 -->
+        <h2 id="part5-options">Partie 5 : Le Mode Batch et le Guide des Options</h2>
+
+        <p>Le mode batch met à votre disposition toute une série d'arguments pour personnaliser précisément le comportement de l'application :</p>
+
+        <h3>Les options générales</h3>
+        <ul>
+            <li><code>--batch</code> : Indique à l'application de travailler en mode automatique sans poser de question.</li>
+            <li><code>--interactive</code> : Force l'ouverture du mode interactif.</li>
+            <li><code>--dry-run</code> : Réalise une simulation complète. L'application vous montre tout ce qu'elle s'apprête à faire sans écrire le moindre fichier sur votre disque.</li>
+            <li><code>--limit-duration-sec SEC</code> : Limite le traitement aux premières secondes d'une vidéo (par exemple 30 secondes), ce qui s'avère idéal pour vérifier la qualité d'un réglage sans attendre la fin d'un long fichier.</li>
+        </ul>
+
+        <h3>La gestion des dossiers et des fichiers</h3>
+        <ul>
+            <li><code>-i PATH</code> ou <code>--input PATH</code> : Indique le fichier ou le répertoire contenant les vidéos à traiter.</li>
+            <li><code>--output-dir PATH</code> : Détermine le répertoire où seront enregistrées vos vidéos finales doublées.</li>
+            <li><code>-r</code> ou <code>--recursive</code> : Demande à l'application d'explorer également tous les sous-dossiers.</li>
+            <li><code>-t</code> ou <code>--preserve-tree</code> : Conserve la même arborescence de sous-dossiers dans le répertoire de sortie que dans le répertoire d'origine.</li>
+            <li><code>--skip-existing</code> : Ignore les vidéos dont le résultat existe déjà dans le dossier de sortie, en sautant l'étape de synthèse vocale.</li>
+            <li><code>--overwrite</code> : Ré-écrit par-dessus les fichiers déjà présent dans le dossier de sortie.</li>
+        </ul>
+
+        <h3>La voix et la synthèse vocale (TTS)</h3>
+        <ul>
+            <li><code>--tts-engine MOTEUR</code> : Permet de choisir le moteur de voix entre <code>onecore</code> (les voix intégrées à Windows), <code>edge</code> (les voix naturelles en ligne) ou <code>gtts</code>.</li>
+            <li><code>--voice ID</code> : Permet de choisir la voix exacte que vous préférez.</li>
+            <li><code>--min-rate-tts RATE</code> et <code>--max-rate-tts RATE</code> : Encadrent la vitesse de lecture de la voix. Si un sous-titre est un peu long, la voix adapte son rythme naturellement sans devenir inaudible.</li>
+        </ul>
+
+        <h3>Les sous-titres et la traduction</h3>
+        <ul>
+            <li><code>--sub SRC</code> : Permet de préciser la source des sous-titres (<code>auto</code> pour laisser l'outil chercher, <code>srt</code> pour un fichier externe, ou <code>mkv</code> pour une piste intégrée).</li>
+            <li><code>--translate</code> : Active la traduction automatique des sous-titres.</li>
+            <li><code>--translate-to LANG</code> : Définit la langue vers laquelle vous souhaitez traduire (par exemple <code>fr</code> pour le français).</li>
+        </ul>
+
+        <h3>Le mixage sonore et les réglages audio</h3>
+        <ul>
+            <li><code>--ducking-db DB</code> : Régle l'atténuation du fond sonore en décibels lorsque la voix s'exprime (par exemple <code>-5.0</code> décibels).</li>
+            <li><code>--bg-mix VOL</code> et <code>--tts-mix VOL</code> : Permettent de régler séparément le volume général du fond sonore et le volume de la voix doublée.</li>
+            <li><code>--audio-codec CODEC</code> : Détermine le format de la piste audio dans le fichier final (comme <code>ac3</code> ou <code>aac</code>).</li>
+            <li><code>--audio-bitrate KBPS</code> : Définit la qualité de compression de la piste sonore.</li>
+            <li><code>--offset-ms MS</code> : Applique un décalage temporel en millisecondes pour ajuster la synchronisation entre la voix et l'image.</li>
+        </ul>
+
+        <h3 id="part5-batch-examples">Exemples concrets d'utilisation</h3>
+
+        <div class="step-block">
+            <div class="step-title">Traduction et vocalisation en voix naturelle</div>
+            <pre><code>start_add_dub.bat --batch -i "video_etrangere.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural" --translate --translate-to fr</code></pre>
+            <p>Cette commande prend une vidéo en langue étrangère, traduit ses sous-titres en français, puis génère un doublage avec la voix naturelle Denise.</p>
+        </div>
+
+        <div class="step-block">
+            <div class="step-title">Test rapide de 30 secondes avec réglage sonore précis</div>
+            <pre><code>start_add_dub.bat --batch -i "video.mkv" --limit-duration-sec 30 --ducking-db -6.0 --audio-codec ac3</code></pre>
+            <p>Permet de générer un extrait de 30 secondes pour vérifier si l'atténuation de 6 décibels offre un bon équilibre entre la musique de fond et la voix doublée.</p>
+        </div>
+
+        <!-- PART 6 -->
+        <h2 id="part6-options-conf">Partie 6 : Le Fichier de Configuration <code>options.conf</code></h2>
+
+        <h3>Rôle et fonctionnement du fichier</h3>
+        <p>Le fichier <code>options.conf</code> est situé à la racine du projet AddDub. Il vous évite d'avoir à saisir de longues lignes de commande à chaque utilisation en conservant l'ensemble de vos préférences (dossiers habituels, choix de la voix, niveau sonore, etc.).</p>
+
+        <h3 id="part6-flag-d">Le drapeau '<code>d</code>' (Display) et son intérêt</h3>
+        <p>Lorsque vous observez le fichier <code>options.conf</code>, vous remarquerez que certaines lignes se terminent par la lettre <strong><code>d</code></strong> (par exemple <code>db = -5.0 d</code>).</p>
+
+        <div class="callout callout-info">
+            <div class="callout-title">💡 Comment fonctionne le drapeau 'd' ?</div>
+            <p>La lettre <code>d</code> signifie <em>Display</em> (Afficher). Son rôle est très simple :</p>
+            <ul>
+                <li><strong>Si la lettre <code>d</code> est présente sur une ligne :** En mode interactif, l'assistant s'arrêtera sur cette étape et vous posera la question pour vous demander si vous souhaitez changer la valeur.</li>
+                <li><strong>Si la lettre <code>d</code> n'est pas présente :** En mode interactif, l'assistant appliquera directement la valeur configurée sans vous interrompre avec une question.</li>
+            </ul>
+            <p>En mode batch automatique, la lettre <code>d</code> n'a aucun impact : le programme applique directement vos réglages en arrière-plan.</p>
+        </div>
+
+        <h3 id="part6-keys">Description de chaque option du fichier de configuration</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Option dans <code>options.conf</code></th>
+                    <th>Valeur type</th>
+                    <th>Explication de l'option</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>input_dir</code></td>
+                    <td><code>"input"</code></td>
+                    <td>Répertoire où l'application cherche vos vidéos par défaut.</td>
+                </tr>
+                <tr>
+                    <td><code>output_dir</code></td>
+                    <td><code>"output"</code></td>
+                    <td>Répertoire où sont enregistrées vos vidéos terminées.</td>
+                </tr>
+                <tr>
+                    <td><code>tmp_dir</code></td>
+                    <td><code>"tmp"</code></td>
+                    <td>Dossier de travail temporaire servant aux étapes de calcul.</td>
+                </tr>
+                <tr>
+                    <td><code>language</code></td>
+                    <td><code>auto <span class="badge-d">d</span></code></td>
+                    <td>Langue de l'interface utilisateur.</td>
+                </tr>
+                <tr>
+                    <td><code>tts_engine</code></td>
+                    <td><code>"edge" <span class="badge-d">d</span></code></td>
+                    <td>Moteur de voix utilisé par défaut (<code>onecore</code>, <code>edge</code> ou <code>gtts</code>).</td>
+                </tr>
+                <tr>
+                    <td><code>voice_id</code></td>
+                    <td><code>""</code></td>
+                    <td>Identifiant de votre voix préférée. Si la valeur est vide, l'outil choisit la voix principale de la langue.</td>
+                </tr>
+                <tr>
+                    <td><code>min_rate_tts</code></td>
+                    <td><code>1.2</code></td>
+                    <td>Vitesse minimale de la voix lors de l'adaptation au rythme des sous-titres.</td>
+                </tr>
+                <tr>
+                    <td><code>max_rate_tts</code></td>
+                    <td><code>1.8</code></td>
+                    <td>Vitesse maximale autorisée pour la voix.</td>
+                </tr>
+                <tr>
+                    <td><code>db</code></td>
+                    <td><code>-5.0 <span class="badge-d">d</span></code></td>
+                    <td>Niveau d'atténuation du son d'origine (ducking) en décibels.</td>
+                </tr>
+                <tr>
+                    <td><code>offset</code></td>
+                    <td><code>0 <span class="badge-d">d</span></code></td>
+                    <td>Décalage temporel en millisecondes pour ajuster la synchronisation audio.</td>
+                </tr>
+                <tr>
+                    <td><code>offset_video</code></td>
+                    <td><code>0</code></td>
+                    <td>Décalage temporel appliqué à l'image vidéo en millisecondes.</td>
+                </tr>
+                <tr>
+                    <td><code>bg</code></td>
+                    <td><code>1.0 <span class="badge-d">d</span></code></td>
+                    <td>Réglage du volume du son d'origine.</td>
+                </tr>
+                <tr>
+                    <td><code>tts</code></td>
+                    <td><code>1.0 <span class="badge-d">d</span></code></td>
+                    <td>Réglage du volume de la voix doublée.</td>
+                </tr>
+                <tr>
+                    <td><code>audio_codec</code></td>
+                    <td><code>ac3</code></td>
+                    <td>Format de compression de la piste sonore finale.</td>
+                </tr>
+                <tr>
+                    <td><code>audio_bitrate</code></td>
+                    <td><code>256</code></td>
+                    <td>Qualité de débit sonore de la piste audio en kilobits par seconde.</td>
+                </tr>
+                <tr>
+                    <td><code>ask_test_before_cleanup</code></td>
+                    <td><code>false</code></td>
+                    <td>Permet d'activer la demande de ré-écoute avant la finalisation de la vidéo.</td>
+                </tr>
+                <tr>
+                    <td><code>translate</code></td>
+                    <td><code>false <span class="badge-d">d</span></code></td>
+                    <td>Active ou désactive la traduction automatique des sous-titres par défaut.</td>
+                </tr>
+                <tr>
+                    <td><code>translate_to</code></td>
+                    <td><code>fr <span class="badge-d">d</span></code></td>
+                    <td>Langue cible de la traduction.</td>
+                </tr>
+                <tr>
+                    <td><code>translate_from</code></td>
+                    <td><code>auto <span class="badge-d">d</span></code></td>
+                    <td>Langue d'origine des sous-titres pour la traduction.</td>
+                </tr>
+            </tbody>
+        </table>
+    </main>
+
+    <script>
+        function filterNav() {
+            const query = document.getElementById('docSearch').value.toLowerCase();
+            const links = document.querySelectorAll('.nav-items a');
+            links.forEach(link => {
+                const text = link.textContent.toLowerCase();
+                link.parentElement.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
