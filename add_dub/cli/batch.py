@@ -47,18 +47,19 @@ def _apply_dirs_from_conf() -> None:
 # --------------------------
 # Ciblage des vidéos
 # --------------------------
-def _gather_targets(paths: Optional[List[str]], recursive: bool) -> List[str]:
+def _gather_targets(paths: Optional[List[str]], recursive: bool, preserve_tree: bool = False) -> List[Tuple[str, str]]:
     """
     Construit la liste des vidéos à traiter.
+    Retourne une liste de tuples (chemin_video, sous_dossier_relatif).
     - Si paths vide -> toutes les vidéos éligibles de INPUT_DIR (voir list_input_videos)
     - Sinon, accepte fichiers/dossiers absolus ou relatifs; peut parcourir récursivement.
     """
     ensure_base_dirs()
-    results: List[str] = []
+    results: List[Tuple[str, str]] = []
 
     if not paths:
         for name in list_input_videos():
-            results.append(os.path.join(io_fs.INPUT_DIR, name))
+            results.append((os.path.join(io_fs.INPUT_DIR, name), ""))
         return results
 
     exts = (".mkv", ".mp4", ".avi", ".mov")
@@ -69,39 +70,57 @@ def _gather_targets(paths: Optional[List[str]], recursive: bool) -> List[str]:
 
         # Fichier vidéo direct
         if os.path.isfile(p) and p.lower().endswith(exts):
-            results.append(p)
+            results.append((p, ""))
             continue
 
         # Dossier
         if os.path.isdir(p):
             if recursive:
+                base_parent = os.path.dirname(p.rstrip(os.sep)) if preserve_tree else p
                 for root, _dirs, files in os.walk(p):
+                    rel_dir = ""
+                    if preserve_tree:
+                        rel = os.path.relpath(root, base_parent)
+                        rel_dir = "" if rel == "." else rel
                     for f in files:
                         if f.lower().endswith(exts):
-                            results.append(os.path.join(root, f))
+                            results.append((os.path.join(root, f), rel_dir))
             else:
                 for f in os.listdir(p):
                     if f.lower().endswith(exts):
-                        results.append(os.path.join(p, f))
+                        results.append((os.path.join(p, f), ""))
             continue
 
         # Nom relatif par rapport à INPUT_DIR (ex: juste "foo.mkv")
         candidate = os.path.join(io_fs.INPUT_DIR, p)
         if os.path.isfile(candidate) and candidate.lower().endswith(exts):
-            results.append(candidate)
+            results.append((candidate, ""))
         elif os.path.isdir(candidate):
-            for name in list_input_videos():
-                results.append(os.path.join(io_fs.INPUT_DIR, name))
+            if recursive:
+                base_parent = os.path.dirname(candidate.rstrip(os.sep)) if preserve_tree else candidate
+                for root, _dirs, files in os.walk(candidate):
+                    rel_dir = ""
+                    if preserve_tree:
+                        rel = os.path.relpath(root, base_parent)
+                        rel_dir = "" if rel == "." else rel
+                    for f in files:
+                        if f.lower().endswith(exts):
+                            results.append((os.path.join(root, f), rel_dir))
+            else:
+                for name in list_input_videos():
+                    results.append((os.path.join(io_fs.INPUT_DIR, name), ""))
 
     # Déduplique en préservant l'ordre
     seen = set()
-    dedup: List[str] = []
+    dedup: List[Tuple[str, str]] = []
     for x in results:
-        if x not in seen:
-            seen.add(x)
+        if x[0] not in seen:
+            seen.add(x[0])
             dedup.append(x)
     return dedup
 
+
+from add_dub.core.ui import ConsoleUI
 
 # --------------------------
 # Services non interactifs
@@ -159,6 +178,7 @@ def _build_services(args):
         choose_files=_choose_files,
         choose_audio_track=_choose_audio_track,
         choose_subtitle_source=_choose_subtitle_source,
+        ui=ConsoleUI(),
     )
 
 
@@ -207,6 +227,7 @@ def _make_options(args) -> DubOptions:
         translate_from=args.translate_from,
         batch_mode=True,
         overwrite=args.overwrite,
+        skip_existing=getattr(args, "skip_existing", False),
     )
 
 def main(args) -> int:
@@ -214,7 +235,8 @@ def main(args) -> int:
     _apply_dirs_from_conf()
     ensure_base_dirs()
 
-    targets = _gather_targets(args.input, args.recursive)
+    preserve_tree = getattr(args, "preserve_tree", False)
+    targets = _gather_targets(args.input, args.recursive, preserve_tree=preserve_tree)
     if not targets:
         print(t("cli_no_video"))
         return 2
@@ -223,8 +245,15 @@ def main(args) -> int:
     opts = _make_options(args)
 
     any_error = False
-    for path in targets:
+    for path, rel_dir in targets:
         print(t("cli_batch_start", path=path))
+
+        if rel_dir:
+            base_out = args.output_dir or io_fs.OUTPUT_DIR
+            out_dir = os.path.join(base_out, rel_dir)
+        else:
+            out_dir = args.output_dir or None
+
         if args.dry_run:
             sub_choice = svcs.choose_subtitle_source(path)
             aud_idx = opts.audio_ffmpeg_index if opts.audio_ffmpeg_index is not None else svcs.choose_audio_track(path)
@@ -245,7 +274,7 @@ def main(args) -> int:
         out = process_one_video(
             input_video_path=path,
             input_video_name=os.path.basename(path),
-            output_dir_path=(args.output_dir or None),
+            output_dir_path=out_dir,
             opts=run_opts,
             svcs=svcs,
             limit_duration_sec=args.limit_duration_sec,

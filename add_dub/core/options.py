@@ -35,6 +35,7 @@ class DubOptions:
     translate_from: Optional[str] = None              # langue source (pour éviter l'auto-détection)
     batch_mode: bool = False                          # si True, pas d'interaction utilisateur (prompts)
     overwrite: bool = False                           # si True, écrase les fichiers existants (y compris traduction)
+    skip_existing: bool = False                       # si True, saute les vidéos dont la sortie existe déjà (avant TTS)
     reuse_translated_subs: bool = True                # si True, réutilise le SRT traduit existant
     ask_reuse_subs: bool = True                       # si True, demande confirmation pour réutiliser
 

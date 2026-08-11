@@ -20,6 +20,31 @@ from add_dub.core.services import Services
 from add_dub.logger import (log_call, log_time)
 from add_dub.i18n import t
 
+from add_dub.core.tts import list_available_voices
+
+def _dub_code_from_voice(voice_id: str | None) -> str:
+    if not voice_id:
+        return "fr"
+    try:
+        voices = list_available_voices()
+    except Exception:
+        voices = []
+    lang = ""
+    vid = str(voice_id).strip()
+    for v in voices:
+        if str(v.get("id", "")).strip() == vid:
+            lang = (v.get("lang") or "").strip()
+            break
+    if not lang:
+        import re as _re
+        m = _re.search(r"([a-zA-Z]{2})(?:[-_][A-Za-z]{2})?", vid)
+        if m:
+            lang = m.group(0)
+    base_lang = (lang.split("-")[0] if lang else "fr").lower()
+    import re as _re
+    return _re.sub(r"[^a-z]", "", base_lang) or "fr"
+
+
 @log_time
 @log_call
 def process_one_video(
@@ -38,9 +63,17 @@ def process_one_video(
     """
     opts = replace(opts)
 
-    svcs.ui.message(t("pipeline_process", name=input_video_name))
-
     base, ext = os.path.splitext(os.path.basename(input_video_path))
+
+    # Verification skip_existing (AVANT toute operation ou generation TTS)
+    if getattr(opts, "skip_existing", False):
+        dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
+        final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}].mkv", output_dir_path)
+        if os.path.exists(final_video):
+            svcs.ui.message(f"[SKIP] Fichier déjà existant : {os.path.basename(final_video)}")
+            return final_video
+
+    svcs.ui.message(t("pipeline_process", name=input_video_name))
 
     # 1) Piste audio source
     audio_idx = opts.audio_ffmpeg_index
@@ -205,30 +238,6 @@ def process_one_video(
 
     # 10) Sortie finale
     final_ext = ".mkv"  # conteneur cible
-
-    # code dub pour suffix
-    from add_dub.core.tts import list_available_voices
-    def _dub_code_from_voice(voice_id: str | None) -> str:
-        if not voice_id:
-            return "fr"
-        try:
-            voices = list_available_voices()
-        except Exception:
-            voices = []
-        lang = ""
-        vid = str(voice_id).strip()
-        for v in voices:
-            if str(v.get("id", "")).strip() == vid:
-                lang = (v.get("lang") or "").strip()
-                break
-        if not lang:
-            import re as _re
-            m = _re.search(r"([a-zA-Z]{2})(?:[-_][A-Za-z]{2})?", vid)
-            if m:
-                lang = m.group(0)
-        base_lang = (lang.split("-")[0] if lang else "fr").lower()
-        import re as _re
-        return _re.sub(r"[^a-z]", "", base_lang) or "fr"
 
     dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
     final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}", output_dir_path)

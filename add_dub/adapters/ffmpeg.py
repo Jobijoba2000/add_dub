@@ -16,11 +16,14 @@ def run_ffmpeg_with_percentage(cmd, duration_source):
     cmd : liste FFmpeg déjà contenant -nostats -progress pipe:1
     duration_source : fichier dont on prend la durée (ex: la vidéo d'entrée)
     """
-    duration = float(subprocess.check_output(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=nw=1:nk=1", duration_source],
-        text=True, encoding="utf-8", errors="replace"
-    ).strip())
+    try:
+        duration = float(subprocess.check_output(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=nw=1:nk=1", duration_source],
+            text=True, encoding="utf-8", errors="replace"
+        ).strip())
+    except Exception:
+        duration = 0.0
 
     p = subprocess.Popen(
         cmd,
@@ -33,9 +36,14 @@ def run_ffmpeg_with_percentage(cmd, duration_source):
     try:
         for line in p.stdout:
             if line.startswith("out_time_ms="):
-                micro_s = float(line.split("=", 1)[1])
-                pct = (micro_s / (duration * 10000.0))
-                print(f"\r{pct:.0f}%", end="", flush=True)
+                val_str = line.split("=", 1)[1].strip()
+                try:
+                    micro_s = float(val_str)
+                    if duration > 0:
+                        pct = (micro_s / (duration * 10000.0))
+                        print(f"\r{pct:.0f}%", end="", flush=True)
+                except ValueError:
+                    pass
             elif line.strip() == "progress=end":
                 print("\r100%")
                 break

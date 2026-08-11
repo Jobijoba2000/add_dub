@@ -96,6 +96,7 @@ def join_input(path: str) -> str:
 def join_output(path: str, output_dir=None) -> str:
     if output_dir is not None:
         base = _abspath_under_root(output_dir)
+        os.makedirs(base, exist_ok=True)
         return os.path.join(base, path)
     else:
         return os.path.join(OUTPUT_DIR, path)

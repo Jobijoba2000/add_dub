@@ -34,7 +34,9 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_io.add_argument("--input", "-i", nargs="+", metavar="PATH", help=t("help_input"))
     g_io.add_argument("--output-dir", metavar="PATH", default=None, help=t("help_output_dir"))
     g_io.add_argument("--recursive", "-r", action="store_true", help=t("help_recursive"))
+    g_io.add_argument("--preserve-tree", "-t", action="store_true", help=t("help_preserve_tree"))
     g_io.add_argument("--overwrite", action="store_true", help=t("help_overwrite"))
+    g_io.add_argument("--skip-existing", action="store_true", help=t("help_skip_existing"))
     g_io.add_argument("--dry-run", action="store_true", help=t("help_dry_run"))
 
     # 2. Audio Configuration
