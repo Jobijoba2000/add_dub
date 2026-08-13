@@ -4,9 +4,13 @@ import os
 from add_dub.config.effective import effective_values
 from add_dub.config import cfg
 
-# Racine du projet (le .bat fait déjà `cd /d "%~dp0"`)
-# Note: Relies on CWD being the project root.
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
+
+# Racine du projet (en mode dev ou en mode PyInstaller .exe)
+if getattr(sys, 'frozen', False):
+    ROOT = os.path.dirname(sys.executable)
+else:
+    ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Valeurs de secours si non définies dans defaults.py
 _DEF_INPUT_DIR = getattr(cfg, "INPUT_DIR", "input")

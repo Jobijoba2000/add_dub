@@ -66,10 +66,16 @@ def _build_console_handler(console_level_name: str) -> logging.Handler:
 
 def _build_file_handler() -> RotatingFileHandler:
     """
-    Fichier : add_dub/logs/add_dub.log + rotation (2 archives)
+    Fichier : logs/add_dub.log à la racine + rotation (2 archives)
     Format verbeux (timestamp + niveau + logger:ligne + message)
     """
-    log_dir = os.path.join(os.path.dirname(__file__), "logs")
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        # Racine du projet (dossier parent de add_dub/)
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    log_dir = os.path.join(base_dir, "logs")
     os.makedirs(log_dir, exist_ok=True)
     file_path = os.path.join(log_dir, "add_dub.log")
 

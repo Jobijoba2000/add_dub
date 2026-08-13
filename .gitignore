@@ -3,6 +3,9 @@
 __pycache__/
 *.pyc
 tmp/
+build/
+dist/
+*.spec
 
 # Dossiers de travail de l’app
 input/
@@ -11,6 +14,7 @@ srt/
 tools/
 licenses/
 add_dub/logs/
+logs/
 
 # Fichiers locaux/packaging
 TOOLBOX_VERSION.txt
