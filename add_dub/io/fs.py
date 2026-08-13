@@ -26,6 +26,15 @@ TMP_DIR = os.path.join(ROOT, _DEF_TMP_DIR)
 # Dossier SRT **fixe** à la racine (non configurable)
 SRT_DIR = os.path.join(ROOT, _DEF_SRT_DIR)
 
+# Auto-injection des sous-dossiers tools/ dans le PATH (ffmpeg, mkvmerge, etc.)
+for _tp in [
+    os.path.join(ROOT, "tools", "ffmpeg", "bin"),
+    os.path.join(ROOT, "tools", "MKVToolNix"),
+    os.path.join(ROOT, "tools", "subtitle_edit"),
+]:
+    if os.path.isdir(_tp) and _tp not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = _tp + os.pathsep + os.environ.get("PATH", "")
+
 # Flags : l’utilisateur a-t-il surchargé via `set_base_dirs()` ?
 _INPUT_OVERRIDDEN = False
 _OUTPUT_OVERRIDDEN = False
