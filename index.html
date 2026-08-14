@@ -299,16 +299,113 @@
             margin-left: 6px;
         }
 
-        .diagram-box {
+        /* Modern Visual Pipeline Flow */
+        .pipeline-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 28px 0 36px;
+        }
+
+        .flow-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0 28px;
-            font-family: 'JetBrains Mono', monospace;
+            padding: 16px 20px;
+        }
+
+        .flow-card-header {
+            font-weight: 700;
+            font-size: 14.5px;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .flow-card-header .tag {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .tag-input { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
+        .tag-core { background: rgba(188, 140, 255, 0.2); color: var(--accent-purple); }
+        .tag-output { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+
+        .flow-arrow {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .pipeline-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .pipeline-step-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 12px 16px;
             font-size: 13.5px;
-            color: #e6edf3;
-            line-height: 1.5;
+            color: #c9d1d9;
+        }
+
+        .pipeline-step-item strong {
+            display: block;
+            color: #f0f6fc;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .tracks-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .track-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            padding: 9px 14px;
+            font-size: 13.5px;
+        }
+
+        .track-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+
+        .track-desc {
+            color: var(--text-muted);
+            font-size: 12.5px;
+        }
+
+        .track-badge-default {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--accent-green);
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            margin-left: 6px;
         }
 
         /* Responsive */
@@ -369,25 +466,81 @@
         
         <p>Le résultat est un fichier vidéo <strong>MKV multi-pistes propre</strong> contenant la vidéo originale sans aucune perte, la nouvelle piste audio mixée (vocalisation + musique de fond atténuée), la piste audio originale isolée intacte, ainsi que les sous-titres.</p>
 
-        <div class="diagram-box">
-[ Vidéo Source + Sous-titres (SRT ou MKV) ]
-                     │
-                     ▼
-  ┌────────────────────────────────────────────────────────┐
-  │                   PIPELINE ADDDUB                      │
-  │  1. Extraction Audio & Sous-titres (avec OCR si PGS)   │
-  │  2. Traduction IA (CTranslate2) [Optionnelle]          │
-  │  3. Synthèse TTS calée au milliseconde près (Edge/One) │
-  │  4. Audio Ducking intelligent (Atténuation du fond)    │
-  │  5. Multiplexage FFmpeg 1-Passe                        │
-  └────────────────────────────────────────────────────────┘
-                     │
-                     ▼
-[ Fichier MKV Final Multi-Pistes ]
-  ├── Piste 0 : Vidéo originale (copie directe)
-  ├── Piste 1 : Audio Doublé (Voix TTS + Fond atténué) [Par défaut]
-  ├── Piste 2 : Audio Original (Isolé et préservé)
-  └── Piste 3 : Sous-titres synchronisés
+        <!-- Visual Pipeline Flow -->
+        <div class="pipeline-flow">
+            <!-- Input -->
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <span class="tag tag-input">Entrée</span>
+                    🎬 Fichiers Source
+                </div>
+                <div style="font-size: 13.5px; color: #c9d1d9;">
+                    Vidéo (<code>.mkv</code>, <code>.mp4</code>, <code>.avi</code>) + Sous-titres (intégrés dans le MKV ou fichier <code>.srt</code> externe).
+                </div>
+            </div>
+
+            <div class="flow-arrow">⬇️</div>
+
+            <!-- Processing Pipeline -->
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <span class="tag tag-core">Traitement</span>
+                    ⚡ Pipeline AddDub (Automatisé)
+                </div>
+                <div class="pipeline-steps">
+                    <div class="pipeline-step-item">
+                        <strong>1. Extraction</strong>
+                        Audio original & sous-titres (avec OCR automatique si PGS/VobSub)
+                    </div>
+                    <div class="pipeline-step-item">
+                        <strong>2. Traduction IA</strong>
+                        Optionnelle vers votre langue via CTranslate2
+                    </div>
+                    <div class="pipeline-step-item">
+                        <strong>3. Synthèse TTS</strong>
+                        Voix neuronales Edge ou OneCore calées à la milliseconde
+                    </div>
+                    <div class="pipeline-step-item">
+                        <strong>4. Audio Ducking</strong>
+                        Baisse automatique du fond sonore sous les voix
+                    </div>
+                    <div class="pipeline-step-item">
+                        <strong>5. Multiplexage</strong>
+                        Assemblage final FFmpeg en 1 seule passe
+                    </div>
+                </div>
+            </div>
+
+            <div class="flow-arrow">⬇️</div>
+
+            <!-- Output -->
+            <div class="flow-card">
+                <div class="flow-card-header">
+                    <span class="tag tag-output">Sortie</span>
+                    📦 Fichier MKV Final Multi-Pistes
+                </div>
+                <div class="tracks-grid">
+                    <div class="track-row">
+                        <div class="track-name">🎥 Piste 0 : Vidéo Originale</div>
+                        <div class="track-desc">Copie directe (aucune perte de qualité d'image)</div>
+                    </div>
+                    <div class="track-row" style="background: rgba(63, 185, 80, 0.06); border-color: rgba(63, 185, 80, 0.3);">
+                        <div class="track-name">
+                            🎙️ Piste 1 : Audio Doublé (Mixé)
+                            <span class="track-badge-default">Par défaut</span>
+                        </div>
+                        <div class="track-desc">Voix TTS nette + Fond d'origine atténué pendant les paroles</div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-name">🎵 Piste 2 : Audio Original (VO)</div>
+                        <div class="track-desc">Piste audio d'origine isolée et préservée intacte</div>
+                    </div>
+                    <div class="track-row">
+                        <div class="track-name">📝 Piste 3 : Sous-titres</div>
+                        <div class="track-desc">Piste de sous-titres synchronisée</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <h3 id="pourquoi-et-pour-qui">♿ Pourquoi cet outil et pour qui ?</h3>
