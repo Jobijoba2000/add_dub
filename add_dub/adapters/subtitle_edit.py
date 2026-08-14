@@ -2,14 +2,15 @@
 import os
 import subprocess
 import shutil
+from add_dub.io.fs import ROOT
 
 def _find_exe(candidates):
     for c in candidates:
+        if os.path.exists(c):
+            return c
         p = shutil.which(c)
         if p:
             return p
-        if os.path.exists(c):
-            return c
     return None
 
 def subtitle_edit_ocr(ocr_input, output_path, cwd=None):
@@ -18,9 +19,9 @@ def subtitle_edit_ocr(ocr_input, output_path, cwd=None):
     Retourne True si output_path est créé et non vide, sinon False.
     """
     se = _find_exe([
-        "SubtitleEdit", "SubtitleEdit.exe",
-        r"C:\Program Files\Subtitle Edit\SubtitleEdit.exe",
-        r"C:\Program Files (x86)\Subtitle Edit\SubtitleEdit.exe",
+        os.path.join(ROOT, "tools", "subtitle_edit", "SubtitleEdit.exe"),
+        "SubtitleEdit", 
+        "SubtitleEdit.exe",
     ])
     if not se:
         return False

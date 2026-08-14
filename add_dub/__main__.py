@@ -8,6 +8,12 @@ from multiprocessing import freeze_support
 import ctranslate2
 
 if sys.platform == "win32":
+    import ctypes
+    try:
+        ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+        ctypes.windll.kernel32.SetConsoleCP(65001)
+    except Exception:
+        pass
     try:
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")
