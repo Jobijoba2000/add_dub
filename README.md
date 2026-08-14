@@ -1,145 +1,107 @@
-# add_dub — Subtitle Vocalization & Automated Voice-Over for Windows
+# add_dub — Vocalisation de Sous-titres & Doublage Automatisé pour Windows
 
 📖 **[Consulter la Documentation Officielle & le Manuel d'Utilisation](https://jobijoba2000.github.io/add_dub/)**
 
-**add_dub** is a powerful tool that automatically transforms video subtitles into **spoken voice (TTS)** and creates a **new video with audio voice-over**.
-Its primary goal is to make content accessible to those who have difficulty reading subtitles—whether due to **visual fatigue**, **visual impairment**, or simply preference—by allowing them to **listen** instead.
+**add_dub** transforme automatiquement les sous-titres de vos vidéos en **doublage vocal synchronisé (TTS)** avec atténuation intelligente du fond sonore (*audio ducking*).
 
-With the new **Translation Feature**, you can now vocalize videos in your native language, even if the original subtitles are in a foreign language!
-
-## 🚀 Features
-
--   **Subtitle Vocalization**: Converts SRT subtitles into synchronized audio voice-over.
--   **AI Translation**: Automatically translates subtitles before vocalization (supports 100+ languages via EasyNMT).
--   **Multiple TTS Engines**:
-    -   **OneCore (Windows)**: Fast, offline, uses installed system voices.
-    -   **Edge TTS**: High-quality, natural-sounding voices (requires Internet).
-    -   **gTTS**: Simple, lightweight (requires Internet).
--   **Smart Mixing**: Automatically "ducks" (lowers) the original audio volume when the TTS speaks.
--   **Batch Processing**: Process entire folders of videos recursively.
--   **Portable**: No complex installation required.
-
-## 📥 Input & Output
-
--   **Input**: A video file (MKV, MP4, AVI, etc.) with embedded subtitles or an external `.srt` file.
--   **Output**: An **MKV** video file containing:
-    -   **Track 0**: Original Video
-    -   **Track 1**: Mixed Audio (TTS + Original Background)
-    -   **Track 2**: Original Audio (Isolated)
-    -   **Track 3**: Subtitles
+Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le **confort d'écoute** (regarder des vidéos étrangères sans fixer l'écran), il intègre également un moteur de **traduction neuronale (IA)** pour doubler vos vidéos dans votre langue natale.
 
 ---
 
-## 📦 Installation
+## ✨ Fonctionnalités clés
 
-### Option 1: Portable Version (Recommended)
-Download the latest release, unzip it, and you're ready to go!
-[📥 Download add_dub_win64.zip](https://github.com/Jobijoba2000/add_dub/releases)
+* 🎙️ **Doublage synchronisé** : Convertit les sous-titres (intégrés ou `.srt` externes) en voix-off calée au milliseconde près.
+* 🌐 **Traduction IA intégrée** : Traduit automatiquement les sous-titres vers votre langue avant vocalisation (via CTranslate2).
+* 🔊 **Audio Ducking intelligent** : Baisse automatiquement le volume de la piste originale pendant les dialogues pour une clarté parfaite.
+* 🗣️ **Moteurs TTS au choix** :
+  * **Edge TTS** : Voix neuronales ultra-réalistes haute fidélité (connecté).
+  * **OneCore (Windows)** : Rapide, 100% hors-ligne avec les voix de votre système.
+  * **gTTS** : Simple et léger.
+* 📦 **100% Portable** : Aucune installation complexe, fonctionne directement après extraction.
+* ⚡ **Traitement par lot (Batch)** : Traitez des saisons entières ou des dossiers récursivement.
 
-### Option 2: From Source
-If you prefer to run from source:
-```bash
-git clone https://github.com/Jobijoba2000/add_dub.git
-cd add_dub
-start_add_dub.bat
+---
+
+## 📥 En entrée & en sortie
+
+```
+[ Vidéo (MKV/MP4/AVI) + Sous-titres ] 
+                  ⬇️  (add_dub)
+[ Nouveau fichier MKV multi-pistes ]
+  ├── Piste 0 : Vidéo originale (sans perte)
+  ├── Piste 1 : Audio Mixé (Voix TTS + Fond atténué) [Par défaut]
+  ├── Piste 2 : Audio Original (Isolé et préservé)
+  └── Piste 3 : Sous-titres synchronisés
 ```
 
 ---
 
-## 🎮 Usage
+## 🚀 Démarrage Rapide (Version Portable)
 
-### First Launch
-Simply run:
-```cmd
-start_add_dub.bat
-```
-On the first run, the script will:
-1.  Download/Install the **Toolbox** (Portable Python, FFmpeg, MKVToolNix, etc.).
-2.  Create necessary directories: `input`, `output`, `tmp`, `srt`.
-3.  Generate a default `options.conf`.
+1. **[Télécharger add_dub_win64.zip](https://github.com/Jobijoba2000/add_dub/releases)** et dézippez-le où vous le souhaitez.
+2. Placez vos vidéos dans le dossier **`input/`** (avec un fichier `.srt` ou avec sous-titres intégrés).
+3. Double-cliquez sur **`add_dub.exe`**.
+4. Suivez l'assistant interactif (choix de la piste audio, des sous-titres, de la voix et de la langue).
+5. Récupérez votre vidéo doublée dans le dossier **`output/`** !
 
-### Interactive Mode
-Just run `start_add_dub.bat` without arguments. The tool will guide you through:
-1.  **Selecting Videos**: Choose from the `input/` folder.
-2.  **Audio Track**: Select the source audio track.
-3.  **Subtitles**: Choose embedded or external subtitles.
-4.  **TTS Engine**: Select OneCore, Edge TTS, or gTTS.
-5.  **Translation**: Optionally translate subtitles to your preferred language (e.g., `fr`, `en`, `es`, `ar`, `zh`...).
-6.  **Configuration**: Adjust volume, speed, and offsets.
+---
 
-### Batch Mode (CLI)
-For automated processing, use the `--batch` flag.
+## ⚡ Mode Batch & Ligne de Commande (CLI)
 
-**Examples:**
+Pour automatiser le traitement ou intégrer `add_dub` dans des scripts, utilisez les options en ligne de commande :
 
-*   **Process a single file:**
-    ```cmd
-    start_add_dub.bat --batch -i "C:\Videos\movie.mkv" --tts-engine edge --voice "en-US-AriaNeural"
-    ```
+* **Traiter une vidéo spécifique :**
+  ```cmd
+  add_dub.exe --batch -i "C:\Videos\film.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural"
+  ```
 
-*   **Process a folder recursively:**
-    ```cmd
-    start_add_dub.bat --batch -i "C:\Videos\Series" --recursive
-    ```
+* **Traiter tout un dossier récursivement :**
+  ```cmd
+  add_dub.exe --batch -i "C:\Videos\Series" --recursive
+  ```
 
-*   **Translate and Dub (e.g., English to French):**
-    ```cmd
-    start_add_dub.bat --batch -i "C:\Videos\movie.mkv" --translate --translate-to fr --voice "fr-FR-DeniseNeural"
-    ```
+* **Traduire et doubler (ex : Anglais vers Français) :**
+  ```cmd
+  add_dub.exe --batch -i "C:\Videos\film.mkv" --translate --translate-to fr --voice "fr-FR-DeniseNeural"
+  ```
 
-*   **Custom Mix Settings:**
-    ```cmd
-    start_add_dub.bat --batch -i "C:\Videos\movie.mkv" --bg-mix 0.8 --tts-mix 1.2 --ducking-db -5.0
-    ```
+* **Ajuster les volumes et l'atténuation (*ducking*) :**
+  ```cmd
+  add_dub.exe --batch -i "C:\Videos\film.mkv" --bg-mix 0.8 --tts-mix 1.2 --ducking-db -5.0
+  ```
 
 ---
 
 ## ⚙️ Configuration (`options.conf`)
 
-The `options.conf` file allows you to set default values.
-Format: `key = value` or `key = value d` (add `d` to ask the user at runtime).
+Le fichier `options.conf` permet de définir vos préférences par défaut.
 
-**Key Options:**
--   `tts_engine`: `onecore`, `edge`, `gtts`.
--   `voice_id`: Specific voice ID (use `--list-voices` to find them).
--   `translate`: `true` or `false` (enable translation by default).
--   `translate_to`: Target language code (e.g., `fr`, `en`).
--   `min_rate_tts` / `max_rate_tts`: Speed limits for TTS.
--   `ducking`: Volume reduction of background audio in dB (e.g., `-5.0`).
+> 💡 **Astuce sur le modificateur `d`** : 
+> Ajoutez la lettre `d` après une valeur (ex: `translate_to = fr d`) pour que `add_dub` vous demande confirmation interactivement au lancement. Sans la lettre `d`, la valeur est appliquée automatiquement.
 
----
-
-## 🌍 Supported Languages
-
-**UI Languages**:
-The interface automatically detects your system language. Supported languages include:
--   English (`en`)
--   French (`fr`)
--   Spanish (`es`)
--   Italian (`it`)
--   German (`de`)
--   Portuguese (`pt`)
--   Russian (`ru`)
--   Greek (`el`)
--   Chinese (`zh`)
--   Arabic (`ar`)
--   Korean (`ko`)
--   Japanese (`ja`)
-
-**Translation Support**:
-You can translate subtitles **from** and **to** almost any language supported by EasyNMT/HuggingFace models.
+**Options principales :**
+* `tts_engine` : `edge`, `onecore`, ou `gtts`.
+* `voice_id` : Identifiant de la voix (ex: `fr-FR-DeniseNeural`, `fr-FR-HenriNeural`).
+* `translate` : `true` ou `false` (activer la traduction automatique).
+* `translate_to` : Code langue cible (ex: `fr`, `en`, `es`, `de`, `ja`...).
+* `db` : Niveau d'atténuation du fond sonore en dB (ex: `-5.0`).
+* `bg` / `tts` : Multiplicateurs de volume pour l'audio d'origine et la voix TTS.
 
 ---
 
-## 🛠️ Troubleshooting
+## 🛠️ Exécution depuis les sources (Développeurs)
 
--   **"ffmpeg not found"**: Ensure the initial setup completed successfully. The `tools` folder should contain ffmpeg.
--   **TTS fails**: Check your internet connection if using Edge TTS or gTTS. For OneCore, ensure the voice is installed in Windows settings.
--   **Translation errors**: The first translation might be slow as it downloads models. Ensure you have a stable internet connection.
+Si vous souhaitez exécuter ou modifier le code source Python :
+
+```cmd
+git clone https://github.com/Jobijoba2000/add_dub.git
+cd add_dub
+start_add_dub.bat
+```
+*Le script `start_add_dub.bat` déploiera automatiquement la toolbox requise (FFmpeg, environnement virtuel et dépendances).*
 
 ---
 
-## 📄 License
+## 📄 Licence
 
-This project is licensed under the **MIT License**.
-Dependencies included in the Toolbox are subject to their respective licenses.
+Ce projet est sous licence **MIT**. Les outils tiers inclus dans la Toolbox restent soumis à leurs licences respectives.
