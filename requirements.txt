@@ -9,11 +9,7 @@ edge-tts==7.2.7
 gTTS==2.5.4
 fasttext-wheel==0.9.2
 tqdm==4.67.1
-transformers==4.46.3
-sacremoses==0.1.1
-nltk==3.9.2
 sentencepiece==0.2.1
-protobuf==6.33.2
 langdetect==1.0.9
-fasttext-wheel==0.9.2
+ctranslate2>=4.0.0
 pyinstaller

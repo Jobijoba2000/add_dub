@@ -1,123 +1,126 @@
 
 import os
-
-
 import sys
-import json
-import subprocess
-import tempfile
 from typing import List, Tuple, Optional
 from add_dub.logger import logger as log
 from add_dub.i18n import t
 from add_dub.core.ui import UIInterface
 
-# Note: We no longer import EasyNMT here to avoid crashes in the main process.
+import ctranslate2
+import sentencepiece
+
+_TRANSLATOR_CACHE = {}
+
+
+def _get_translator_and_tokenizer(source_lang: str, target_lang: str):
+    """
+    Retourne le traducteur CTranslate2 et les tokenizers SentencePiece pour la paire de langues.
+    """
+    model_name = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
+    cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "add_dub", "ct2_models")
+    model_dir = os.path.join(cache_dir, f"opus-mt-{source_lang}-{target_lang}")
+
+    key = f"{source_lang}_{target_lang}"
+    if key in _TRANSLATOR_CACHE:
+        return _TRANSLATOR_CACHE[key]
+
+    src_spm = os.path.join(model_dir, "source.spm")
+    tgt_spm = os.path.join(model_dir, "target.spm")
+
+    if not os.path.exists(os.path.join(model_dir, "model.bin")) or not os.path.exists(src_spm) or not os.path.exists(tgt_spm):
+        os.makedirs(model_dir, exist_ok=True)
+        log.info(f"Conversion / chargement du modèle CTranslate2 ({source_lang} -> {target_lang})...")
+        conv = ctranslate2.converters.TransformersConverter(model_name)
+        conv.convert(model_dir, quantization="int8", force=True)
+
+        from huggingface_hub import hf_hub_download
+        try:
+            hf_hub_download(repo_id=model_name, filename="source.spm", local_dir=model_dir)
+            hf_hub_download(repo_id=model_name, filename="target.spm", local_dir=model_dir)
+        except Exception as e:
+            log.warning(f"Note: téléchargeur SPM: {e}")
+
+    log.info(f"Chargement du moteur CTranslate2 ({model_name})...")
+    translator = ctranslate2.Translator(model_dir, device="cpu", intra_threads=1)
+
+    sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
+    sp_tgt = sentencepiece.SentencePieceProcessor(model_file=tgt_spm)
+
+    _TRANSLATOR_CACHE[key] = (translator, sp_src, sp_tgt)
+    return translator, sp_src, sp_tgt
+
 
 def translate_subtitles(
     subtitles: List[Tuple[float, float, str]], 
     target_lang: str, 
-    source_lang: str = None,
+    source_lang: Optional[str] = None,
     ui: Optional[UIInterface] = None
 ) -> List[Tuple[float, float, str]]:
     """
-    Traduit une liste de sous-titres (start, end, text) vers la langue cible.
-    Exécute la traduction dans un sous-processus isolé pour éviter les crashs (PyTorch/Windows).
+    Traduit une liste de sous-titres (start, end, text) vers la langue cible via CTranslate2 + SentencePiece.
     """
     texts = [s[2] for s in subtitles]
     if not texts:
         return subtitles
 
+    # Auto-détection de la langue source si non fournie ou 'auto'
+    if not source_lang or source_lang.lower() == "auto":
+        try:
+            from langdetect import detect
+            sample = " ".join([str(t) for t in texts[:10] if t])
+            if sample:
+                source_lang = detect(sample)
+                log.info(f"Langue source détectée : {source_lang}")
+        except Exception as e:
+            log.warning(f"Échec de détection de langue : {e}")
+            source_lang = "fr"
+
     log.info(t("trans_log_start", count=len(texts), target=target_lang, source=source_lang))
 
-    # Create temp files for IPC
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8', suffix='.json') as f_in:
-        json.dump(texts, f_in, ensure_ascii=False)
-        input_path = f_in.name
-    
-    # Output file path
-    output_path = input_path + ".out.json"
-
-    worker_script = os.path.join(os.path.dirname(__file__), "translate_worker.py")
-    
-    cmd = [
-        sys.executable, 
-        worker_script,
-        input_path,
-        output_path,
-        target_lang
-    ]
-    if source_lang:
-        cmd.append(source_lang)
-
     try:
-        # Run subprocess and capture output for progress
-        # Merge stderr into stdout to avoid deadlock if stderr buffer fills up
-        process = subprocess.Popen(
-            cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
-            text=True,
-            encoding='utf-8' # Force encoding
-        )
-        
-        # Read stdout line by line to show progress
-        while True:
-            line = process.stdout.readline()
-            if not line and process.poll() is not None:
-                break
-            if line:
-                line = line.strip()
-                if line.startswith("PROGRESS:"):
-                    pct = float(line.split(':')[1])
-                    if ui:
-                        ui.progress(pct)
-                    else:
-                        # Avoid spamming logs with progress
-                        pass
-                else:
-                    # Log other output (logs, warnings) as debug info
-                    # This ensures we drain the buffer and don't deadlock
-                    if line:
-                        log.debug(f"Worker: {line}")
-
-        # No stderr to read since it's merged
-        stdout, _ = process.communicate()
-        
-        if process.returncode != 0:
-            log.error(t("trans_err_subprocess", code=process.returncode))
-            return subtitles
-
-        # Read result
-        if os.path.exists(output_path):
-            with open(output_path, 'r', encoding='utf-8') as f_out:
-                translated_texts = json.load(f_out)
-        else:
-            log.error(t("trans_err_no_output"))
-            return subtitles
-
+        translator, sp_src, sp_tgt = _get_translator_and_tokenizer(source_lang, target_lang)
     except Exception as e:
-        log.error(t("trans_err_exception", err=e))
+        log.error(f"Erreur d'initialisation du traducteur pour {source_lang}->{target_lang}: {e}")
         return subtitles
-    finally:
-        # Cleanup
-        if os.path.exists(input_path):
-            os.remove(input_path)
-        if os.path.exists(output_path):
-            os.remove(output_path)
 
-    # if not ui:
-    #     print("") # Newline after progress
+    translated_texts = []
+    batch_size = 16
+    total = len(texts)
+
+    for i in range(0, total, batch_size):
+        batch = texts[i : i + batch_size]
+        tokens = [
+            sp_src.encode(str(t), out_type=str) + ["</s>"] if t and str(t).strip() else []
+            for t in batch
+        ]
+
+        try:
+            results = translator.translate_batch(tokens)
+            for j, r in enumerate(results):
+                if r.hypotheses:
+                    decoded = sp_tgt.decode(r.hypotheses[0])
+                    translated_texts.append(decoded)
+                else:
+                    translated_texts.append(batch[j])
+        except Exception as e:
+            log.error(f"Erreur lors de la traduction d'un lot : {e}")
+            translated_texts.extend(batch)
+
+        pct = min(100.0, int((i + len(batch)) / total * 100))
+        if ui:
+            ui.progress(pct)
+
     log.info(t("trans_log_completed"))
 
     new_subs = []
     for i, (start, end, _) in enumerate(subtitles):
         if i < len(translated_texts):
-            new_text = translated_texts[i]
-            new_subs.append((start, end, new_text))
+            new_subs.append((start, end, translated_texts[i]))
         else:
             new_subs.append((start, end, subtitles[i][2]))
-    
+
     return new_subs
+
 
 def write_srt_file(subtitles: List[Tuple[float, float, str]], output_path: str):
     """

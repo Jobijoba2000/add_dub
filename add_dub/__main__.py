@@ -1,15 +1,29 @@
 # add_dub/__main__.py
 from __future__ import annotations
 
+import os
 import sys
+
 from multiprocessing import freeze_support
+import ctranslate2
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 from add_dub.cli.args import parse_args, want_interactive
 
 
 def main(argv=None) -> int:
     freeze_support()
-    args, _unknown = parse_args(argv or [])
+
+    if argv is None:
+        argv = sys.argv[1:]
+
+    args, _unknown = parse_args(argv)
 
     # Actions utilitaires rapides
     if getattr(args, "list_voices", False):

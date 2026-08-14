@@ -30,10 +30,9 @@ SRT_DIR = os.path.join(ROOT, _DEF_SRT_DIR)
 for _tp in [
     os.path.join(ROOT, "tools", "ffmpeg", "bin"),
     os.path.join(ROOT, "tools", "MKVToolNix"),
-    os.path.join(ROOT, "tools", "subtitle_edit"),
 ]:
     if os.path.isdir(_tp) and _tp not in os.environ.get("PATH", ""):
-        os.environ["PATH"] = _tp + os.pathsep + os.environ.get("PATH", "")
+        os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + _tp
 
 # Flags : l’utilisateur a-t-il surchargé via `set_base_dirs()` ?
 _INPUT_OVERRIDDEN = False

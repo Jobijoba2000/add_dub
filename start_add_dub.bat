@@ -203,14 +203,6 @@ if exist "%ROOT%requirements.txt" if not exist "%ROOT%.venv\.deps_ok" (
         echo [STEP] Installing dependencies...
         python -m pip install --disable-pip-version-check --no-input --upgrade pip || goto fail
         python -m pip install --disable-pip-version-check --no-input -r "%ROOT%requirements.txt" || goto fail
-        if not exist "%ROOT%.venv\.torch_cpu_fixed" (
-            echo [FIX] Cleaning up potential incompatible PyTorch versions...
-            python -m pip uninstall -y torch torchvision torchaudio
-            echo [FIX] Installing CPU-only PyTorch...
-            python -m pip install --disable-pip-version-check --no-input torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu || goto fail
-            echo fixed> "%ROOT%.venv\.torch_cpu_fixed"
-        )
-        python -m pip install --disable-pip-version-check --no-input --no-deps easynmt || goto fail
         echo ok> "%ROOT%.venv\.deps_ok"
         echo [OK] Dependencies installed.
 ) else (

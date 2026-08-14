@@ -33,7 +33,16 @@ def get_system_default_voice_id() -> str | None:
 
 # TTS
 TTS_ENGINE = "onecore"
-VOICE_ID = get_system_default_voice_id()
+_default_voice_id = None
+
+def get_voice_id_default() -> str | None:
+    global _default_voice_id
+    if _default_voice_id is None:
+        _default_voice_id = get_system_default_voice_id()
+    return _default_voice_id
+
+# Propriété dynamique ou valeur par défaut
+VOICE_ID = None
 MIN_RATE_TTS = 1.0
 MAX_RATE_TTS = 1.8
 LANGUAGE = "auto"
