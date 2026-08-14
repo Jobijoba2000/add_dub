@@ -15,10 +15,11 @@ _TRANSLATOR_CACHE = {}
 def _get_translator_and_tokenizer(source_lang: str, target_lang: str):
     """
     Retourne le traducteur CTranslate2 et les tokenizers SentencePiece pour la paire de langues.
+    Télécharge automatiquement le modèle CTranslate2 pré-converti si non présent dans le cache.
     """
-    model_name = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
+    pair_name = f"{source_lang}-{target_lang}"
     cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "add_dub", "ct2_models")
-    model_dir = os.path.join(cache_dir, f"opus-mt-{source_lang}-{target_lang}")
+    model_dir = os.path.join(cache_dir, f"ct2fast-opus-mt-{pair_name}")
 
     key = f"{source_lang}_{target_lang}"
     if key in _TRANSLATOR_CACHE:
@@ -26,21 +27,21 @@ def _get_translator_and_tokenizer(source_lang: str, target_lang: str):
 
     src_spm = os.path.join(model_dir, "source.spm")
     tgt_spm = os.path.join(model_dir, "target.spm")
+    model_bin = os.path.join(model_dir, "model.bin")
 
-    if not os.path.exists(os.path.join(model_dir, "model.bin")) or not os.path.exists(src_spm) or not os.path.exists(tgt_spm):
+    # Si le modèle n'est pas présent dans le cache, le télécharger automatiquement depuis HuggingFace
+    if not (os.path.exists(model_bin) and os.path.exists(src_spm) and os.path.exists(tgt_spm)):
         os.makedirs(model_dir, exist_ok=True)
-        log.info(f"Conversion / chargement du modèle CTranslate2 ({source_lang} -> {target_lang})...")
-        conv = ctranslate2.converters.TransformersConverter(model_name)
-        conv.convert(model_dir, quantization="int8", force=True)
-
-        from huggingface_hub import hf_hub_download
+        log.info(f"Téléchargement automatique du modèle CTranslate2 ({source_lang} -> {target_lang})...")
+        from huggingface_hub import snapshot_download
+        repo_id = f"michaelfeil/ct2fast-opus-mt-{source_lang}-{target_lang}"
         try:
-            hf_hub_download(repo_id=model_name, filename="source.spm", local_dir=model_dir)
-            hf_hub_download(repo_id=model_name, filename="target.spm", local_dir=model_dir)
+            snapshot_download(repo_id=repo_id, local_dir=model_dir)
         except Exception as e:
-            log.warning(f"Note: téléchargeur SPM: {e}")
+            log.error(f"Échec du téléchargement du modèle pré-converti {repo_id}: {e}")
+            raise RuntimeError(f"Impossible de télécharger le modèle de traduction pour {source_lang}->{target_lang}: {e}")
 
-    log.info(f"Chargement du moteur CTranslate2 ({model_name})...")
+    log.info(f"Chargement du moteur CTranslate2 ({source_lang} -> {target_lang})...")
     translator = ctranslate2.Translator(model_dir, device="cpu", intra_threads=1)
 
     sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
