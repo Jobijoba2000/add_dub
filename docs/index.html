@@ -639,16 +639,16 @@
         <h4>Le rôle de la lettre <span class="badge-d">d</span> (Display)</h4>
         <p>Chaque ligne du fichier suit le format : <code>clé = valeur [d]</code></p>
         <ul>
-            <li><strong>Avec la lettre <code>d</code></strong> (ex: <code>tts_engine = "edge" d</code>) : AddDub vous
+            <li><strong>Avec la lettre <code>d</code></strong> (ex: <code>tts_engine = "onecore" d</code>) : AddDub vous
                 posera la question de manière interactive au lancement pour vous permettre de choisir ou de valider la
                 valeur.</li>
-            <li><strong>Sans la lettre <code>d</code></strong> (ex: <code>tts_engine = "edge"</code>) : AddDub
+            <li><strong>Sans la lettre <code>d</code></strong> (ex: <code>tts_engine = "onecore"</code>) : AddDub
                 appliquera directement cette valeur sans jamais vous interrompre.</li>
             <li><strong>Si une option est absente du fichier</strong> : Le programme utilise automatiquement des valeurs
                 par défaut saines intégrées en dur dans le code.</li>
         </ul>
 
-        <h4>Détail de toutes les options du fichier <code>options.conf</code> :</h4>
+        <h4>Détail de toutes les options du fichier modèle (<code>options.example.conf</code>) :</h4>
         <table>
             <thead>
                 <tr>
@@ -659,23 +659,34 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><code>language</code></td>
-                    <td><code>fr</code></td>
-                    <td>Langue de l'interface du programme (<code>auto</code>, <code>fr</code>, <code>en</code>,
-                        <code>es</code>, <code>de</code>, <code>ja</code>...).</td>
+                    <td><code>input_dir</code></td>
+                    <td><code>"input"</code></td>
+                    <td>Dossier d'entrée contenant les vidéos à traiter.</td>
+                </tr>
+                <tr>
+                    <td><code>output_dir</code></td>
+                    <td><code>"output"</code></td>
+                    <td>Dossier de destination où enregistrer les vidéos générées.</td>
+                </tr>
+                <tr>
+                    <td><code>tmp_dir</code></td>
+                    <td><code>"tmp"</code></td>
+                    <td>Dossier de travail pour les fichiers temporaires.</td>
+                </tr>
+                <tr>
+                    <td><code>language</code> <span class="badge-d">d</span></td>
+                    <td><code>auto</code></td>
+                    <td>Langue de l'interface du programme (<code>auto</code> pour détection automatique système, <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>...).</td>
                 </tr>
                 <tr>
                     <td><code>tts_engine</code> <span class="badge-d">d</span></td>
-                    <td><code>"edge"</code></td>
-                    <td>Moteur de synthèse vocale : <code>"edge"</code> (Microsoft Neural haute fidélité),
-                        <code>"onecore"</code> (Windows hors-ligne), <code>"gtts"</code> (Google).</td>
+                    <td><code>"onecore"</code></td>
+                    <td>Moteur de synthèse vocale : <code>"onecore"</code> (Windows hors-ligne), <code>"edge"</code> (Microsoft Neural), <code>"gtts"</code> (Google).</td>
                 </tr>
                 <tr>
                     <td><code>voice_id</code></td>
-                    <td><code>"fr-FR-DeniseNeural"</code></td>
-                    <td>Identifiant exact de la voix. Lors du choix d'une voix dans le mode interactif, son
-                        <code>voice_id</code> s'affiche à l'écran : vous pouvez le copier ici pour le réutiliser par
-                        défaut.</td>
+                    <td><code>""</code></td>
+                    <td>Identifiant de la voix (vide = sélection ou détection automatique). Vous pouvez y coller un <code>voice_id</code> spécifique (ex: <code>"fr-FR-DeniseNeural"</code>).</td>
                 </tr>
                 <tr>
                     <td><code>min_rate_tts</code></td>
@@ -684,25 +695,23 @@
                 </tr>
                 <tr>
                     <td><code>max_rate_tts</code></td>
-                    <td><code>2.8</code></td>
-                    <td>Plafond d'accélération maximale quand une phrase longue doit rentrer dans une réplique courte.
-                    </td>
+                    <td><code>1.8</code></td>
+                    <td>Plafond d'accélération maximale quand une phrase longue doit rentrer dans une réplique courte.</td>
                 </tr>
                 <tr>
                     <td><code>db</code> <span class="badge-d">d</span></td>
                     <td><code>-5.0</code></td>
-                    <td>Atténuation (ducking) de l'audio original en dB pendant les dialogues (toujours interprété comme
-                        une baisse).</td>
+                    <td>Atténuation (ducking) de l'audio original en dB pendant les dialogues (toujours interprété comme une baisse).</td>
                 </tr>
                 <tr>
                     <td><code>bg</code> <span class="badge-d">d</span></td>
-                    <td><code>2.0</code></td>
-                    <td>Facteur multiplicateur de volume de l'audio de fond (musique/effets originaux).</td>
+                    <td><code>1.0</code></td>
+                    <td>Facteur multiplicateur de volume du fond sonore original (1.0 = 100%).</td>
                 </tr>
                 <tr>
                     <td><code>tts</code> <span class="badge-d">d</span></td>
-                    <td><code>2.0</code></td>
-                    <td>Facteur multiplicateur de volume de la voix parlée TTS.</td>
+                    <td><code>1.0</code></td>
+                    <td>Facteur multiplicateur de volume de la voix parlée TTS (1.0 = 100%).</td>
                 </tr>
                 <tr>
                     <td><code>offset</code> <span class="badge-d">d</span></td>
@@ -717,18 +726,22 @@
                 <tr>
                     <td><code>audio_codec</code></td>
                     <td><code>ac3</code></td>
-                    <td>Codec audio pour les pistes exportées : <code>ac3</code>, <code>aac</code>, <code>mp3</code>,
-                        <code>flac</code>, <code>opus</code>, <code>pcm_s16le</code>.</td>
+                    <td>Codec audio pour les pistes exportées : <code>ac3</code>, <code>aac</code>, <code>mp3</code>, <code>flac</code>, <code>opus</code>.</td>
                 </tr>
                 <tr>
                     <td><code>audio_bitrate</code></td>
-                    <td><code>192</code></td>
+                    <td><code>256</code></td>
                     <td>Débit de la piste audio encodée en kbps (ex: 128, 192, 256, 320).</td>
                 </tr>
                 <tr>
                     <td><code>orig_audio_lang</code></td>
-                    <td><code>Japonais</code></td>
+                    <td><code>Original</code></td>
                     <td>Libellé affiché dans les métadonnées du fichier MKV pour la piste d'origine.</td>
+                </tr>
+                <tr>
+                    <td><code>ask_test_before_cleanup</code></td>
+                    <td><code>false</code></td>
+                    <td>Si <code>true</code>, propose d'écouter la vidéo et de réajuster les volumes avant nettoyage.</td>
                 </tr>
                 <tr>
                     <td><code>translate</code> <span class="badge-d">d</span></td>
@@ -738,8 +751,7 @@
                 <tr>
                     <td><code>translate_to</code> <span class="badge-d">d</span></td>
                     <td><code>fr</code></td>
-                    <td>Code de la langue de destination (ex: <code>fr</code>, <code>en</code>, <code>es</code>,
-                        <code>de</code>...).</td>
+                    <td>Code de la langue de destination (ex: <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>...).</td>
                 </tr>
                 <tr>
                     <td><code>translate_from</code> <span class="badge-d">d</span></td>
@@ -749,14 +761,7 @@
                 <tr>
                     <td><code>reuse_translated_subs</code> <span class="badge-d">d</span></td>
                     <td><code>true</code></td>
-                    <td>Si un fichier de sous-titre déjà traduit existe dans <code>srt/</code>, le réutilise sans
-                        recalculer.</td>
-                </tr>
-                <tr>
-                    <td><code>ask_test_before_cleanup</code></td>
-                    <td><code>false</code></td>
-                    <td>Si <code>true</code>, propose d'écouter la vidéo et de réajuster les volumes avant nettoyage.
-                    </td>
+                    <td>Si un fichier de sous-titre déjà traduit existe dans <code>srt/</code>, le réutilise sans recalculer.</td>
                 </tr>
             </tbody>
         </table>
