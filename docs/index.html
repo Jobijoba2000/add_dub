@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manuel & Documentation Officielle — AddDub</title>
-    <meta name="description" content="AddDub — Outil gratuit et portable de vocalisation de sous-titres, doublage voice-over et traduction IA pour Windows. Idéal pour l'accessibilité (malvoyance, fatigue visuelle) et le confort d'écoute.">
-    <meta name="keywords" content="AddDub, vocalisation sous-titres, doublage automatique, voice-over, TTS, text to speech, accessibilité, malvoyance, audio ducking, traduction sous-titres, MKV, SRT, Edge TTS, CTranslate2, Windows">
+    <meta name="description"
+        content="AddDub — Outil gratuit et portable de vocalisation de sous-titres, doublage en voix-off et traduction IA pour Windows. Idéal pour l'accessibilité (malvoyance, fatigue visuelle) et le confort d'écoute.">
+    <meta name="keywords"
+        content="AddDub, vocalisation sous-titres, doublage automatique, voix-off, TTS, text to speech, accessibilité, malvoyance, audio ducking, traduction sous-titres, MKV, SRT, Edge TTS, CTranslate2, Windows">
     <meta name="author" content="Jobijoba2000">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://jobijoba2000.github.io/add_dub/">
@@ -14,15 +17,19 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://jobijoba2000.github.io/add_dub/">
     <meta property="og:title" content="AddDub — Vocalisation de Sous-titres & Doublage Automatisé">
-    <meta property="og:description" content="Transformez automatiquement les sous-titres de vos vidéos en voix-off parlée avec atténuation intelligente du fond sonore (audio ducking). 100% portable pour Windows.">
+    <meta property="og:description"
+        content="Transformez automatiquement les sous-titres de vos vidéos en voix-off parlée avec atténuation intelligente du fond sonore (audio ducking). 100% portable pour Windows.">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="AddDub — Vocalisation de Sous-titres & Doublage Automatisé">
-    <meta name="twitter:description" content="Transformez automatiquement les sous-titres de vos vidéos en voix-off parlée avec atténuation intelligente du fond sonore (audio ducking). 100% portable pour Windows.">
+    <meta name="twitter:description"
+        content="Transformez automatiquement les sous-titres de vos vidéos en voix-off parlée avec atténuation intelligente du fond sonore (audio ducking). 100% portable pour Windows.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -39,7 +46,11 @@
             --border-color: #30363d;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         html {
             scroll-behavior: smooth;
@@ -55,7 +66,8 @@
             overflow-x: hidden;
         }
 
-        code, pre {
+        code,
+        pre {
             font-family: 'JetBrains Mono', monospace;
         }
 
@@ -64,13 +76,16 @@
             width: 8px;
             height: 8px;
         }
+
         ::-webkit-scrollbar-track {
             background: var(--bg-dark);
         }
+
         ::-webkit-scrollbar-thumb {
             background: #30363d;
             border-radius: 4px;
         }
+
         ::-webkit-scrollbar-thumb:hover {
             background: #484f58;
         }
@@ -110,24 +125,27 @@
         }
 
         .nav-group-title {
-            font-size: 11px;
-            font-weight: 700;
+            font-size: 13.5px;
+            font-weight: 800;
             text-transform: uppercase;
-            color: var(--text-muted);
-            letter-spacing: 1px;
-            margin: 20px 0 8px 8px;
+            color: var(--accent-blue);
+            letter-spacing: 0.8px;
+            margin: 26px 0 10px 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(88, 166, 255, 0.2);
         }
 
         .nav-items {
             list-style: none;
+            padding-left: 10px;
         }
 
         .nav-items a {
             display: block;
-            padding: 7px 12px;
+            padding: 6px 10px;
             color: var(--text-main);
             text-decoration: none;
-            font-size: 13.5px;
+            font-size: 12.5px;
             border-radius: 6px;
             transition: all 0.15s ease;
         }
@@ -146,37 +164,41 @@
         }
 
         h1 {
-            font-size: 32px;
+            font-size: 42px;
             font-weight: 800;
-            color: var(--text-heading);
-            margin-bottom: 16px;
+            color: #ffffff;
+            margin-bottom: 20px;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 16px;
-            line-height: 1.3;
+            line-height: 1.2;
         }
 
         h2 {
-            font-size: 23px;
-            font-weight: 700;
-            color: var(--accent-blue);
-            margin: 56px 0 20px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border-color);
-            scroll-margin-top: 30px;
+            font-size: 32px;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 96px 0 28px 0;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--accent-blue);
+            scroll-margin-top: 40px;
         }
 
         h3 {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-heading);
-            margin: 32px 0 12px;
+            font-size: 23px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 36px 0 14px 0;
+            scroll-margin-top: 30px;
         }
 
         h4 {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--accent-purple);
-            margin: 20px 0 8px;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin: 28px 0 12px 0;
+            padding-left: 12px;
+            border-left: 3px solid var(--accent-blue);
+            scroll-margin-top: 30px;
         }
 
         p {
@@ -185,7 +207,8 @@
             color: #c9d1d9;
         }
 
-        ul, ol {
+        ul,
+        ol {
             margin-bottom: 22px;
             padding-left: 24px;
         }
@@ -207,7 +230,7 @@
             font-weight: 600;
             font-size: 15px;
             text-decoration: none;
-            margin: 12px 0 24px;
+            margin: 12px 0 24px 0;
             transition: background 0.2s ease;
         }
 
@@ -248,10 +271,27 @@
             background: var(--bg-card);
         }
 
-        .callout-info { border-left-color: var(--accent-blue); }
-        .callout-tip { border-left-color: var(--accent-green); }
-        .callout-warning { border-left-color: var(--accent-orange); }
-        .callout-purple { border-left-color: var(--accent-purple); }
+        .callout p,
+        .callout ul,
+        .callout ol {
+            margin-left: 0;
+        }
+
+        .callout-info {
+            border-left-color: var(--accent-blue);
+        }
+
+        .callout-tip {
+            border-left-color: var(--accent-green);
+        }
+
+        .callout-warning {
+            border-left-color: var(--accent-orange);
+        }
+
+        .callout-purple {
+            border-left-color: var(--accent-purple);
+        }
 
         .callout-title {
             font-weight: 700;
@@ -274,7 +314,8 @@
             border: 1px solid var(--border-color);
         }
 
-        th, td {
+        th,
+        td {
             padding: 14px 18px;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
@@ -333,9 +374,20 @@
             letter-spacing: 0.5px;
         }
 
-        .tag-input { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
-        .tag-core { background: rgba(188, 140, 255, 0.2); color: var(--accent-purple); }
-        .tag-output { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+        .tag-input {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--accent-blue);
+        }
+
+        .tag-core {
+            background: rgba(188, 140, 255, 0.2);
+            color: var(--accent-purple);
+        }
+
+        .tag-output {
+            background: rgba(63, 185, 80, 0.2);
+            color: var(--accent-green);
+        }
 
         .flow-arrow {
             text-align: center;
@@ -410,7 +462,10 @@
 
         /* Responsive */
         @media (max-width: 900px) {
-            body { flex-direction: column; }
+            body {
+                flex-direction: column;
+            }
+
             aside.sidebar {
                 width: 100%;
                 height: auto;
@@ -418,10 +473,14 @@
                 border-right: none;
                 border-bottom: 1px solid var(--border-color);
             }
-            main.content { padding: 24px; }
+
+            main.content {
+                padding: 24px;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <!-- Sidebar Navigation -->
@@ -429,123 +488,46 @@
         <div class="sidebar-brand">
             AddDub <span>v1.0.0</span>
         </div>
-        
-        <div class="nav-group-title">Introduction</div>
+
+        <div class="nav-group-title">1. Présentation</div>
         <ul class="nav-items">
             <li><a href="#presentation">📌 Présentation</a></li>
             <li><a href="#pourquoi-et-pour-qui">♿ Pourquoi et Pour qui</a></li>
-            <li><a href="#philosophie">🎯 Ce que l'outil n'est PAS</a></li>
-            <li><a href="#demarrage-rapide">🚀 Démarrage Rapide</a></li>
+            <li><a href="#philosophie">🎯 Philosophie</a></li>
         </ul>
 
-        <div class="nav-group-title">Utilisation</div>
+        <div class="nav-group-title">2. Démarrage Rapide</div>
         <ul class="nav-items">
-            <li><a href="#mode-interactif">🎮 Mode Interactif (Défaut)</a></li>
-            <li><a href="#saisons-multi-videos">📁 Traitement Multi-Vidéos</a></li>
-            <li><a href="#mode-test">🎧 Mode Test & Ajustement</a></li>
+            <li><a href="#demarrage-rapide">🚀 Téléchargement & Test</a></li>
+        </ul>
+
+        <div class="nav-group-title">3. Pour Aller Plus Loin</div>
+        <ul class="nav-items">
+            <li><a href="#pipeline">⚙️ Fonctionnement du pipeline</a></li>
+            <li><a href="#mode-interactif">🎮 Mode Interactif</a></li>
             <li><a href="#options-conf">⚙️ Fichier options.conf</a></li>
+            <li><a href="#mode-batch">⚡ Mode Batch</a></li>
         </ul>
 
-        <div class="nav-group-title">Automatisation</div>
+        <div class="nav-group-title">4. Pour les Développeurs</div>
         <ul class="nav-items">
-            <li><a href="#mode-batch">⚡ Mode Batch (Ligne de commande)</a></li>
-            <li><a href="#exemples-batch">💡 Exemples de Commandes</a></li>
-            <li><a href="#reference-options">📋 Référence Complète des Options</a></li>
+            <li><a href="#developpeurs">🛠️ Cloner & Démarrer le code</a></li>
         </ul>
     </aside>
 
     <!-- Main Documentation Content -->
     <main class="content">
 
-        <h1>Manuel & Guide d'Utilisation Officiel — AddDub</h1>
-        <p>Bienvenue dans la documentation complète de <strong>AddDub</strong>, l'outil autonome de vocalisation de sous-titres, de doublage voice-over et de traduction automatisée pour Windows.</p>
+        <h1>Documentation de AddDub</h1>
+        <p>Bienvenue dans la documentation officielle de <strong>AddDub</strong>, l'outil autonome de vocalisation de sous-titres en voix-off et de traduction automatisée pour Windows.</p>
 
         <!-- Section 1 : Présentation -->
         <h2 id="presentation">📌 Présentation de l'Outil</h2>
-        <p><strong>AddDub</strong> est un logiciel conçu pour transformer automatiquement les sous-titres d'une vidéo (fichiers <code>.srt</code> externes ou pistes intégrées dans un conteneur MKV/MP4) en une <strong>piste vocale parlée synchronisée</strong> avec atténuation dynamique du fond sonore (<em>audio ducking</em>).</p>
-        
-        <p>Le résultat est un fichier vidéo <strong>MKV multi-pistes propre</strong> contenant la vidéo originale sans aucune perte, la nouvelle piste audio mixée (vocalisation + musique de fond atténuée), la piste audio originale isolée intacte, ainsi que les sous-titres.</p>
-
-        <!-- Visual Pipeline Flow -->
-        <div class="pipeline-flow">
-            <!-- Input -->
-            <div class="flow-card">
-                <div class="flow-card-header">
-                    <span class="tag tag-input">Entrée</span>
-                    🎬 Fichiers Source
-                </div>
-                <div style="font-size: 13.5px; color: #c9d1d9;">
-                    Vidéo (<code>.mkv</code>, <code>.mp4</code>, <code>.avi</code>) + Sous-titres (intégrés dans le MKV ou fichier <code>.srt</code> externe).
-                </div>
-            </div>
-
-            <div class="flow-arrow">⬇️</div>
-
-            <!-- Processing Pipeline -->
-            <div class="flow-card">
-                <div class="flow-card-header">
-                    <span class="tag tag-core">Traitement</span>
-                    ⚡ Pipeline AddDub (Automatisé)
-                </div>
-                <div class="pipeline-steps">
-                    <div class="pipeline-step-item">
-                        <strong>1. Extraction</strong>
-                        Audio original & sous-titres (avec OCR automatique si PGS/VobSub)
-                    </div>
-                    <div class="pipeline-step-item">
-                        <strong>2. Traduction IA</strong>
-                        Optionnelle vers votre langue via CTranslate2
-                    </div>
-                    <div class="pipeline-step-item">
-                        <strong>3. Synthèse TTS</strong>
-                        Voix neuronales Edge ou OneCore calées à la milliseconde
-                    </div>
-                    <div class="pipeline-step-item">
-                        <strong>4. Audio Ducking</strong>
-                        Baisse automatique du fond sonore sous les voix
-                    </div>
-                    <div class="pipeline-step-item">
-                        <strong>5. Multiplexage</strong>
-                        Assemblage final FFmpeg en 1 seule passe
-                    </div>
-                </div>
-            </div>
-
-            <div class="flow-arrow">⬇️</div>
-
-            <!-- Output -->
-            <div class="flow-card">
-                <div class="flow-card-header">
-                    <span class="tag tag-output">Sortie</span>
-                    📦 Fichier MKV Final Multi-Pistes
-                </div>
-                <div class="tracks-grid">
-                    <div class="track-row">
-                        <div class="track-name">🎥 Piste 0 : Vidéo Originale</div>
-                        <div class="track-desc">Copie directe (aucune perte de qualité d'image)</div>
-                    </div>
-                    <div class="track-row" style="background: rgba(63, 185, 80, 0.06); border-color: rgba(63, 185, 80, 0.3);">
-                        <div class="track-name">
-                            🎙️ Piste 1 : Audio Doublé (Mixé)
-                            <span class="track-badge-default">Par défaut</span>
-                        </div>
-                        <div class="track-desc">Voix TTS nette + Fond d'origine atténué pendant les paroles</div>
-                    </div>
-                    <div class="track-row">
-                        <div class="track-name">🎵 Piste 2 : Audio Original (VO)</div>
-                        <div class="track-desc">Piste audio d'origine isolée et préservée intacte</div>
-                    </div>
-                    <div class="track-row">
-                        <div class="track-name">📝 Piste 3 : Sous-titres</div>
-                        <div class="track-desc">Piste de sous-titres synchronisée</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <p><strong>AddDub</strong> transforme automatiquement les sous-titres d'une vidéo en une <strong>voix-off parlée et synchronisée</strong>, mixée avec le son d'origine qui s'atténue pendant les dialogues.</p>
 
         <h3 id="pourquoi-et-pour-qui">♿ Pourquoi cet outil et pour qui ?</h3>
-        <p>Le projet AddDub est né d'un besoin personnel et authentique : <strong>son créateur étant lui-même malvoyant</strong>, lire des sous-titres à l'écran pendant 2 heures sur des films ou animés étrangers représente une fatigue oculaire intense, voire une impossibilité totale.</p>
-        
+        <p><strong>Étant moi-même malvoyant</strong>, j'ai développé AddDub par besoin personnel : il m'est tout simplement impossible de lire les sous-titres à l'écran lorsque je regarde des films, séries ou animés étrangers.</p>
+
         <p>AddDub a été créé avant tout comme un <strong>outil d'accessibilité universelle</strong> :</p>
         <ul>
             <li><strong>Pour les personnes malvoyantes, âgées ou dyslexiques :</strong> Accéder enfin aux films en VO, séries étrangères ou animés japonais sans devoir déchiffrer des sous-titres écrits.</li>
@@ -553,74 +535,120 @@
             <li><strong>Pour le multi-tâche et l'écoute active :</strong> Regarder un documentaire ou une vidéo étrangère tout en cuisinant, bricolant ou travaillant, sans avoir besoin de garder les yeux rivés sur l'écran.</li>
         </ul>
 
-        <h3 id="philosophie">🎯 Ce que l'outil n'est PAS (Philosophie du projet)</h3>
-        <div class="callout callout-purple">
-            <div class="callout-title">🛡️ Une solution légère, fiable et universelle</div>
-            <p>AddDub <strong>n'est PAS</strong> une usine à gaz de doublage cinéma « full IA » qui cherche à cloner les voix des acteurs ou à effacer complètement la bande sonore d'origine au prix d'une installation de 20 Go et d'une carte graphique à 1000 €.</p>
-            <p>AddDub adopte le principe éprouvé du <strong>Voice-Over / Lektor</strong> :</p>
-            <ul style="margin-bottom: 0;">
-                <li><strong>On conserve l'émotion et la voix originale en fond</strong>, simplement atténuée lorsque la voix-off lit le sous-titre.</li>
-                <li><strong>100% stable et sans hallucination</strong> : comme il se base sur le texte exact des sous-titres, il n'invente jamais de mots.</li>
-                <li><strong>Ultra-rapide et utilisable sur n'importe quel PC bureautique</strong> grâce à des moteurs ultra-optimisés (CTranslate2 sur CPU, Edge-TTS neuronales et OneCore hors-ligne).</li>
-            </ul>
-        </div>
+        <h3 id="philosophie">🎯 Philosophie de AddDub</h3>
+        <p>AddDub n'a pas pour but de réaliser un doublage IA lourd avec clonage vocal, qui nécessiterait des ressources matérielles conséquentes (carte graphique dédiée, dizaines de gigaoctets de modèles ou installations complexes).</p>
+        <p>AddDub adopte le principe éprouvé de la <strong>voix-off</strong> :</p>
+        <ul>
+            <li><strong>On conserve l'émotion et la voix originale en fond</strong>, simplement atténuée lorsque la voix-off lit le sous-titre.</li>
+            <li><strong>100% stable et sans hallucination</strong> : comme il se base sur le texte exact des sous-titres, il n'invente jamais de mots.</li>
+            <li><strong>Ultra-rapide et utilisable sur n'importe quel PC bureautique.</strong></li>
+        </ul>
 
         <!-- Section 2 : Démarrage Rapide -->
         <h2 id="demarrage-rapide">🚀 Démarrage Rapide</h2>
-        <p>La version officielle de AddDub est distribuée sous forme d'une <strong>application portable autonome</strong> (aucun pré-requis, aucun besoin d'installer Python ou FFmpeg sur votre machine).</p>
+        <p>La version officielle de AddDub est distribuée sous forme d'une <strong>application portable
+                autonome</strong> (aucun pré-requis, aucun besoin d'installer Python ou FFmpeg sur votre machine).</p>
 
         <a href="https://github.com/Jobijoba2000/add_dub/releases" class="btn-download" target="_blank">
-            📥 Télécharger la dernière version (add_dub_win64.zip)
+            📥 Télécharger la dernière version (add_dub_v1.0.0_win64.zip)
         </a>
 
         <h3>Étapes d'installation et premier test :</h3>
         <ol>
-            <li>Téléchargez l'archive <code>add_dub_win64.zip</code> depuis la page des releases.</li>
+            <li>Téléchargez l'archive <code>add_dub_v1.0.0_win64.zip</code> depuis la page des releases.</li>
             <li>Décompressez l'archive dans le dossier de votre choix.</li>
-            <li><strong>Faire un premier test immédiat :</strong> Un fichier d'exemple <code>extrait.mkv</code> est déjà présent dans le dossier <code>input/</code> pour vous permettre de tester l'outil en quelques secondes !</li>
+            <li><strong>Faire un premier test immédiat :</strong> Un fichier d'exemple <code>extrait.mkv</code> est déjà
+                présent dans le dossier <code>input/</code> pour vous permettre de tester l'outil en quelques secondes !
+            </li>
             <li>Double-cliquez sur <strong><code>add_dub.exe</code></strong>.</li>
             <li>Laissez-vous guider par les questions simples du mode interactif.</li>
             <li>Votre vidéo doublée est générée dans le dossier <strong><code>output/</code></strong> !</li>
         </ol>
 
-        <!-- Section 3 : Mode Interactif -->
-        <h2 id="mode-interactif">🎮 Mode Interactif (Par défaut)</h2>
-        <p>Lorsque vous lancez <code>add_dub.exe</code> sans argument en ligne de commande, le mode interactif démarre automatiquement. Il analyse le dossier <code>input/</code> et vous pose une série de questions numérotées simples.</p>
 
-        <h3>Déroulement pas-à-pas :</h3>
-        <ol>
-            <li><strong>Sélection des vidéos :</strong> Choisissez le ou les fichiers à traiter dans <code>input/</code>.</li>
-            <li><strong>Piste audio :</strong> Choisissez la piste audio source à utiliser (ex: Japonais, Anglais...).</li>
-            <li><strong>Sous-titres :</strong> Sélectionnez la piste de sous-titres interne (MKV) ou un fichier <code>.srt</code> externe.</li>
-            <li><strong>Moteur TTS & Voix :</strong> Sélectionnez le moteur (Edge TTS recommandé, OneCore hors-ligne ou gTTS) puis choisissez la voix parmi les dizaines de langues et voix disponibles.</li>
-            <li><strong>Traduction (optionnelle) :</strong> Indiquez si vous souhaitez traduire automatiquement les sous-titres vers une autre langue avant la vocalisation.</li>
-            <li><strong>Réglages fins :</strong> Ajustez le niveau de ducking (atténuation du fond), les volumes ou les offsets si demandé.</li>
-        </ol>
 
-        <h3 id="saisons-multi-videos">📁 Traitement d'une saison entière (Multi-vidéos)</h3>
-        <div class="callout callout-tip">
-            <div class="callout-title">💡 Gain de temps pour les séries</div>
-            <p>Si vous avez par exemple une saison de <strong>12 ou 24 épisodes</strong> dans le dossier <code>input/</code> et que vous les sélectionnez tous lors de la première étape :</p>
-            <p style="margin-bottom: 0;"><strong>Les choix de configuration (audio, sous-titres, voix, langue) ne vous sont posés qu'UNE SEULE FOIS pour le premier épisode.</strong> AddDub applique ensuite automatiquement cette configuration à tous les épisodes restants, à la chaîne !</p>
-        </div>
+        <!-- Section 3 : Pour Aller Plus Loin -->
+        <h2 id="aller-plus-loin">💡 Pour Aller Plus Loin</h2>
 
-        <h3 id="mode-test">🎧 Mode Test & Ajustement rapide des volumes</h3>
-        <p>Si l'option <code>ask_test_before_cleanup = true</code> est activée dans votre configuration, AddDub vous proposera d'écouter la vidéo finale avant de nettoyer les fichiers temporaires.</p>
-        <p>Si le volume de la musique vous paraît trop fort ou la voix trop faible, vous pouvez simplement entrer de nouveaux niveaux de volume (ex: <code>bg = 1.5</code> et <code>tts = 2.5</code>). AddDub ré-exécute alors <strong>uniquement le multiplexage instantané</strong> (quelques secondes) sans devoir recalculer tout le TTS !</p>
-
-        <!-- Section 4 : Configuration options.conf -->
-        <h2 id="options-conf">⚙️ Configuration Avancée (<code>options.conf</code>)</h2>
-        <p>Le fichier <code>options.conf</code> situé à la racine vous permet de définir vos préférences par défaut et de personnaliser complètement le comportement du mode interactif.</p>
-
-        <h3>Le rôle de la lettre <span class="badge-d">d</span> (Display)</h3>
-        <p>Chaque ligne du fichier suit le format : <code>clé = valeur [d]</code></p>
+        <h3 id="pipeline">⚙️ Fonctionnement du pipeline (Entrée, Traitement & Sortie)</h3>
+        <p>Lors du traitement, AddDub exécute automatiquement une chaîne de 5 étapes :</p>
         <ul>
-            <li><strong>Avec la lettre <code>d</code></strong> (ex: <code>tts_engine = "edge" d</code>) : AddDub vous posera la question de manière interactive au lancement pour vous permettre de choisir ou de valider la valeur.</li>
-            <li><strong>Sans la lettre <code>d</code></strong> (ex: <code>tts_engine = "edge"</code>) : AddDub appliquera directement cette valeur sans jamais vous interrompre.</li>
-            <li><strong>Si une option est absente du fichier</strong> : Le programme utilise automatiquement des valeurs par défaut saines intégrées en dur dans le code.</li>
+            <li><strong>Entrée :</strong> Fichier vidéo source (<code>.mkv</code>, <code>.mp4</code>...) + sous-titres (intégrés ou fichier <code>.srt</code>).</li>
+            <li><strong>1. Extraction :</strong> Récupération de l'audio et des sous-titres (avec OCR automatique si nécessaire).</li>
+            <li><strong>2. Traduction IA (optionnelle) :</strong> Traduction automatique du texte vers votre langue cible.</li>
+            <li><strong>3. Synthèse vocale (TTS) :</strong> Génération de la voix-off synchronisée à la milliseconde.</li>
+            <li><strong>4. Atténuation sonore (Audio Ducking) :</strong> Baisse automatique du fond sonore sous les paroles.</li>
+            <li><strong>5. Multiplexage & Sortie :</strong> Assemblage final dans un fichier MKV multi-pistes :
+                <ul>
+                    <li>Vidéo originale (sans perte de qualité)</li>
+                    <li>Audio doublé (voix-off + fond sonore atténué)</li>
+                    <li>Audio original (piste VO préservée)</li>
+                    <li>Sous-titres synchronisés</li>
+                </ul>
+            </li>
         </ul>
 
-        <h3>Détail de toutes les options du fichier <code>options.conf</code> :</h3>
+        <div class="callout callout-info">
+            <div class="callout-title">👁️ Support OCR & Traduction IA intégrés</div>
+            <p><strong>Sous-titres d'images (Blu-ray & DVD) :</strong> Si vos sous-titres ne sont pas au format texte (SRT / ASS) mais au format image (<strong>PGS</strong> sur Blu-ray ou <strong>VobSub / SUB-IDX</strong> sur DVD), AddDub lance automatiquement une reconnaissance optique de caractères (OCR) en arrière-plan pour les convertir en texte.</p>
+            <p style="margin-bottom: 0;"><strong>Traduction locale (CTranslate2) :</strong> Si vous activez la traduction, celle-ci s'exécute 100% hors-ligne sur votre processeur via le moteur <strong>CTranslate2</strong>, sans nécessiter aucune clé API payante ni connexion Internet.</p>
+        </div>
+
+        <h3 id="mode-interactif">🎮 Mode Interactif (Par défaut)</h3>
+        <p>Par défaut, <strong>AddDub</strong> démarre en mode interactif. Il analyse automatiquement le dossier <code>input/</code> et vous pose une série de questions numérotées simples.</p>
+
+        <h4>Déroulement pas-à-pas :</h4>
+        <ol>
+            <li><strong>Sélection des vidéos :</strong> Choisissez le ou les fichiers à traiter dans
+                <code>input/</code>.</li>
+            <li><strong>Piste audio :</strong> Choisissez la piste audio source à utiliser (ex: Japonais, Anglais...).
+            </li>
+            <li><strong>Sous-titres :</strong> Sélectionnez la piste de sous-titres interne (MKV) ou un fichier
+                <code>.srt</code> externe.</li>
+            <li><strong>Moteur TTS & Voix :</strong> Sélectionnez le moteur (Edge TTS recommandé, OneCore hors-ligne ou
+                gTTS) puis choisissez la voix parmi les dizaines de langues et voix disponibles.</li>
+            <li><strong>Traduction (optionnelle) :</strong> Indiquez si vous souhaitez traduire automatiquement les
+                sous-titres vers une autre langue avant la vocalisation.</li>
+            <li><strong>Réglages fins :</strong> Ajustez le niveau de ducking (atténuation du fond), les volumes ou les
+                offsets si demandé.</li>
+        </ol>
+
+        <h4 id="saisons-multi-videos">📁 Traitement d'une saison entière (Multi-vidéos)</h4>
+        <div class="callout callout-tip">
+            <div class="callout-title">💡 Gain de temps pour les séries</div>
+            <p>Si vous avez par exemple une saison de <strong>12 ou 24 épisodes</strong> dans le dossier
+                <code>input/</code> et que vous les sélectionnez tous lors de la première étape :</p>
+            <p style="margin-bottom: 0;"><strong>Les choix de configuration (audio, sous-titres, voix, langue) ne vous
+                    sont posés qu'UNE SEULE FOIS pour le premier épisode.</strong> AddDub applique ensuite
+                automatiquement cette configuration à tous les épisodes restants, à la chaîne !</p>
+        </div>
+
+        <h4 id="mode-test">🎧 Mode Test & Ajustement rapide des volumes</h4>
+        <p>Si l'option <code>ask_test_before_cleanup = true</code> est activée dans votre configuration, AddDub vous
+            proposera d'écouter la vidéo finale avant de nettoyer les fichiers temporaires.</p>
+        <p>Si le volume de la musique vous paraît trop fort ou la voix trop faible, vous pouvez simplement entrer de
+            nouveaux niveaux de volume (ex: <code>bg = 1.5</code> et <code>tts = 2.5</code>). AddDub ré-exécute alors
+            <strong>uniquement le multiplexage instantané</strong> (quelques secondes) sans devoir recalculer tout le
+            TTS !</p>
+
+        <!-- Sous-section : Configuration options.conf -->
+        <h3 id="options-conf">⚙️ Configuration Avancée (<code>options.conf</code>)</h3>
+        <p>Le fichier <code>options.conf</code> situé à la racine vous permet de définir vos préférences par défaut et
+            de personnaliser complètement le comportement du mode interactif.</p>
+
+        <h4>Le rôle de la lettre <span class="badge-d">d</span> (Display)</h4>
+        <p>Chaque ligne du fichier suit le format : <code>clé = valeur [d]</code></p>
+        <ul>
+            <li><strong>Avec la lettre <code>d</code></strong> (ex: <code>tts_engine = "edge" d</code>) : AddDub vous
+                posera la question de manière interactive au lancement pour vous permettre de choisir ou de valider la
+                valeur.</li>
+            <li><strong>Sans la lettre <code>d</code></strong> (ex: <code>tts_engine = "edge"</code>) : AddDub
+                appliquera directement cette valeur sans jamais vous interrompre.</li>
+            <li><strong>Si une option est absente du fichier</strong> : Le programme utilise automatiquement des valeurs
+                par défaut saines intégrées en dur dans le code.</li>
+        </ul>
+
+        <h4>Détail de toutes les options du fichier <code>options.conf</code> :</h4>
         <table>
             <thead>
                 <tr>
@@ -633,17 +661,21 @@
                 <tr>
                     <td><code>language</code></td>
                     <td><code>fr</code></td>
-                    <td>Langue de l'interface du programme (<code>auto</code>, <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>, <code>ja</code>...).</td>
+                    <td>Langue de l'interface du programme (<code>auto</code>, <code>fr</code>, <code>en</code>,
+                        <code>es</code>, <code>de</code>, <code>ja</code>...).</td>
                 </tr>
                 <tr>
                     <td><code>tts_engine</code> <span class="badge-d">d</span></td>
                     <td><code>"edge"</code></td>
-                    <td>Moteur de synthèse vocale : <code>"edge"</code> (Microsoft Neural haute fidélité), <code>"onecore"</code> (Windows hors-ligne), <code>"gtts"</code> (Google).</td>
+                    <td>Moteur de synthèse vocale : <code>"edge"</code> (Microsoft Neural haute fidélité),
+                        <code>"onecore"</code> (Windows hors-ligne), <code>"gtts"</code> (Google).</td>
                 </tr>
                 <tr>
                     <td><code>voice_id</code></td>
                     <td><code>"fr-FR-DeniseNeural"</code></td>
-                    <td>Identifiant exact de la voix. Lors du choix d'une voix dans le mode interactif, son <code>voice_id</code> s'affiche à l'écran : vous pouvez le copier ici pour le réutiliser par défaut.</td>
+                    <td>Identifiant exact de la voix. Lors du choix d'une voix dans le mode interactif, son
+                        <code>voice_id</code> s'affiche à l'écran : vous pouvez le copier ici pour le réutiliser par
+                        défaut.</td>
                 </tr>
                 <tr>
                     <td><code>min_rate_tts</code></td>
@@ -653,12 +685,14 @@
                 <tr>
                     <td><code>max_rate_tts</code></td>
                     <td><code>2.8</code></td>
-                    <td>Plafond d'accélération maximale quand une phrase longue doit rentrer dans une réplique courte.</td>
+                    <td>Plafond d'accélération maximale quand une phrase longue doit rentrer dans une réplique courte.
+                    </td>
                 </tr>
                 <tr>
                     <td><code>db</code> <span class="badge-d">d</span></td>
                     <td><code>-5.0</code></td>
-                    <td>Atténuation (ducking) de l'audio original en dB pendant les dialogues (toujours interprété comme une baisse).</td>
+                    <td>Atténuation (ducking) de l'audio original en dB pendant les dialogues (toujours interprété comme
+                        une baisse).</td>
                 </tr>
                 <tr>
                     <td><code>bg</code> <span class="badge-d">d</span></td>
@@ -683,7 +717,8 @@
                 <tr>
                     <td><code>audio_codec</code></td>
                     <td><code>ac3</code></td>
-                    <td>Codec audio pour les pistes exportées : <code>ac3</code>, <code>aac</code>, <code>mp3</code>, <code>flac</code>, <code>opus</code>, <code>pcm_s16le</code>.</td>
+                    <td>Codec audio pour les pistes exportées : <code>ac3</code>, <code>aac</code>, <code>mp3</code>,
+                        <code>flac</code>, <code>opus</code>, <code>pcm_s16le</code>.</td>
                 </tr>
                 <tr>
                     <td><code>audio_bitrate</code></td>
@@ -703,7 +738,8 @@
                 <tr>
                     <td><code>translate_to</code> <span class="badge-d">d</span></td>
                     <td><code>fr</code></td>
-                    <td>Code de la langue de destination (ex: <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>...).</td>
+                    <td>Code de la langue de destination (ex: <code>fr</code>, <code>en</code>, <code>es</code>,
+                        <code>de</code>...).</td>
                 </tr>
                 <tr>
                     <td><code>translate_from</code> <span class="badge-d">d</span></td>
@@ -713,51 +749,57 @@
                 <tr>
                     <td><code>reuse_translated_subs</code> <span class="badge-d">d</span></td>
                     <td><code>true</code></td>
-                    <td>Si un fichier de sous-titre déjà traduit existe dans <code>srt/</code>, le réutilise sans recalculer.</td>
+                    <td>Si un fichier de sous-titre déjà traduit existe dans <code>srt/</code>, le réutilise sans
+                        recalculer.</td>
                 </tr>
                 <tr>
                     <td><code>ask_test_before_cleanup</code></td>
                     <td><code>false</code></td>
-                    <td>Si <code>true</code>, propose d'écouter la vidéo et de réajuster les volumes avant nettoyage.</td>
+                    <td>Si <code>true</code>, propose d'écouter la vidéo et de réajuster les volumes avant nettoyage.
+                    </td>
                 </tr>
             </tbody>
         </table>
 
-        <!-- Section 5 : Mode Batch -->
-        <h2 id="mode-batch">⚡ Mode Batch (Ligne de Commande)</h2>
-        <p>Le mode Batch permet d'exécuter AddDub de manière <strong>100% non interactive</strong> en passant tous les arguments en ligne de commande avec le drapeau <code>--batch</code>.</p>
-        
+        <!-- Sous-section : Mode Batch -->
+        <h3 id="mode-batch">⚡ Mode Batch (Ligne de Commande)</h3>
+        <p>Le mode Batch permet d'exécuter AddDub de manière <strong>100% non interactive</strong> en passant tous les
+            arguments en ligne de commande avec le drapeau <code>--batch</code>.</p>
+
         <p>C'est l'outil parfait pour :</p>
         <ul>
             <li>Intégrer AddDub dans des <strong>scripts d'automatisation</strong> personnels.</li>
             <li>Lancer le traitement automatique de dossiers complets en tâche de fond la nuit.</li>
-            <li>Coupler AddDub avec d'autres utilitaires (ex: scripts de téléchargement automatique ou gestionnaires de médiathèque comme Plex / Jellyfin).</li>
+            <li>Coupler AddDub avec d'autres utilitaires ou gestionnaires de médiathèque.</li>
         </ul>
 
-        <h3 id="exemples-batch">💡 Exemples de Commandes Représentatives</h3>
+        <h4 id="exemples-batch">💡 Exemples de Commandes Représentatives</h4>
 
         <h4>1. Traiter une vidéo unique avec Edge TTS et une voix française</h4>
         <pre><code>add_dub.exe --batch -i "C:\Videos\film.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural"</code></pre>
-        <p><em>Explication :</em> Traite directement le fichier <code>film.mkv</code> avec la voix neuronale Denise et place le résultat dans <code>output/</code>.</p>
+        <p><em>Explication :</em> Traite directement le fichier <code>film.mkv</code> avec la voix neuronale Denise et
+            place le résultat dans <code>output/</code>.</p>
 
         <h4>2. Traiter récursivement tout un dossier de séries</h4>
         <pre><code>add_dub.exe --batch -i "C:\Videos\Anime_Saison_1" --recursive --preserve-tree</code></pre>
-        <p><em>Explication :</em> Parcourt tous les sous-dossiers, traite chaque vidéo trouvée et recrée la même arborescence de dossiers dans <code>output/</code>.</p>
+        <p><em>Explication :</em> Parcourt tous les sous-dossiers, traite chaque vidéo trouvée et recrée la même
+            arborescence de dossiers dans <code>output/</code>.</p>
 
         <h4>3. Traduire automatiquement de l'anglais vers le français avant doublage</h4>
         <pre><code>add_dub.exe --batch -i "C:\Videos\doc.mp4" --translate --translate-to fr --voice "fr-FR-HenriNeural"</code></pre>
-        <p><em>Explication :</em> Extrait les sous-titres anglais, les traduit en français via CTranslate2, génère la voix-off française et remuxe le tout.</p>
+        <p><em>Explication :</em> Extrait les sous-titres anglais, les traduit en français via CTranslate2, génère la
+            voix-off française et remuxe le tout.</p>
 
         <h4>4. Ajuster précisément le mixage sonore</h4>
         <pre><code>add_dub.exe --batch -i "C:\Videos\film.mkv" --bg-mix 0.7 --tts-mix 1.4 --ducking-db -6.0</code></pre>
-        <p><em>Explication :</em> Règle le volume de fond à 70%, la voix à 140% et applique une atténuation plus forte de -6 dB pendant les paroles.</p>
+        <p><em>Explication :</em> Règle le volume de fond à 70%, la voix à 140% et applique une atténuation plus forte
+            de -6 dB pendant les paroles.</p>
 
         <h4>5. Reprise de traitement sans écraser l'existant</h4>
         <pre><code>add_dub.exe --batch -i "C:\Videos\Series" --recursive --skip-existing</code></pre>
         <p><em>Explication :</em> Vérifie si la vidéo de sortie finale existe déjà dans <code>output/</code> et l'ignore immédiatement si c'est le cas (très utile en cas d'interruption).</p>
 
-        <!-- Section 6 : Référence Complète des Options -->
-        <h2 id="reference-options">📋 Référence Complète des Options CLI (Batch)</h2>
+        <h4 id="reference-options">📋 Référence Complète des Options CLI (Batch)</h4>
         <table>
             <thead>
                 <tr>
@@ -825,7 +867,8 @@
                 <tr>
                     <td><code>--audio-codec</code></td>
                     <td><code>CODEC</code></td>
-                    <td>Codec audio pour l'encodage final (<code>ac3</code>, <code>aac</code>, <code>opus</code>, <code>flac</code>, <code>mp3</code>).</td>
+                    <td>Codec audio pour l'encodage final (<code>ac3</code>, <code>aac</code>, <code>opus</code>,
+                        <code>flac</code>, <code>mp3</code>).</td>
                 </tr>
                 <tr>
                     <td><code>--audio-bitrate</code></td>
@@ -835,7 +878,8 @@
                 <tr>
                     <td><code>--sub</code></td>
                     <td><code>auto|srt|mkv[:idx]</code></td>
-                    <td>Source des sous-titres : <code>auto</code>, <code>srt</code>, ou piste MKV spécifique (ex: <code>mkv:0</code>).</td>
+                    <td>Source des sous-titres : <code>auto</code>, <code>srt</code>, ou piste MKV spécifique (ex:
+                        <code>mkv:0</code>).</td>
                 </tr>
                 <tr>
                     <td><code>--translate</code></td>
@@ -895,11 +939,41 @@
             </tbody>
         </table>
 
-        <div style="margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted); font-size: 13px;">
+        <!-- Section 4 : Pour les Développeurs -->
+        <h2 id="developpeurs">🛠️ Pour les Développeurs (Code Source)</h2>
+        <p>Si vous souhaitez modifier le code source, contribuer au projet ou exécuter AddDub directement depuis Git sans passer par la version binaire pré-compilée, cette section est faite pour vous.</p>
+
+        <h3>📥 Cloner le projet & Premier Lancement</h3>
+        <p>Récupérez le dépôt officiel depuis GitHub et entrez dans le dossier du projet :</p>
+        <pre><code>git clone https://github.com/Jobijoba2000/add_dub.git
+cd add_dub
+start_add_dub.bat</code></pre>
+
+        <h3>⚙️ Ce qui se passe au premier lancement (<code>start_add_dub.bat</code>)</h3>
+        <p>Le script <code>start_add_dub.bat</code> est conçu pour automatiser l'intégralité de la configuration de votre environnement de développement :</p>
+        <ol>
+            <li><strong>Environnement virtuel Python :</strong> Il crée automatiquement un environnement virtuel (venv) et installe l'ensemble des bibliothèques nécessaires à partir de <code>requirements.txt</code>.</li>
+            <li><strong>Téléchargement automatique de la Toolbox (<code>tools/</code>) :</strong> 
+                <p style="margin-top: 6px;">AddDub repose sur plusieurs utilitaires indispensables pour le traitement multimédia et l'OCR (FFmpeg, MKVToolNix, SubtitleEdit, vobsub2srt...). Plutôt que d'obliger le développeur à installer et configurer manuellement ces outils système, <code>start_add_dub.bat</code> télécharge automatiquement une archive d'outils portables pré-configurés et les extrait directement dans le dossier <code>tools/</code>.</p>
+            </li>
+        </ol>
+
+        <div class="callout callout-purple">
+            <div class="callout-title">💡 Isolation complète de l'environnement</div>
+            <p style="margin-bottom: 0;">Grâce au dossier <code>tools/</code> et à son environnement virtuel dédié, le projet fonctionne de manière 100% autonome et n'interfère jamais avec vos autres installations Python ou vos utilitaires système.</p>
+        </div>
+
+        <h3>⚡ Mode Batch via Script Source</h3>
+        <p>Si vous souhaitez lancer des commandes automatisées en mode Batch à partir du code source, passez simplement vos arguments CLI directement au script <code>start_add_dub.bat</code> :</p>
+        <pre><code>start_add_dub.bat --batch -i "C:\Videos\film.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural"</code></pre>
+
+        <div
+            style="margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted); font-size: 13px;">
             AddDub — Projet Open-Source sous licence MIT • Créé pour rendre le contenu accessible à tous.
         </div>
 
     </main>
 
 </body>
+
 </html>
