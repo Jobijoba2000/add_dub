@@ -227,8 +227,9 @@
 
         .btn-download {
             display: inline-flex;
-            flex-direction: column;
-            align-items: flex-start;
+            flex-direction: row;
+            align-items: center;
+            gap: 16px;
             background: #238636;
             color: #ffffff;
             padding: 16px 28px;
@@ -245,25 +246,31 @@
             box-shadow: 0 6px 18px rgba(46, 160, 67, 0.45);
         }
 
-        .btn-download-header {
+        .btn-download-icon {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 4px;
+            justify-content: center;
+            flex-shrink: 0;
         }
 
-        .btn-download-header strong {
-            font-size: 19px;
+        .btn-download-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .btn-download-text strong {
+            font-size: 20px;
             font-weight: 800;
             color: #ffffff;
-            line-height: 1;
+            line-height: 1.1;
         }
 
-        .btn-download-sub {
+        .btn-download-text span {
             font-size: 12.5px;
             font-weight: 500;
             color: #ffffff;
-            padding-left: 36px;
+            margin-top: 3px;
         }
 
         .btn-github {
@@ -604,13 +611,15 @@
                 autonome</strong> (aucun pré-requis, aucun besoin d'installer Python ou FFmpeg sur votre machine).</p>
 
         <a href="https://github.com/Jobijoba2000/add_dub/releases" class="btn-download" target="_blank">
-            <div class="btn-download-header">
-                <svg width="24" height="24" viewBox="0 0 88 88" fill="currentColor">
+            <div class="btn-download-icon">
+                <svg width="36" height="36" viewBox="0 0 88 88" fill="currentColor">
                     <path d="M0 0h41.6v41.6H0zM46.4 0H88v41.6H46.4zM0 46.4h41.6V88H0zM46.4 46.4H88V88H46.4z"/>
                 </svg>
-                <strong>Télécharger</strong>
             </div>
-            <span class="btn-download-sub">add_dub_v1.0.0_win64.zip</span>
+            <div class="btn-download-text">
+                <strong>Télécharger</strong>
+                <span>add_dub_v1.0.0_win64.zip</span>
+            </div>
         </a>
 
         <h3>Étapes d'installation et premier test :</h3>
