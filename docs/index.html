@@ -225,7 +225,6 @@
             font-size: 15px;
         }
 
-        /* Buttons & Badges */
         .btn-download {
             display: inline-flex;
             align-items: center;
@@ -237,12 +236,32 @@
             font-weight: 600;
             font-size: 15px;
             text-decoration: none;
-            margin: 12px 0 24px 0;
             transition: background 0.2s ease;
         }
 
         .btn-download:hover {
             background: #2ea043;
+        }
+
+        .btn-github {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #21262d;
+            color: var(--text-heading);
+            border: 1px solid var(--border-color);
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 15px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-github:hover {
+            background: #30363d;
+            border-color: #8b949e;
+            color: #ffffff;
         }
 
         /* Code & Callouts */
@@ -494,6 +513,11 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             add_dub <span>v1.0.0</span>
+            <div style="margin-top: 6px;">
+                <a href="https://github.com/Jobijoba2000/add_dub" target="_blank" style="font-size: 12px; color: var(--accent-blue); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                    ⭐ Voir le dépôt GitHub
+                </a>
+            </div>
         </div>
 
         <div class="nav-group-title">1. Présentation</div>
@@ -556,9 +580,14 @@
         <p>La version officielle de add_dub est distribuée sous forme d'une <strong>application portable
                 autonome</strong> (aucun pré-requis, aucun besoin d'installer Python ou FFmpeg sur votre machine).</p>
 
-        <a href="https://github.com/Jobijoba2000/add_dub/releases" class="btn-download" target="_blank">
-            📥 Télécharger la dernière version (add_dub_v1.0.0_win64.zip)
-        </a>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin: 16px 0 28px;">
+            <a href="https://github.com/Jobijoba2000/add_dub/releases" class="btn-download" target="_blank">
+                📥 Télécharger la dernière version (add_dub_v1.0.0_win64.zip)
+            </a>
+            <a href="https://github.com/Jobijoba2000/add_dub" class="btn-github" target="_blank">
+                ⭐ Voir le dépôt GitHub
+            </a>
+        </div>
 
         <h3>Étapes d'installation et premier test :</h3>
         <ol>
