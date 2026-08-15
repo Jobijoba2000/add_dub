@@ -227,20 +227,43 @@
 
         .btn-download {
             display: inline-flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            align-items: flex-start;
             background: #238636;
-            color: #fff;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 15px;
+            color: #ffffff;
+            padding: 16px 28px;
+            border-radius: 10px;
             text-decoration: none;
-            transition: background 0.2s ease;
+            margin: 16px 0 28px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(35, 134, 54, 0.35);
         }
 
         .btn-download:hover {
             background: #2ea043;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(46, 160, 67, 0.45);
+        }
+
+        .btn-download-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .btn-download-header strong {
+            font-size: 19px;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .btn-download-sub {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #ffffff;
+            padding-left: 36px;
         }
 
         .btn-github {
@@ -580,8 +603,14 @@
         <p>La version officielle de add_dub est distribuée sous forme d'une <strong>application portable
                 autonome</strong> (aucun pré-requis, aucun besoin d'installer Python ou FFmpeg sur votre machine).</p>
 
-        <a href="https://github.com/Jobijoba2000/add_dub/releases" class="btn-download" target="_blank" style="margin: 16px 0 28px;">
-            📥 Télécharger la dernière version (add_dub_v1.0.0_win64.zip)
+        <a href="https://github.com/Jobijoba2000/add_dub/releases" class="btn-download" target="_blank">
+            <div class="btn-download-header">
+                <svg width="24" height="24" viewBox="0 0 88 88" fill="currentColor">
+                    <path d="M0 0h41.6v41.6H0zM46.4 0H88v41.6H46.4zM0 46.4h41.6V88H0zM46.4 46.4H88V88H46.4z"/>
+                </svg>
+                <strong>Télécharger</strong>
+            </div>
+            <span class="btn-download-sub">add_dub_v1.0.0_win64.zip</span>
         </a>
 
         <h3>Étapes d'installation et premier test :</h3>
