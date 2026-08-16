@@ -6,6 +6,7 @@ tmp/
 build/
 dist/
 *.spec
+!add_dub.spec
 
 # Dossiers de travail de l’app
 input/
