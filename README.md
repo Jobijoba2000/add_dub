@@ -38,7 +38,7 @@ Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le 
 
 ## 🚀 Démarrage Rapide (Version Portable)
 
-1. **[Télécharger add_dub_v1.0.0_win64.zip](https://github.com/Jobijoba2000/add_dub/releases/download/v1.0.0/add_dub_v1.0.0_win64.zip)** et dézippez-le où vous le souhaitez.
+1. **[Télécharger add_dub (Dernière version)](https://github.com/Jobijoba2000/add_dub/releases/latest)** et dézippez l'archive où vous le souhaitez.
 2. Placez vos vidéos dans le dossier **`input/`** (avec un fichier `.srt` ou avec sous-titres intégrés).
 3. Double-cliquez sur **`add_dub.exe`**.
 4. Suivez l'assistant interactif (choix de la piste audio, des sous-titres, de la voix et de la langue).
