@@ -17,7 +17,8 @@ from add_dub.core.tts_registry import normalize_engine
 
 from add_dub.i18n import t
 
-# ... imports ...
+# Mode de débogage pour afficher le nombre de tentatives et la vitesse par sous-titre
+DEBUG_TTS_ATTEMPTS = False
 
 def _coerce_gtts_lang(voice_id: str) -> str:
     """
@@ -162,32 +163,54 @@ def generate_dub_audio(
                         fut.cancel()
                     except Exception:
                         pass
-                    idx, path, s_ms, e_ms = tts_worker(job)
+                    res = tts_worker(job)
+                    if len(res) >= 5:
+                        idx, path, s_ms, e_ms, attempts = res[:5]
+                        rate = res[5] if len(res) >= 6 else getattr(opts, "min_rate_tts", 1.0)
+                    else:
+                        idx, path, s_ms, e_ms = res[:4]
+                        attempts = 1
+                        rate = getattr(opts, "min_rate_tts", 1.0)
                     results[idx] = (path, s_ms, e_ms)
                     done += 1
                     pct = int(done * 100 / total)
-                    if ui:
-                        ui.progress(pct)
+                    if DEBUG_TTS_ATTEMPTS:
+                        msg = f"[{pct:3d}%] - {attempts} essai(s) ({rate:.1f}x)"
+                        if ui:
+                            ui.message(msg)
+                        else:
+                            log.info(msg)
                     else:
-                        # Avoid spamming logs with progress updates
-                        pass
+                        if ui:
+                            ui.progress(pct)
                 pending.clear()
                 break
 
             for fut in done_set:
                 job = fut_to_job[fut]
                 try:
-                    idx, path, s_ms, e_ms = fut.result()
+                    res = fut.result()
                 except Exception:
-                    idx, path, s_ms, e_ms = tts_worker(job)
+                    res = tts_worker(job)
+                if len(res) >= 5:
+                    idx, path, s_ms, e_ms, attempts = res[:5]
+                    rate = res[5] if len(res) >= 6 else getattr(opts, "min_rate_tts", 1.0)
+                else:
+                    idx, path, s_ms, e_ms = res[:4]
+                    attempts = 1
+                    rate = getattr(opts, "min_rate_tts", 1.0)
                 results[idx] = (path, s_ms, e_ms)
                 done += 1
                 pct = int(done * 100 / total)
-                if ui:
-                    ui.progress(pct)
+                if DEBUG_TTS_ATTEMPTS:
+                    msg = f"[{pct:3d}%] - {attempts} essai(s) ({rate:.1f}x)"
+                    if ui:
+                        ui.message(msg)
+                    else:
+                        log.info(msg)
                 else:
-                    # Avoid spamming logs with progress updates
-                    pass
+                    if ui:
+                        ui.progress(pct)
 
     finally:
         ex.shutdown(wait=False, cancel_futures=True)

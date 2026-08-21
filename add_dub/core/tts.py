@@ -167,30 +167,33 @@ def _onecore_synthesize_segment(
     target_duration_ms: int,
     voice_id: str | None, 
     opts
-) -> AudioSegment:
+) -> tuple[AudioSegment, int, float]:
     """
     Laisse remonter les erreurs (pas de segment silencieux masquant le problème).
+    Retourne (AudioSegment, nombre_tentatives, vitesse_finale)
     """
     r = opts.min_rate_tts
     h = opts.max_rate_tts
     t = target_duration_ms
     v = voice_id or opts.voice_id
+    attempts = 0
     for _ in range(10):
+        attempts += 1
         data    = asyncio.run(_onecore_synthesize_bytes_async(text, v, r))
         bio     = io.BytesIO(data)
         segment = AudioSegment.from_file(bio, format="wav")
         if len(segment) <= t or r >= h:
-            return segment
+            return segment, attempts, round(r, 2)
         else:
-            r = ((r * 10) + 1) / 10
-    return segment
+            r = round(((r * 10) + 1) / 10, 2)
+    return segment, attempts, round(r, 2)
 
-def synthesize_tts_for_subtitle(text: str, target_duration_ms: int, voice_id: str | None, opts: DubOptions) -> AudioSegment:
+def synthesize_tts_for_subtitle(text: str, target_duration_ms: int, voice_id: str | None, opts: DubOptions) -> tuple[AudioSegment, int, float]:
     """
     Synthèse OneCore ajustée à la durée cible.
-    Retourne un AudioSegment (coupé/paddé à target_duration_ms).
+    Retourne un tuple (AudioSegment, nombre_tentatives, vitesse_finale).
     """
-    segment = _onecore_synthesize_segment(
+    segment, attempts, final_rate = _onecore_synthesize_segment(
         text, 
         target_duration_ms, 
         voice_id, 
@@ -202,7 +205,7 @@ def synthesize_tts_for_subtitle(text: str, target_duration_ms: int, voice_id: st
         segment = segment[:target_duration_ms]
     elif cur < target_duration_ms:
         segment = segment + AudioSegment.silent(duration=(target_duration_ms - cur))
-    return segment
+    return segment, attempts, final_rate
 
 def is_valid_voice_id(voice_id: str | None) -> bool:
     """

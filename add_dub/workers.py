@@ -29,16 +29,36 @@ def tts_worker(args):
             from add_dub.core.tts import synthesize_tts_for_subtitle as _synth
 
         target_duration_ms = end_ms - start_ms
-        seg = _synth(text, target_duration_ms, voice_id, opts)
+        res = _synth(text, target_duration_ms, voice_id, opts)
+        if isinstance(res, tuple):
+            if len(res) == 3:
+                seg, attempts, rate = res
+            elif len(res) == 2:
+                seg, attempts = res
+                rate = getattr(opts, "min_rate_tts", 1.0)
+            else:
+                seg, attempts, rate = res[0], 1, getattr(opts, "min_rate_tts", 1.0)
+        else:
+            seg, attempts, rate = res, 1, getattr(opts, "min_rate_tts", 1.0)
         
     except Exception as e:
         print(t("workers_warn_tts_fail", engine=engine, e=e))
         # Fallback OneCore
         from add_dub.core.tts import synthesize_tts_for_subtitle as _synth_fallback
         target_duration_ms = end_ms - start_ms
-        seg = _synth_fallback(text, target_duration_ms, None, opts)
+        res = _synth_fallback(text, target_duration_ms, None, opts)
+        if isinstance(res, tuple):
+            if len(res) == 3:
+                seg, attempts, rate = res
+            elif len(res) == 2:
+                seg, attempts = res
+                rate = getattr(opts, "min_rate_tts", 1.0)
+            else:
+                seg, attempts, rate = res[0], 1, getattr(opts, "min_rate_tts", 1.0)
+        else:
+            seg, attempts, rate = res, 1, getattr(opts, "min_rate_tts", 1.0)
 
     out_path = os.path.join(io_fs.TMP_DIR, f"dub_seg_{uuid.uuid4().hex}.wav")
     seg.export(out_path, format="wav")
     
-    return idx, out_path, start_ms, end_ms
+    return idx, out_path, start_ms, end_ms, attempts, rate

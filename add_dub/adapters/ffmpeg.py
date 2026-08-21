@@ -88,6 +88,7 @@ def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_
         "-i", video_fullpath,
         "-map", f"0:{audio_track_index}",
         "-vn",
+        "-ac", "2",
         "-c:a", "pcm_s16le",
     ]
     if duration_sec is not None:
