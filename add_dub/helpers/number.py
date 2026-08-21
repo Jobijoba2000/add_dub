@@ -1,4 +1,4 @@
-# add_dub/core/pipeline.py
+# add_dub/helpers/number.py
 
 from decimal import Decimal, InvalidOperation
 from typing import Union

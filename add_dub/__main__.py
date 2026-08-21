@@ -5,7 +5,6 @@ import os
 import sys
 
 from multiprocessing import freeze_support
-import ctranslate2
 
 if sys.platform == "win32":
     import ctypes

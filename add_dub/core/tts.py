@@ -1,17 +1,14 @@
 # add_dub/core/tts.py
 import os
 import io
-import uuid
-import tempfile
 import asyncio
 from pydub import AudioSegment
 from add_dub.config.defaults import get_system_default_voice_id  # re-export
 
 # Typage (et pour accéder aux bornes min/max depuis l'instance)
 from add_dub.core.options import DubOptions
-from add_dub.logger import (log_call, log_time, logger as log)
+from add_dub.logger import logger as log
 from add_dub.i18n import t
-import time
 
 # OneCore (WinRT)
 try:
@@ -177,7 +174,7 @@ def _onecore_synthesize_segment(
     r = opts.min_rate_tts
     h = opts.max_rate_tts
     t = target_duration_ms
-    v = opts.voice_id
+    v = voice_id or opts.voice_id
     for _ in range(10):
         data    = asyncio.run(_onecore_synthesize_bytes_async(text, v, r))
         bio     = io.BytesIO(data)

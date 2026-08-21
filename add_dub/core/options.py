@@ -40,4 +40,4 @@ class DubOptions:
     ask_reuse_subs: bool = True                       # si True, demande confirmation pour réutiliser
 
 
-__all__ = ["DubOptions", "Services"]
+__all__ = ["DubOptions"]
