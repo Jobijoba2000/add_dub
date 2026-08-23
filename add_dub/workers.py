@@ -3,7 +3,7 @@ import os
 import uuid
 import add_dub.io.fs as io_fs
 from add_dub.core.tts_registry import normalize_engine
-from add_dub.i18n import t
+from add_dub.logger import logger
 
 def tts_worker(args):
     """
@@ -42,7 +42,7 @@ def tts_worker(args):
             seg, attempts, rate = res, 1, getattr(opts, "min_rate_tts", 1.0)
         
     except Exception as e:
-        print(t("workers_warn_tts_fail", engine=engine, e=e))
+        logger.warning(t("workers_warn_tts_fail", engine=engine, e=e))
         # Fallback OneCore
         from add_dub.core.tts import synthesize_tts_for_subtitle as _synth_fallback
         target_duration_ms = end_ms - start_ms

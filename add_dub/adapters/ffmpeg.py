@@ -11,10 +11,11 @@ from add_dub.logger import (log_call, log_time)
 from add_dub.i18n import t
 
 
-def run_ffmpeg_with_percentage(cmd, duration_source):
+def run_ffmpeg_with_percentage(cmd, duration_source, progress_cb=None):
     """
     cmd : liste FFmpeg déjà contenant -nostats -progress pipe:1
     duration_source : fichier dont on prend la durée (ex: la vidéo d'entrée)
+    progress_cb : callback optionnel pour transmettre le pourcentage (0-100)
     """
     try:
         duration = float(subprocess.check_output(
@@ -41,11 +42,17 @@ def run_ffmpeg_with_percentage(cmd, duration_source):
                     micro_s = float(val_str)
                     if duration > 0:
                         pct = (micro_s / (duration * 10000.0))
-                        print(f"\r{pct:.0f}%", end="", flush=True)
+                        if progress_cb:
+                            progress_cb(pct)
+                        else:
+                            print(f"\r{pct:.0f}%", end="", flush=True)
                 except ValueError:
                     pass
             elif line.strip() == "progress=end":
-                print("\r100%")
+                if progress_cb:
+                    progress_cb(100.0)
+                else:
+                    print("\r100%")
                 break
     finally:
         rc = p.wait()
@@ -77,7 +84,7 @@ def get_track_info(video_fullpath):
 
 @log_time
 @log_call()
-def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_sec=None):
+def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_sec=None, progress_cb=None):
     """
     Extrait la piste audio ffmpeg index 'audio_track_index' en WAV PCM 16-bit.
     """
@@ -96,7 +103,7 @@ def extract_audio_track(video_fullpath, audio_track_index, output_wav, duration_
     cmd.append(output_wav)
 
     # subprocess.run(cmd, check=True)
-    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath, progress_cb=progress_cb)
     return output_wav
 
 
@@ -115,6 +122,7 @@ def dub_in_one_pass(
     subtitle_srt_path: str,
     output_video_path: str,
     opts: DubOptions,
+    progress_cb=None,
 ):
     """
     Fait en UNE PASSE :
@@ -209,5 +217,5 @@ def dub_in_one_pass(
     ]
 
     # Barre de progression (basée sur la durée vidéo)
-    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath)
+    run_ffmpeg_with_percentage(cmd, duration_source=video_fullpath, progress_cb=progress_cb)
     return output_video_path

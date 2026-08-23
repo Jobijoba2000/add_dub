@@ -198,7 +198,8 @@ def process_one_video(
         input_video_path,
         audio_idx,
         orig_wav,
-        duration_sec=limit_duration_sec
+        duration_sec=limit_duration_sec,
+        progress_cb=svcs.ui.progress,
     )
 
     # Durée cible (utile pour calages éventuels)
@@ -251,6 +252,7 @@ def process_one_video(
         subtitle_srt_path=srt_path,
         output_video_path=final_video,
         opts=opts,
+        progress_cb=svcs.ui.progress,
     )
 
     # 11) (NOUVEAU) Option de test AVANT nettoyage + re-mux rapide si besoin
@@ -279,6 +281,7 @@ def process_one_video(
                 subtitle_srt_path=srt_path,
                 output_video_path=final_video,  # on écrase, -y est passé dans la commande
                 opts=opts,
+                progress_cb=svcs.ui.progress,
             )
             svcs.ui.message(t("pipeline_test_done", path=final_video))
             svcs.ui.message(t("pipeline_test_continue"))
