@@ -18,6 +18,7 @@ Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le 
   * **OneCore (Windows)** : Rapide, 100% hors-ligne avec les voix de votre système.
   * **gTTS** : Simple et léger.
 * 📦 **100% Portable** : Aucune installation complexe, fonctionne directement après extraction.
+* 💻 **100% CPU** : Ultra-rapide sur n'importe quel PC, sans carte graphique dédiée.
 * ⚡ **Traitement par lot (Batch)** : Traitez des saisons entières ou des dossiers récursivement.
 
 ---
