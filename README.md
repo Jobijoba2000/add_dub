@@ -104,4 +104,4 @@ start_add_dub.bat
 
 ## 📄 Licence
 
-Ce projet est sous licence **MIT**. Les outils tiers inclus dans la Toolbox restent soumis à leurs licences respectives.
+Ce projet est sous licence **GNU General Public License v3.0 (GPLv3)**. Les outils tiers inclus dans la Toolbox restent soumis à leurs licences respectives.
