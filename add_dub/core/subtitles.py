@@ -95,8 +95,12 @@ def time_to_seconds(t_str: str) -> float:
 
 
 def parse_srt_file(srt_file: str, duration_limit_sec: int | None = None):
-    with open(srt_file, encoding="utf-8") as f:
-        content = f.read()
+    try:
+        with open(srt_file, "r", encoding="utf-8") as f:
+            content = f.read()
+    except UnicodeDecodeError:
+        with open(srt_file, "r", encoding="cp1252", errors="replace") as f:
+            content = f.read()
     blocks = re.split(r"\n\s*\n", content.strip())
     subtitles = []
     for block in blocks:
