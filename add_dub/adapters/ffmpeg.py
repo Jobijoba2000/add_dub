@@ -1,14 +1,8 @@
-# add_dub/adapters/ffmpeg.py
-import os
 import json
-import time
 import subprocess
-import add_dub.helpers.number as _n
-import sys
 from pathlib import Path
 from add_dub.core.options import DubOptions
 from add_dub.logger import (log_call, log_time)
-from add_dub.i18n import t
 
 
 def run_ffmpeg_with_percentage(cmd, duration_source, progress_cb=None):

@@ -186,8 +186,7 @@ def _safe_repr(value, *, max_len: int = 200, max_items: int = 10):
         if isinstance(value, str):
             if len(value) <= max_len:
                 return repr(value)
-            import hashlib as _h
-            digest = _h.md5(value.encode("utf-8")).hexdigest()[:8]
+            digest = hashlib.md5(value.encode("utf-8")).hexdigest()[:8]
             preview = value[:max_len].replace("\n", "\\n")
             return f"'{preview}...'(len={len(value)}, md5={digest})"
 

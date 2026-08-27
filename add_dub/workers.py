@@ -4,6 +4,7 @@ import uuid
 import add_dub.io.fs as io_fs
 from add_dub.core.tts_registry import normalize_engine
 from add_dub.logger import logger
+from add_dub.i18n import t
 
 def tts_worker(args):
     """

@@ -42,6 +42,24 @@ def ask_option(
     # kind == "str"
     return ask_string(prompt, str(default))
 
+def _ask_target_lang(prompt: str, default: str) -> str:
+    while True:
+        val = ask_string(prompt, default=default).strip().lower()
+        if len(val) == 2 and val.isalpha():
+            return val
+        print(t("cli_lang_code_invalid"))
+
+
+def _ask_source_lang(prompt: str, default: str) -> str | None:
+    while True:
+        val = ask_string(prompt, default=default).strip().lower()
+        if val in ("auto", "none", ""):
+            return None
+        if len(val) == 2 and val.isalpha():
+            return val
+        print(t("cli_lang_source_invalid"))
+
+
 def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
     """
     Demande si on veut traduire, et si oui, vers quelle langue.
@@ -58,7 +76,7 @@ def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
     if should_ask_trans:
         do_trans = ask_yes_no(t("cli_ask_translate"), default=base_opts.translate)
     
-    trans_to = base_opts.translate_to
+    trans_to = (base_opts.translate_to or "fr").strip().lower()[:2]
     trans_from = base_opts.translate_from
 
     if do_trans:
@@ -67,29 +85,37 @@ def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
         should_ask_to = True
         if entry_to and not entry_to.display:
             should_ask_to = False
-            trans_to = str(entry_to.value)
+            raw_to = str(entry_to.value).strip().lower()
+            if len(raw_to) >= 2 and raw_to[:2].isalpha():
+                trans_to = raw_to[:2]
+            else:
+                trans_to = "fr"
         
         if should_ask_to:
-            trans_to = ask_string(t("cli_ask_translate_lang", default=base_opts.translate_to), default=base_opts.translate_to)
+            trans_to = _ask_target_lang(
+                t("cli_ask_translate_lang", default=trans_to),
+                default=trans_to
+            )
         
         # 3. Source lang (optional)
         entry_from = opts.get("translate_from")
         should_ask_from = True
         if entry_from and not entry_from.display:
             should_ask_from = False
-            val = str(entry_from.value).strip()
-            if val.lower() == "none" or val.lower() == "auto" or not val:
+            val = str(entry_from.value).strip().lower()
+            if val in ("none", "auto", ""):
                 trans_from = None
+            elif len(val) >= 2 and val[:2].isalpha():
+                trans_from = val[:2]
             else:
-                trans_from = val
+                trans_from = None
         
         if should_ask_from:
-            src_def = base_opts.translate_from or ""
-            src = ask_string(t("cli_ask_translate_from", default=src_def if src_def else "auto"), default=src_def)
-            if src and src.lower() != "auto":
-                trans_from = src
-            else:
-                trans_from = None
+            src_def = base_opts.translate_from or "auto"
+            trans_from = _ask_source_lang(
+                t("cli_ask_translate_from", default=src_def),
+                default=src_def
+            )
 
     return do_trans, trans_to, trans_from
 

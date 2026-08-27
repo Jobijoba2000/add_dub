@@ -5,7 +5,7 @@ import os
 from typing import Iterable, List, Optional, Tuple
 from dataclasses import replace
 
-from add_dub.io.fs import ensure_base_dirs, INPUT_DIR, set_base_dirs
+from add_dub.io.fs import ensure_base_dirs, set_base_dirs
 from add_dub.core.options import DubOptions
 from add_dub.core.pipeline import process_one_video
 from add_dub.core.subtitles import (

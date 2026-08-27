@@ -5,18 +5,20 @@ import json
 import subprocess
 import tempfile
 from pathlib import Path
+from add_dub.io.fs import ROOT
 
 def _find_exe(candidates):
     for c in candidates:
+        if os.path.exists(c):
+            return c
         p = shutil.which(c)
         if p:
             return p
-        if os.path.exists(c):
-            return c
     return None
 
 def mkvmerge_identify_json(video_path):
     mkvmerge = _find_exe([
+        os.path.join(ROOT, "tools", "MKVToolNix", "mkvmerge.exe"),
         "mkvmerge",
         r"C:\Program Files\MKVToolNix\mkvmerge.exe",
         r"C:\Program Files (x86)\MKVToolNix\mkvmerge.exe",
@@ -70,11 +72,13 @@ def audio_video_offset_ms(video_path, audio_track_id):
     Retourne un int (ms). Positif = audio commence après la vidéo.
     """
     mkvmerge = _find_exe([
+        os.path.join(ROOT, "tools", "MKVToolNix", "mkvmerge.exe"),
         "mkvmerge",
         r"C:\Program Files\MKVToolNix\mkvmerge.exe",
         r"C:\Program Files (x86)\MKVToolNix\mkvmerge.exe",
     ])
     mkvextract = _find_exe([
+        os.path.join(ROOT, "tools", "MKVToolNix", "mkvextract.exe"),
         "mkvextract",
         r"C:\Program Files\MKVToolNix\mkvextract.exe",
         r"C:\Program Files (x86)\MKVToolNix\mkvextract.exe",

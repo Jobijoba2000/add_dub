@@ -1,20 +1,16 @@
-# add_dub/core/pipeline.py
 import os
-import subprocess
-import time
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import Optional
 
 from pydub import AudioSegment
 
-from add_dub.io.fs import join_input, join_output, join_tmp
+from add_dub.io.fs import join_output, join_tmp
 from add_dub.core.subtitles import parse_srt_file, strip_subtitle_tags_inplace, shift_subtitle_timestamps
 from add_dub.core.ducking import lower_audio_during_subtitles
 from add_dub.adapters.ffmpeg import (
     extract_audio_track,
     dub_in_one_pass,
 )
-import re
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
 from add_dub.logger import (log_call, log_time)
@@ -162,7 +158,6 @@ def process_one_video(
                         if not source_lang:
                             try:
                                 from langdetect import detect
-                                # Concatenate a sample of text for better detection
                                 sample_text = " ".join([s[2] for s in subs_source[:50]])
                                 detected = detect(sample_text)
                                 if detected:
@@ -171,14 +166,69 @@ def process_one_video(
                             except Exception as e:
                                 svcs.ui.error(f" [Auto-Detect] Failed: {e}")
                     
-                    # On traduit
-                    subs_translated = translate_subtitles(subs_source, opts.translate_to, source_lang=source_lang, ui=svcs.ui)
-                    
-                    write_srt_file(subs_translated, new_srt_path)
-                    
-                    # On met à jour srt_path pour que la suite du pipeline utilise le traduit
-                    srt_path = new_srt_path
-                    svcs.ui.message(t("pipeline_trans_done", path=srt_path))
+                    src = (source_lang or "fr").strip().lower()[:2]
+                    tgt = (opts.translate_to or "fr").strip().lower()[:2]
+
+                    # Vérification source == cible
+                    skip_trans = False
+                    if src == tgt:
+                        if opts.batch_mode:
+                            svcs.ui.message(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
+                            skip_trans = True
+                        else:
+                            svcs.ui.message(t("pipeline_trans_same_lang_warn", src=src, tgt=tgt))
+                            if svcs.ui.ask_yes_no(t("pipeline_trans_same_lang_ask"), default=False):
+                                from add_dub.helpers.console import ask_string
+                                while True:
+                                    new_tgt = ask_string(t("cli_ask_translate_lang", default=tgt), default=tgt).strip().lower()
+                                    if len(new_tgt) == 2 and new_tgt.isalpha():
+                                        tgt = new_tgt
+                                        break
+                                    svcs.ui.message(t("cli_lang_code_invalid"))
+
+                                while True:
+                                    new_src = ask_string(t("cli_ask_translate_from", default=src), default=src).strip().lower()
+                                    if new_src in ("auto", "none", ""):
+                                        source_lang = None
+                                        break
+                                    if len(new_src) == 2 and new_src.isalpha():
+                                        src = new_src
+                                        source_lang = new_src
+                                        break
+                                    svcs.ui.message(t("cli_lang_source_invalid"))
+
+                                opts = replace(opts, translate_to=tgt, translate_from=source_lang)
+                                if src == tgt:
+                                    svcs.ui.message(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
+                                    skip_trans = True
+                            else:
+                                svcs.ui.message(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
+                                skip_trans = True
+
+                    if not skip_trans:
+                        while True:
+                            new_srt_path = join_srt(f"{base_srt}.{tgt}.srt")
+                            subs_translated = translate_subtitles(subs_source, tgt, source_lang=source_lang, ui=svcs.ui)
+                            if subs_translated is not None:
+                                write_srt_file(subs_translated, new_srt_path)
+                                srt_path = new_srt_path
+                                svcs.ui.message(t("pipeline_trans_done", path=srt_path))
+                                break
+                            else:
+                                svcs.ui.error(t("pipeline_trans_model_not_found", src=src, tgt=tgt))
+                                if not opts.batch_mode and svcs.ui.ask_yes_no(t("pipeline_trans_retry_ask"), default=False):
+                                    from add_dub.helpers.console import ask_string
+                                    while True:
+                                        new_tgt = ask_string(t("cli_ask_translate_lang", default=tgt), default=tgt).strip().lower()
+                                        if len(new_tgt) == 2 and new_tgt.isalpha():
+                                            tgt = new_tgt
+                                            break
+                                        svcs.ui.message(t("cli_lang_code_invalid"))
+                                    opts = replace(opts, translate_to=tgt)
+                                    continue
+                                else:
+                                    svcs.ui.message(t("pipeline_trans_fallback_orig"))
+                                    break
                 else:
                     svcs.ui.error(t("pipeline_trans_err", err="Empty source SRT"))
             except Exception as e:

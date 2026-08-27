@@ -7,7 +7,6 @@ winrt-Windows.Storage.Streams==3.2.1
 winrt-Windows.Media.SpeechSynthesis==3.2.1
 edge-tts==7.2.7
 gTTS==2.5.4
-fasttext-wheel==0.9.2
 tqdm==4.67.1
 sentencepiece==0.2.1
 langdetect==1.0.9

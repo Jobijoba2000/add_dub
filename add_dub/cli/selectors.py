@@ -1,6 +1,4 @@
-# add_dub/cli/selectors.py
 import os
-import sys
 import add_dub.io.fs as io_fs
 from add_dub.adapters.ffmpeg import get_track_info
 from add_dub.adapters.mkvtoolnix import list_mkv_sub_tracks

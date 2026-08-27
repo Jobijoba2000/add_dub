@@ -12,7 +12,7 @@ from dataclasses import replace
 from add_dub.core.options import DubOptions
 from add_dub.core.subtitles import parse_srt_file
 from add_dub.workers import tts_worker
-from add_dub.logger import (log_call, log_time)
+from add_dub.logger import (log_call, log_time, logger as log)
 from add_dub.core.tts_registry import normalize_engine
 
 from add_dub.i18n import t

@@ -1,7 +1,6 @@
 # add_dub/__main__.py
 from __future__ import annotations
 
-import os
 import sys
 
 from multiprocessing import freeze_support

@@ -1,10 +1,9 @@
 # add_dub/cli/main.py
 import os
-import sys
 from dataclasses import replace
 
 import add_dub.io.fs as io_fs  # ← module, pas des valeurs copiées
-from add_dub.io.fs import ensure_base_dirs, set_base_dirs, join_input, join_output
+from add_dub.io.fs import ensure_base_dirs, set_base_dirs, join_input
 
 from add_dub.core.subtitles import list_input_videos, resolve_srt_for_video
 from add_dub.core.pipeline import process_one_video
@@ -18,21 +17,17 @@ from add_dub.cli.selectors import (
     choose_subtitle_source,
 )
 
-from add_dub.config import cfg
-from add_dub.helpers.time import measure_duration as _md
 from add_dub.helpers.console import ask_yes_no
 from add_dub.config.opts_loader import load_options, save_option
 
 from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
-from add_dub.adapters.mkvtoolnix import audio_video_offset_ms
 
 # Builder centralisé (options.conf > defaults.py)
 from add_dub.config.effective import build_default_opts
 
 # Registre TTS moteur-agnostique
 from add_dub.core.tts_registry import (
-    normalize_engine,
     list_voices_for_engine,
     resolve_voice_with_fallbacks,
 )

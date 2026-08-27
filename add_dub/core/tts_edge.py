@@ -13,7 +13,6 @@ from pydub import AudioSegment
 
 # Même signature publique que tts.py pour rester plug-and-play
 from add_dub.core.options import DubOptions
-from add_dub.logger import (log_call, log_time)
 
 # Dépendances: edge-tts + ffmpeg dans le PATH
 try:
