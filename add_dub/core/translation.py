@@ -204,6 +204,7 @@ def _get_opus_translator_and_tokenizer(src: str, tgt: str) -> Optional[Tuple[ctr
         for t_code in tgt_vars:
             pair = f"{s}-{t_code}"
             candidate_repos.extend([
+                (f"WindyWord/translate-windy-hplt-{s}-{t_code}", os.path.join(cache_base, f"windy-{pair}")),
                 (f"michaelfeil/ct2fast-opus-mt-{pair}", os.path.join(cache_base, f"ct2fast-opus-mt-{pair}")),
                 (f"gaudi/opus-mt-{pair}-ctranslate2", os.path.join(cache_base, f"gaudi-opus-mt-{pair}")),
                 (f"manancode/opus-mt-{pair}-ctranslate2-android", os.path.join(cache_base, f"manancode-opus-mt-{pair}")),
