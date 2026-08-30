@@ -14,9 +14,50 @@ import sentencepiece
 _OPUS_CACHE: Dict[str, Tuple[ctranslate2.Translator, sentencepiece.SentencePieceProcessor, sentencepiece.SentencePieceProcessor]] = {}
 _NLLB_CACHE = None
 
-# Interjections courantes qui doivent rester strictement fidèles sans hallucination
 COMMON_INTERJECTIONS = {
     "oh", "ah", "eh", "hein", "ouh", "hey", "chut", "stop", "wow", "ok", "hum", "euh", "pff", "bah"
+}
+
+# Alias usuels pour les codes de langues dans les modèles Opus-MT / Hugging Face
+OPUS_LANG_VARIANTS: Dict[str, List[str]] = {
+    "ja": ["ja", "jap", "jpn"],
+    "zh": ["zh", "zho", "chi"],
+    "fr": ["fr", "fra", "fre"],
+    "de": ["de", "deu", "ger"],
+    "es": ["es", "spa"],
+    "it": ["it", "ita"],
+    "ru": ["ru", "rus"],
+    "ar": ["ar", "ara"],
+    "el": ["el", "ell", "grk", "gre"],
+    "cs": ["cs", "ces", "cze"],
+    "ro": ["ro", "ron", "rum"],
+    "nl": ["nl", "nld", "dut"],
+    "sv": ["sv", "swe"],
+    "pt": ["pt", "por"],
+    "ko": ["ko", "kor"],
+    "vi": ["vi", "vie"],
+    "tr": ["tr", "tur"],
+    "pl": ["pl", "pol"],
+    "da": ["da", "dan"],
+    "fi": ["fi", "fin"],
+    "no": ["no", "nob", "nor"],
+    "hi": ["hi", "hin"],
+    "id": ["id", "ind"],
+    "th": ["th", "tha"],
+    "he": ["he", "heb"],
+    "uk": ["uk", "ukr"],
+    "bg": ["bg", "bul"],
+    "hr": ["hr", "hrv"],
+    "sk": ["sk", "slk"],
+    "sl": ["sl", "slv"],
+    "hu": ["hu", "hun"],
+}
+
+# Dépôts spécialisés additionnels pour certaines paires majeures
+SPECIAL_PAIRS_REPOS: Dict[str, List[str]] = {
+    "en-ja": ["jkawamoto/fugumt-en-ja-ct2", "manancode/opus-mt-en-jap-ctranslate2-android"],
+    "ja-en": ["jkawamoto/fugumt-ja-en-ct2", "gaudi/opus-mt-jap-en-ctranslate2", "manancode/opus-mt-ja-en-ctranslate2-android"],
+    "ja-fr": ["manancode/opus-mt-ja-fr-ctranslate2-android"],
 }
 
 NLLB_LANG_CODES: Dict[str, str] = {
@@ -137,40 +178,73 @@ def normalize_nllb_code(lang: str) -> str:
 def _get_opus_translator_and_tokenizer(src: str, tgt: str) -> Optional[Tuple[ctranslate2.Translator, sentencepiece.SentencePieceProcessor, sentencepiece.SentencePieceProcessor]]:
     """
     Charge ou télécharge un modèle bilingue Opus-MT pré-converti pour CTranslate2.
+    Gère les variantes de codes de langue (ex: ja/jap/jpn) et les dépôts spécialisés (FuguMT, Gaudi, Manancode, MichaelFeil).
     """
     key = f"{src}_{tgt}"
     if key in _OPUS_CACHE:
         return _OPUS_CACHE[key]
 
-    pair_name = f"{src}-{tgt}"
-    cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "add_dub", "ct2_models", f"ct2fast-opus-mt-{pair_name}")
-    model_bin = os.path.join(cache_dir, "model.bin")
-    src_spm = os.path.join(cache_dir, "source.spm")
-    tgt_spm = os.path.join(cache_dir, "target.spm")
+    cache_base = os.path.join(os.path.expanduser("~"), ".cache", "add_dub", "ct2_models")
+    from huggingface_hub import snapshot_download
 
-    if not (os.path.exists(model_bin) and os.path.exists(src_spm) and os.path.exists(tgt_spm)):
-        from huggingface_hub import snapshot_download
-        repo_id = f"michaelfeil/ct2fast-opus-mt-{src}-{tgt}"
+    candidate_repos = []
+
+    # 1. Paires spéciales prioritaires (ex: en-ja via FuguMT / Manancode)
+    spec_key = f"{src}-{tgt}"
+    if spec_key in SPECIAL_PAIRS_REPOS:
+        for r in SPECIAL_PAIRS_REPOS[spec_key]:
+            clean_name = r.replace("/", "-")
+            candidate_repos.append((r, os.path.join(cache_base, clean_name)))
+
+    # 2. Génération des variantes de codes de langues (ex: en-ja, en-jap, fr-es, etc.)
+    src_vars = OPUS_LANG_VARIANTS.get(src, [src])
+    tgt_vars = OPUS_LANG_VARIANTS.get(tgt, [tgt])
+
+    for s in src_vars:
+        for t_code in tgt_vars:
+            pair = f"{s}-{t_code}"
+            candidate_repos.extend([
+                (f"michaelfeil/ct2fast-opus-mt-{pair}", os.path.join(cache_base, f"ct2fast-opus-mt-{pair}")),
+                (f"gaudi/opus-mt-{pair}-ctranslate2", os.path.join(cache_base, f"gaudi-opus-mt-{pair}")),
+                (f"manancode/opus-mt-{pair}-ctranslate2-android", os.path.join(cache_base, f"manancode-opus-mt-{pair}")),
+                (f"manancode/opus-mt-{pair}-ctranslate2", os.path.join(cache_base, f"manancode-opus-mt-{pair}")),
+            ])
+
+    for repo_id, model_dir in candidate_repos:
+        model_bin = os.path.join(model_dir, "model.bin")
+        src_spm = os.path.join(model_dir, "source.spm")
+        tgt_spm = os.path.join(model_dir, "target.spm")
+
+        # Modèle déjà en cache local
+        if os.path.exists(model_bin) and os.path.exists(src_spm) and os.path.exists(tgt_spm):
+            try:
+                translator = ctranslate2.Translator(model_dir, device="cpu", compute_type="int8", intra_threads=4)
+                sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
+                sp_tgt = sentencepiece.SentencePieceProcessor(model_file=tgt_spm)
+                _OPUS_CACHE[key] = (translator, sp_src, sp_tgt)
+                return _OPUS_CACHE[key]
+            except Exception:
+                pass
+
+        # Téléchargement depuis Hugging Face
         try:
-            log.info(f"Téléchargement du modèle bilingue Opus-MT ({src} -> {tgt})...")
-            snapshot_download(repo_id=repo_id, local_dir=cache_dir)
+            log.info(f"Recherche du modèle bilingue {repo_id}...")
+            snapshot_download(repo_id=repo_id, local_dir=model_dir)
+            if os.path.exists(model_bin) and os.path.exists(src_spm) and os.path.exists(tgt_spm):
+                translator = ctranslate2.Translator(model_dir, device="cpu", compute_type="int8", intra_threads=4)
+                sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
+                sp_tgt = sentencepiece.SentencePieceProcessor(model_file=tgt_spm)
+                _OPUS_CACHE[key] = (translator, sp_src, sp_tgt)
+                return _OPUS_CACHE[key]
         except Exception:
             try:
                 import shutil
-                shutil.rmtree(cache_dir, ignore_errors=True)
+                shutil.rmtree(model_dir, ignore_errors=True)
             except Exception:
                 pass
-            return None
+            continue
 
-    try:
-        translator = ctranslate2.Translator(cache_dir, device="cpu", compute_type="int8", intra_threads=4)
-        sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
-        sp_tgt = sentencepiece.SentencePieceProcessor(model_file=tgt_spm)
-        _OPUS_CACHE[key] = (translator, sp_src, sp_tgt)
-        return _OPUS_CACHE[key]
-    except Exception as e:
-        log.warning(f"Impossible de charger le modèle Opus-MT {pair_name}: {e}")
-        return None
+    return None
 
 
 def _translate_with_opus_pair(texts: List[str], src: str, tgt: str) -> Optional[List[str]]:
@@ -272,7 +346,6 @@ def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str) -> List
                 original_text = batch[j].strip()
                 orig_lower = re.sub(r'[^\w\s]', '', original_text).lower()
 
-                # Garde-fou pour les interjections simples (ex: "Oh", "Ah")
                 if orig_lower in COMMON_INTERJECTIONS:
                     translated_texts.append(original_text)
                     continue
@@ -282,7 +355,6 @@ def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str) -> List
                     clean_hyp = [tok for tok in hyp if tok not in (tgt_nllb, src_nllb, "</s>", "<s>", "<unk>")]
                     decoded = sp_model.decode(clean_hyp).strip()
 
-                    # Si un mot de 1 mot d'origine a explosé en plus de 3 mots, garder l'origine
                     if len(original_text.split()) == 1 and len(decoded.split()) >= 4:
                         translated_texts.append(original_text)
                     else:
@@ -303,16 +375,15 @@ def translate_subtitles(
     ui: Optional[UIInterface] = None
 ) -> Optional[List[Tuple[float, float, str]]]:
     """
-    Traduit les sous-titres avec la stratégie optimale :
-    1. Modèle bilingue Opus-MT direct si disponible (strict, rapide, fidèle aux dialogues).
-    2. Modèle Opus-MT via pivot anglais si non direct (ex: fr -> en -> es).
+    Traduit les sous-titres :
+    1. Recherche un modèle Opus-MT direct dans tous les dépôts CTranslate2.
+    2. Si aucun modèle direct n'existe, passe par le pivot Opus-MT anglais (src -> en -> tgt).
     3. Secours universel NLLB-200 avec filtres anti-hallucination.
     """
     texts = [s[2] for s in subtitles]
     if not texts:
         return subtitles
 
-    # Détection automatique de la langue source si 'auto' ou non renseignée
     if not source_lang or source_lang.lower() == "auto":
         try:
             from langdetect import detect
@@ -335,12 +406,10 @@ def translate_subtitles(
     if ui:
         ui.message(f"Traduction des sous-titres ({src} -> {tgt})...")
 
-    translated_texts = None
-
-    # Stratégie 1 : Opus-MT direct (ex: en->fr, fr->en, es->en, en->es)
+    # Stratégie 1 : Opus-MT direct multi-dépôts (gaudi, michaelfeil, manancode, fugumt)
     translated_texts = _translate_with_opus_pair(texts, src, tgt)
 
-    # Stratégie 2 : Opus-MT via pivot anglais (ex: fr -> en -> es, it -> en -> fr)
+    # Stratégie 2 : Pivot anglais Opus-MT
     if translated_texts is None and src != "en" and tgt != "en":
         translated_texts = _translate_with_opus_pivot(texts, src, tgt)
 
