@@ -88,14 +88,21 @@ async def _edge_list_voices_async() -> List[Dict]:
     return _normalize_voice_records(voices)
 
 
+_VOICE_CACHE: Optional[List[Dict]] = None
+
+
 def list_available_voices() -> List[Dict]:
     """
-    Wrapper synchrone pour lister les voix Edge.
+    Wrapper synchrone pour lister les voix Edge avec mise en cache mémoire.
     """
+    global _VOICE_CACHE
+    if _VOICE_CACHE is not None:
+        return _VOICE_CACHE
     try:
         lst = asyncio.run(_edge_list_voices_async())
         if lst:
-            return lst
+            _VOICE_CACHE = lst
+            return _VOICE_CACHE
     except Exception:
         pass
     # Fallback minimal si l’API a échoué
@@ -105,13 +112,17 @@ def list_available_voices() -> List[Dict]:
 def is_valid_voice_id(voice_id: Optional[str]) -> bool:
     if not voice_id:
         return False
+    vid = str(voice_id).strip()
+    if not vid:
+        return False
+    # Vérification rapide si déjà au format voix Edge (évite tout appel réseau répété)
+    if "Neural" in vid or "-" in vid:
+        return True
     try:
-        s = str(voice_id).strip()
         voices = list_available_voices()
-        return any(v["id"] == s for v in voices)
+        return any(v["id"] == vid for v in voices)
     except Exception:
-        # En cas d'échec de listing, tolérer la voix par défaut
-        return str(voice_id).strip().lower() == DEFAULT_EDGE_VOICE.lower()
+        return True
 
 
 def _atempo_chain_for_factor(factor: float) -> list[str]:

@@ -62,7 +62,7 @@ def process_one_video(
     base, ext = os.path.splitext(os.path.basename(input_video_path))
 
     # Verification skip_existing (AVANT toute operation ou generation TTS)
-    if getattr(opts, "skip_existing", False):
+    if getattr(opts, "skip_existing", False) and not getattr(opts, "overwrite", False):
         dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
         final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}].mkv", output_dir_path)
         if os.path.exists(final_video):
@@ -109,28 +109,32 @@ def process_one_video(
         svcs.ui.message(t("pipeline_translating", lang=opts.translate_to))
         
         # Check for existing translated SRT
+        import re as _re
         base_srt = os.path.basename(srt_path)
-        # Save in srt/ folder for persistence and easy access
-        new_srt_path = join_srt(f"{base_srt}.{opts.translate_to}.srt")
+        clean_base_srt = _re.sub(r'\.[a-z]{2,3}\.srt$', '.srt', base_srt, flags=_re.IGNORECASE)
+        new_srt_path = join_srt(f"{clean_base_srt}.{opts.translate_to}.srt")
         
         reuse_existing = False
-        if os.path.exists(new_srt_path) and not getattr(opts, "overwrite", False):
-            # Ask user if they want to reuse it (unless batch mode)
-            svcs.ui.message(t("pipeline_trans_found", path=new_srt_path))
-            
-            should_reuse = False
-            if opts.batch_mode:
-                should_reuse = True
-            elif not opts.ask_reuse_subs:
-                # Si configuré pour ne pas demander, on utilise la valeur par défaut
-                should_reuse = opts.reuse_translated_subs
-            elif svcs.ui.ask_yes_no(t("pipeline_trans_reuse"), default=opts.reuse_translated_subs):
-                should_reuse = True
-                
-            if should_reuse:
+        should_reuse = bool(getattr(opts, "reuse_translated_subs", True)) and not getattr(opts, "overwrite", False)
+        
+        if should_reuse and os.path.exists(new_srt_path):
+            if not opts.batch_mode and getattr(opts, "ask_reuse_subs", False):
+                if svcs.ui.ask_yes_no(t("pipeline_trans_reuse"), default=True):
+                    reuse_existing = True
+            else:
                 reuse_existing = True
+                
+            if reuse_existing:
+                svcs.ui.message(t("pipeline_trans_found", path=new_srt_path))
                 svcs.ui.message(t("pipeline_trans_reusing"))
                 srt_path = new_srt_path
+        else:
+            # Si on ne réutilise pas : on supprime l'ancien fichier traduit existant pour forcer une nouvelle traduction
+            if os.path.exists(new_srt_path):
+                try:
+                    os.remove(new_srt_path)
+                except Exception:
+                    pass
         
         if not reuse_existing:
             try:

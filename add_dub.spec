@@ -5,7 +5,7 @@ datas = []
 binaries = []
 hiddenimports = []
 
-for pkg in ['ctranslate2', 'sentencepiece', 'langdetect', 'huggingface_hub']:
+for pkg in ['ctranslate2', 'sentencepiece', 'langdetect', 'huggingface_hub', 'PyQt6']:
     try:
         tmp_ret = collect_all(pkg)
         datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
