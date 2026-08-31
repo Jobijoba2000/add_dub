@@ -295,10 +295,11 @@ def _translate_with_opus_pair(texts: List[str], src: str, tgt: str, ui: Optional
         elapsed = time.time() - start_t
         if ui:
             ui.progress(pct)
-        print(f"\rTraduction ({src}->{tgt}) : {pct:.0f}% [{done}/{total}] ({elapsed:.1f}s)", end="", flush=True)
+        print(f"\r[INFO] - Traduction ({src}->{tgt}) : {pct:.0f}% [{done}/{total}] ({elapsed:.1f}s)", end="", flush=True)
 
     elapsed_total = time.time() - start_t
-    print(f"\rTraduction ({src}->{tgt}) terminée en {elapsed_total:.2f}s.                     ")
+    print("\r" + " " * 80 + "\r", end="", flush=True)
+    log.info(f"Traduction ({src}->{tgt}) terminée en {elapsed_total:.2f}s.")
     return translated
 
 
@@ -397,10 +398,11 @@ def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str, ui: Opt
         elapsed = time.time() - start_t
         if ui:
             ui.progress(pct)
-        print(f"\rTraduction NLLB ({src_lang}->{tgt_lang}) : {pct:.0f}% [{done}/{total}] ({elapsed:.1f}s)", end="", flush=True)
+        print(f"\r[INFO] - Traduction NLLB ({src_lang}->{tgt_lang}) : {pct:.0f}% [{done}/{total}] ({elapsed:.1f}s)", end="", flush=True)
 
     elapsed_total = time.time() - start_t
-    print(f"\rTraduction NLLB ({src_lang}->{tgt_lang}) terminée en {elapsed_total:.2f}s.                 ")
+    print("\r" + " " * 80 + "\r", end="", flush=True)
+    log.info(f"Traduction NLLB ({src_lang}->{tgt_lang}) terminée en {elapsed_total:.2f}s.")
     return translated_texts
 
 
