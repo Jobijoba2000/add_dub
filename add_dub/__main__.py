@@ -4,7 +4,10 @@ from __future__ import annotations
 import sys
 
 from multiprocessing import freeze_support
-import ctranslate2
+try:
+    import ctranslate2
+except ImportError:
+    pass
 
 if sys.platform == "win32":
     import ctypes
@@ -36,10 +39,6 @@ def main(argv=None) -> int:
         for v in list_available_voices():
             print(v)
         return 0
-
-    if getattr(args, "gui", False):
-        from add_dub.gui.qt_app import main as gui_main
-        return gui_main()
 
     if want_interactive(args):
         from add_dub.cli.main import main as interactive_main

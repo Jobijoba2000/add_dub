@@ -26,7 +26,6 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_mode = parser.add_mutually_exclusive_group()
     g_mode.add_argument("--interactive", action="store_true", help=t("help_interactive"))
     g_mode.add_argument("--batch", action="store_true", help=t("help_batch"))
-    g_mode.add_argument("--gui", action="store_true", help=t("help_gui", default="Lance l'interface graphique (GUI)."))
 
     # --- Groupes d'arguments pour plus de clarté ---
     
@@ -96,9 +95,9 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
 def want_interactive(args: argparse.Namespace) -> bool:
     """
     Décide si on doit lancer l'interactif CLI.
-    - False si --gui ou --batch
+    - False si --batch
     - True sinon (interactif par défaut)
     """
-    if getattr(args, "gui", False) or getattr(args, "batch", False):
+    if getattr(args, "batch", False):
         return False
     return True

@@ -5,7 +5,7 @@ datas = []
 binaries = []
 hiddenimports = []
 
-for pkg in ['ctranslate2', 'sentencepiece', 'langdetect', 'huggingface_hub', 'PyQt6']:
+for pkg in ['ctranslate2', 'sentencepiece', 'langdetect', 'huggingface_hub']:
     try:
         tmp_ret = collect_all(pkg)
         datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
@@ -28,7 +28,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['transformers', 'torch', 'torchvision', 'torchaudio', 'onnxruntime', 'scipy', 'matplotlib'],
+    excludes=['PyQt6', 'PyQt6.QtCore', 'PyQt6.QtWidgets', 'PyQt6.QtGui', 'PyQt6_sip', 'qfluentwidgets', 'qframelesswindow', 'transformers', 'torch', 'torchvision', 'torchaudio', 'onnxruntime', 'scipy', 'matplotlib'],
     noarchive=False,
     optimize=0,
 )
