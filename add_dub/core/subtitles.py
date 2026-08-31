@@ -251,7 +251,8 @@ def extract_first_subtitle_to_srt_into_input(
 
         tmp_out = os.path.join(tmp_dir, base + ".srt")
 
-        ok = subtitle_edit_ocr(ocr_input, tmp_out, cwd=tmp_dir)
+        track_lang = t_sel.get("properties", {}).get("language") or t_sel.get("language") or ocr_lang
+        ok = subtitle_edit_ocr(ocr_input, tmp_out, lang=track_lang, cwd=tmp_dir)
         if ok:
             os.makedirs(os.path.dirname(target_srt), exist_ok=True)
             os.replace(tmp_out, target_srt)
