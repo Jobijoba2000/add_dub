@@ -175,10 +175,12 @@ def normalize_nllb_code(lang: str) -> str:
     return "eng_Latn"
 
 
-def _get_opus_translator_and_tokenizer(src: str, tgt: str) -> Optional[Tuple[ctranslate2.Translator, sentencepiece.SentencePieceProcessor, sentencepiece.SentencePieceProcessor]]:
+def _get_opus_translator_and_tokenizer(
+    src: str, tgt: str, ui: Optional[UIInterface] = None
+) -> Optional[Tuple[ctranslate2.Translator, sentencepiece.SentencePieceProcessor, sentencepiece.SentencePieceProcessor, str]]:
     """
     Charge ou télécharge un modèle bilingue Opus-MT pré-converti pour CTranslate2.
-    Gère les variantes de codes de langue (ex: ja/jap/jpn) et les dépôts spécialisés (FuguMT, Gaudi, Manancode, MichaelFeil).
+    Gère silencieusement les tests de dépôts jusqu'à trouver ou télécharger le bon modèle.
     """
     key = f"{src}_{tgt}"
     if key in _OPUS_CACHE:
@@ -211,31 +213,40 @@ def _get_opus_translator_and_tokenizer(src: str, tgt: str) -> Optional[Tuple[ctr
                 (f"manancode/opus-mt-{pair}-ctranslate2", os.path.join(cache_base, f"manancode-opus-mt-{pair}")),
             ])
 
+    # Passe 1 : Recherche en local (sans aucun log verbeux)
     for repo_id, model_dir in candidate_repos:
         model_bin = os.path.join(model_dir, "model.bin")
         src_spm = os.path.join(model_dir, "source.spm")
         tgt_spm = os.path.join(model_dir, "target.spm")
 
-        # Modèle déjà en cache local
         if os.path.exists(model_bin) and os.path.exists(src_spm) and os.path.exists(tgt_spm):
             try:
                 translator = ctranslate2.Translator(model_dir, device="cpu", compute_type="int8", intra_threads=4)
                 sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
                 sp_tgt = sentencepiece.SentencePieceProcessor(model_file=tgt_spm)
-                _OPUS_CACHE[key] = (translator, sp_src, sp_tgt)
+                _OPUS_CACHE[key] = (translator, sp_src, sp_tgt, repo_id)
                 return _OPUS_CACHE[key]
             except Exception:
                 pass
 
-        # Téléchargement depuis Hugging Face
+    # Passe 2 : Téléchargement si non disponible en local
+    for repo_id, model_dir in candidate_repos:
+        model_bin = os.path.join(model_dir, "model.bin")
+        src_spm = os.path.join(model_dir, "source.spm")
+        tgt_spm = os.path.join(model_dir, "target.spm")
+
         try:
-            log.info(f"Recherche du modèle bilingue {repo_id}...")
+            msg_dl = f"Téléchargement du modèle de traduction : {repo_id}..."
+            log.info(msg_dl)
+            if ui:
+                ui.message(f" -> {msg_dl}")
+
             snapshot_download(repo_id=repo_id, local_dir=model_dir)
             if os.path.exists(model_bin) and os.path.exists(src_spm) and os.path.exists(tgt_spm):
                 translator = ctranslate2.Translator(model_dir, device="cpu", compute_type="int8", intra_threads=4)
                 sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
                 sp_tgt = sentencepiece.SentencePieceProcessor(model_file=tgt_spm)
-                _OPUS_CACHE[key] = (translator, sp_src, sp_tgt)
+                _OPUS_CACHE[key] = (translator, sp_src, sp_tgt, repo_id)
                 return _OPUS_CACHE[key]
         except Exception:
             try:
@@ -248,19 +259,26 @@ def _get_opus_translator_and_tokenizer(src: str, tgt: str) -> Optional[Tuple[ctr
     return None
 
 
-def _translate_with_opus_pair(texts: List[str], src: str, tgt: str) -> Optional[List[str]]:
+def _translate_with_opus_pair(texts: List[str], src: str, tgt: str, ui: Optional[UIInterface] = None) -> Optional[List[str]]:
     """
     Traduit une liste de textes avec un modèle Opus-MT direct (src -> tgt).
     """
-    res = _get_opus_translator_and_tokenizer(src, tgt)
+    res = _get_opus_translator_and_tokenizer(src, tgt, ui=ui)
     if res is None:
         return None
 
-    translator, sp_src, sp_tgt = res
+    translator, sp_src, sp_tgt, repo_id = res
+    msg = f"Modèle direct Opus-MT retenu ({src} -> {tgt}) : {repo_id}"
+    log.info(msg)
+    if ui:
+        ui.message(f" -> {msg}")
+
     translated = []
     batch_size = 32
+    total = len(texts)
+    start_t = time.time()
 
-    for i in range(0, len(texts), batch_size):
+    for i in range(0, total, batch_size):
         batch = texts[i : i + batch_size]
         tokens = [
             sp_src.encode(str(t), out_type=str) + ["</s>"] if t and str(t).strip() else []
@@ -278,25 +296,38 @@ def _translate_with_opus_pair(texts: List[str], src: str, tgt: str) -> Optional[
             log.error(f"Erreur Opus-MT batch : {e}")
             translated.extend(batch)
 
+        done = min(i + batch_size, total)
+        pct = (done / total) * 100
+        elapsed = time.time() - start_t
+        if ui:
+            ui.progress(pct)
+        print(f"\rTraduction ({src}->{tgt}) : {pct:.0f}% [{done}/{total}] ({elapsed:.1f}s)", end="", flush=True)
+
+    elapsed_total = time.time() - start_t
+    print(f"\rTraduction ({src}->{tgt}) terminée en {elapsed_total:.2f}s.                     ")
     return translated
 
 
-def _translate_with_opus_pivot(texts: List[str], src: str, tgt: str) -> Optional[List[str]]:
+def _translate_with_opus_pivot(texts: List[str], src: str, tgt: str, ui: Optional[UIInterface] = None) -> Optional[List[str]]:
     """
     Traduit via le pivot anglais avec Opus-MT (src -> en -> tgt) : rapide, strict et sans hallucination.
     """
-    log.info(f"Traduction stricte via pivot Opus-MT ({src} -> en -> {tgt})...")
+    msg = f"Solution pivot via l'anglais retenue ({src} -> en -> {tgt})"
+    log.info(msg)
+    if ui:
+        ui.message(f" -> {msg}")
+
     # Étape 1 : src -> en
-    en_texts = _translate_with_opus_pair(texts, src, "en")
+    en_texts = _translate_with_opus_pair(texts, src, "en", ui=ui)
     if en_texts is None:
         return None
 
     # Étape 2 : en -> tgt
-    tgt_texts = _translate_with_opus_pair(en_texts, "en", tgt)
+    tgt_texts = _translate_with_opus_pair(en_texts, "en", tgt, ui=ui)
     return tgt_texts
 
 
-def _get_nllb_translator_and_tokenizer():
+def _get_nllb_translator_and_tokenizer(ui: Optional[UIInterface] = None):
     global _NLLB_CACHE
     if _NLLB_CACHE is not None:
         return _NLLB_CACHE
@@ -306,7 +337,11 @@ def _get_nllb_translator_and_tokenizer():
     spm_model = os.path.join(cache_dir, "sentencepiece.bpe.model")
 
     if not (os.path.exists(model_bin) and os.path.exists(spm_model)):
-        log.info("Téléchargement du modèle universel NLLB-200...")
+        msg = "Téléchargement du modèle universel NLLB-200 (600M int8)..."
+        log.info(msg)
+        if ui:
+            ui.message(f" -> {msg}")
+
         from huggingface_hub import snapshot_download
         repo_id = "osa911/nllb-200-distilled-600M-ct2-int8"
         snapshot_download(repo_id=repo_id, local_dir=cache_dir)
@@ -317,18 +352,25 @@ def _get_nllb_translator_and_tokenizer():
     return _NLLB_CACHE
 
 
-def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str) -> List[str]:
+def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str, ui: Optional[UIInterface] = None) -> List[str]:
     """
     Traduction universelle via NLLB-200 avec garde-fou anti-hallucination sur les petits mots.
     """
     src_nllb = normalize_nllb_code(src_lang)
     tgt_nllb = normalize_nllb_code(tgt_lang)
 
-    translator, sp_model = _get_nllb_translator_and_tokenizer()
+    msg = f"Modèle universel NLLB-200 retenu ({src_lang} -> {tgt_lang})"
+    log.info(msg)
+    if ui:
+        ui.message(f" -> {msg}")
+
+    translator, sp_model = _get_nllb_translator_and_tokenizer(ui=ui)
     translated_texts = []
     batch_size = 16
+    total = len(texts)
+    start_t = time.time()
 
-    for i in range(0, len(texts), batch_size):
+    for i in range(0, total, batch_size):
         batch = texts[i : i + batch_size]
         tokens = []
         for text in batch:
@@ -366,6 +408,15 @@ def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str) -> List
             log.error(f"Erreur NLLB batch : {e}")
             translated_texts.extend(batch)
 
+        done = min(i + batch_size, total)
+        pct = (done / total) * 100
+        elapsed = time.time() - start_t
+        if ui:
+            ui.progress(pct)
+        print(f"\rTraduction NLLB ({src_lang}->{tgt_lang}) : {pct:.0f}% [{done}/{total}] ({elapsed:.1f}s)", end="", flush=True)
+
+    elapsed_total = time.time() - start_t
+    print(f"\rTraduction NLLB ({src_lang}->{tgt_lang}) terminée en {elapsed_total:.2f}s.                 ")
     return translated_texts
 
 
@@ -377,13 +428,15 @@ def translate_subtitles(
 ) -> Optional[List[Tuple[float, float, str]]]:
     """
     Traduit les sous-titres :
-    1. Recherche un modèle Opus-MT direct dans tous les dépôts CTranslate2.
+    1. Recherche silencieusement un modèle Opus-MT direct.
     2. Si aucun modèle direct n'existe, passe par le pivot Opus-MT anglais (src -> en -> tgt).
     3. Secours universel NLLB-200 avec filtres anti-hallucination.
     """
     texts = [s[2] for s in subtitles]
     if not texts:
         return subtitles
+
+    start_overall = time.time()
 
     if not source_lang or source_lang.lower() == "auto":
         try:
@@ -403,21 +456,21 @@ def translate_subtitles(
         log.info(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
         return subtitles
 
-    log.info(f"Traduction de {len(texts)} sous-titres ({src} -> {tgt})...")
+    msg_start = f"Recherche du modèle de traduction ({len(texts)} sous-titres, {src} -> {tgt})..."
+    log.info(msg_start)
     if ui:
-        ui.message(f"Traduction des sous-titres ({src} -> {tgt})...")
+        ui.message(msg_start)
 
     # Stratégie 1 : Opus-MT direct multi-dépôts (gaudi, michaelfeil, manancode, fugumt)
-    translated_texts = _translate_with_opus_pair(texts, src, tgt)
+    translated_texts = _translate_with_opus_pair(texts, src, tgt, ui=ui)
 
     # Stratégie 2 : Pivot anglais Opus-MT
     if translated_texts is None and src != "en" and tgt != "en":
-        translated_texts = _translate_with_opus_pivot(texts, src, tgt)
+        translated_texts = _translate_with_opus_pivot(texts, src, tgt, ui=ui)
 
     # Stratégie 3 : Secours NLLB-200
     if translated_texts is None:
-        log.info(f"Passage au modèle universel NLLB-200 ({src} -> {tgt})...")
-        translated_texts = _translate_with_nllb(texts, src, tgt)
+        translated_texts = _translate_with_nllb(texts, src, tgt, ui=ui)
 
     new_subs = []
     for i, (start, end, _) in enumerate(subtitles):
@@ -426,7 +479,12 @@ def translate_subtitles(
         else:
             new_subs.append((start, end, subtitles[i][2]))
 
-    log.info(t("trans_log_completed"))
+    elapsed_overall = time.time() - start_overall
+    msg_done = f"Traduction terminée avec succès en {elapsed_overall:.2f}s."
+    log.info(msg_done)
+    if ui:
+        ui.message(msg_done)
+
     return new_subs
 
 
