@@ -54,15 +54,20 @@ def _pcm_to_numpy(audio: AudioSegment):
 def _numpy_to_pcm(arr_f32, fr, ch, sw, scale, dtype):
     """
     Reconvertit un tableau float32 [-1..1] en PCM bytes selon (sw, scale, dtype).
+    Plafonne strictement la valeur maximale pour éviter tout débordement d'entier PCM (ex: 32767 en int16).
     """
     arr = np.clip(arr_f32, -1.0, 1.0)
 
-    if sw in (2, 4):
-        out = (arr * scale).astype(dtype).reshape(-1)
+    if sw == 2:
+        out = np.clip(arr * 32767.0, -32768.0, 32767.0).astype(np.int16).reshape(-1)
+        return out.tobytes(), sw
+
+    elif sw == 4:
+        out = np.clip(arr * 2147483647.0, -2147483648.0, 2147483647.0).astype(np.int32).reshape(-1)
         return out.tobytes(), sw
 
     elif sw == 1:
-        out = (arr * scale + 128.0).round().astype(dtype).reshape(-1)
+        out = np.clip(arr * 128.0 + 128.0, 0.0, 255.0).round().astype(np.uint8).reshape(-1)
         return out.tobytes(), sw
 
     else:
