@@ -144,7 +144,11 @@ def generate_dub_audio(
 
     FREEZE_TIMEOUT = 5
 
-    ex = ProcessPoolExecutor(max_workers=max_workers)
+    engine = normalize_engine(opts.tts_engine)
+    if engine in ("edge", "gtts"):
+        ex = ThreadPoolExecutor(max_workers=max_workers)
+    else:
+        ex = ProcessPoolExecutor(max_workers=max_workers)
     try:
         fut_to_job = {ex.submit(tts_worker, j): j for j in jobs}
         pending = set(fut_to_job.keys())
