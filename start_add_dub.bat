@@ -199,18 +199,25 @@ if not exist "%ROOT%.venv\Scripts\python.exe" (
 call "%ROOT%.venv\Scripts\activate.bat"
 
 rem --- Dependances ------------------------------------------------------------
-if exist "%ROOT%requirements.txt" if not exist "%ROOT%.venv\.deps_ok" (
-        echo [STEP] Installing dependencies...
+if exist "%ROOT%requirements.txt" (
+    set "HASH_FILE=%ROOT%.venv\.req_hash"
+    set "CURR_HASH="
+    for /f "tokens=*" %%H in ('powershell -NoProfile -Command "(Get-FileHash -Algorithm MD5 '%ROOT%requirements.txt').Hash"') do set "CURR_HASH=%%H"
+
+    set "LAST_HASH="
+    if exist "!HASH_FILE!" set /p LAST_HASH=<"!HASH_FILE!"
+
+    if "!CURR_HASH!" NEQ "!LAST_HASH!" (
+        echo [STEP] Installing / updating dependencies from requirements.txt...
         python -m pip install --disable-pip-version-check --no-input --upgrade pip || goto fail
         python -m pip install --disable-pip-version-check --no-input -r "%ROOT%requirements.txt" || goto fail
-        echo ok> "%ROOT%.venv\.deps_ok"
-        echo [OK] Dependencies installed.
-) else (
-    if exist "%ROOT%.venv\.deps_ok" (
-        echo [INFO] Dependencies already installed - skipping check.
+        > "!HASH_FILE!" echo !CURR_HASH!
+        echo [OK] Dependencies up to date.
     ) else (
-        echo [INFO] requirements.txt missing - step skipped.
+        echo [INFO] Dependencies already up to date - skipping check.
     )
+) else (
+    echo [INFO] requirements.txt missing - step skipped.
 )
 
 rem --- Boucle d'execution -----------------------------------------------------
