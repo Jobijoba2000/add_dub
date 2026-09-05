@@ -281,7 +281,7 @@ def _ask_config_for_video(
             ab = int(chosen_ab_str)
 
     # 4) Traduction
-    do_trans, trans_to, trans_from = ask_translation_options(base_opts, opts)
+    do_trans, trans_to, trans_from, trans_engine = ask_translation_options(base_opts, opts)
 
     # 5) Validation & fallbacks (silencieux) selon le moteur choisi
     lang_hint_base = _lang_base(oal) if oal else ""
@@ -315,7 +315,9 @@ def _ask_config_for_video(
         translate=do_trans,
         translate_to=trans_to,
         translate_from=trans_from,
+        translation_engine=trans_engine,
     )
+
 
 
 def _cleanup_test_outputs(output_path: str | None) -> None:

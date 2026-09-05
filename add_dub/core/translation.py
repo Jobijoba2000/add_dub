@@ -4,16 +4,21 @@ from __future__ import annotations
 import os
 import re
 import time
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Any
 from add_dub.logger import logger as log
 from add_dub.i18n import t
 from add_dub.core.ui import UIInterface
 
-import ctranslate2
-import sentencepiece
+try:
+    import ctranslate2
+    import sentencepiece
+except ImportError:
+    ctranslate2 = None
+    sentencepiece = None
 
-_OPUS_CACHE: Dict[str, Tuple[ctranslate2.Translator, sentencepiece.SentencePieceProcessor, sentencepiece.SentencePieceProcessor]] = {}
+_OPUS_CACHE: Dict[str, Tuple[Any, Any, Any]] = {}
 _NLLB_CACHE = None
+
 
 COMMON_INTERJECTIONS = {
     "oh", "ah", "eh", "hein", "ouh", "hey", "chut", "stop", "wow", "ok", "hum", "euh", "pff", "bah"
@@ -183,12 +188,19 @@ def _get_opus_translator_and_tokenizer(
     Charge ou télécharge un modèle bilingue Opus-MT pré-converti pour CTranslate2.
     Gère 100% silencieusement la recherche de modèles (local + distant) jusqu'à succès.
     """
+    if ctranslate2 is None or sentencepiece is None:
+        return None
+
     key = f"{src}_{tgt}"
     if key in _OPUS_CACHE:
         return _OPUS_CACHE[key]
 
     cache_base = os.path.join(os.path.expanduser("~"), ".cache", "add_dub", "ct2_models")
-    from huggingface_hub import snapshot_download
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError:
+        return None
+
 
     candidate_repos = []
 
@@ -317,6 +329,9 @@ def _translate_with_opus_pivot(texts: List[str], src: str, tgt: str, ui: Optiona
 
 
 def _get_nllb_translator_and_tokenizer(ui: Optional[UIInterface] = None):
+    if ctranslate2 is None or sentencepiece is None:
+        return None
+
     global _NLLB_CACHE
     if _NLLB_CACHE is not None:
         return _NLLB_CACHE
@@ -327,9 +342,13 @@ def _get_nllb_translator_and_tokenizer(ui: Optional[UIInterface] = None):
 
     if not (os.path.exists(model_bin) and os.path.exists(spm_model)):
         log.info("Téléchargement du modèle universel NLLB-200 (600M int8)...")
-        from huggingface_hub import snapshot_download
+        try:
+            from huggingface_hub import snapshot_download
+        except ImportError:
+            return None
         repo_id = "osa911/nllb-200-distilled-600M-ct2-int8"
         snapshot_download(repo_id=repo_id, local_dir=cache_dir)
+
 
     translator = ctranslate2.Translator(cache_dir, device="cpu", compute_type="int8", intra_threads=4)
     sp_model = sentencepiece.SentencePieceProcessor(model_file=spm_model)
@@ -346,7 +365,11 @@ def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str, ui: Opt
 
     log.info(f"Modèle universel NLLB-200 retenu ({src_lang} -> {tgt_lang})")
 
-    translator, sp_model = _get_nllb_translator_and_tokenizer(ui=ui)
+    res = _get_nllb_translator_and_tokenizer(ui=ui)
+    if res is None:
+        return None
+    translator, sp_model = res
+
     translated_texts = []
     batch_size = 16
     total = len(texts)
@@ -400,17 +423,107 @@ def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str, ui: Opt
     return translated_texts
 
 
+def _translate_with_google(
+    texts: List[str],
+    src_lang: str,
+    tgt_lang: str,
+    ui: Optional[UIInterface] = None
+) -> List[str]:
+    """
+    Traduit les sous-titres en ligne via Google Traduction (deep-translator).
+    Regroupe les textes par paquets avec le séparateur '\n---\n'.
+    En cas d'échec (ex: rate limit HTTP 429 ou problème réseau), lève une exception
+    afin de déclencher la bascule automatique sur CTranslate2.
+    """
+    from deep_translator import GoogleTranslator
+
+    if not texts:
+        return []
+
+    log.info(t("pipeline_trans_using_engine", lang=tgt_lang, engine="Google Traduction"))
+    start_t = time.time()
+
+    translator = GoogleTranslator(source=src_lang, target=tgt_lang)
+    delimiter = "\n###\n"
+
+    # Découpage par paquets (~3500 caractères max ou 40 lignes max)
+    batches: List[List[str]] = []
+    current_batch: List[str] = []
+    current_len = 0
+
+    for text in texts:
+        t_clean = str(text or "").strip()
+        if not t_clean:
+            t_clean = "."
+        t_len = len(t_clean) + len(delimiter)
+
+        if current_batch and (current_len + t_len > 3500 or len(current_batch) >= 40):
+            batches.append(current_batch)
+            current_batch = [t_clean]
+            current_len = t_len
+        else:
+            current_batch.append(t_clean)
+            current_len += t_len
+
+    if current_batch:
+        batches.append(current_batch)
+
+    total_subs = len(texts)
+    done_subs = 0
+    translated_texts: List[str] = []
+
+    for b_idx, batch in enumerate(batches):
+        chunk_str = delimiter.join(batch)
+        try:
+            res_str = translator.translate(chunk_str)
+            if not res_str:
+                raise ValueError("Réponse vide de Google Traduction")
+
+            parts = [p.strip() for p in re.split(r'\n?\s*###\s*\n?', res_str)]
+
+
+
+            if len(parts) == len(batch):
+                translated_texts.extend(parts)
+            elif len(parts) > 0:
+                if len(parts) < len(batch):
+                    parts.extend(batch[len(parts):])
+                translated_texts.extend(parts[:len(batch)])
+            else:
+                translated_texts.extend(batch)
+
+        except Exception as e:
+            err_str = str(e)
+            if "-->" in err_str:
+                err_str = err_str.split("-->")[-1].strip()
+            short_err = err_str.splitlines()[0][:120]
+            log.warning(f"Erreur paquet Google Traduction (batch {b_idx+1}/{len(batches)}) : {short_err}")
+            raise RuntimeError(short_err) from e
+
+        done_subs += len(batch)
+        pct = (done_subs / total_subs) * 100
+        if ui:
+            ui.progress(pct)
+
+        if b_idx < len(batches) - 1:
+            time.sleep(0.4)
+
+    elapsed = time.time() - start_t
+    log.info(f"Traduction Google Traduction terminée en {elapsed:.2f}s ({total_subs} sous-titres).")
+    return translated_texts
+
+
 def translate_subtitles(
     subtitles: List[Tuple[float, float, str]], 
     target_lang: str, 
     source_lang: Optional[str] = None,
-    ui: Optional[UIInterface] = None
+    ui: Optional[UIInterface] = None,
+    engine: str = "google"
 ) -> Optional[List[Tuple[float, float, str]]]:
     """
     Traduit les sous-titres :
-    1. Recherche silencieusement un modèle Opus-MT direct.
-    2. Si aucun modèle direct n'existe, passe par le pivot Opus-MT anglais (src -> en -> tgt).
-    3. Secours universel NLLB-200 avec filtres anti-hallucination.
+    - Mode google (défaut) : traduit en ligne via deep-translator avec fallback automatique sur CTranslate2 en cas de problème.
+    - Mode ctranslate2 : traduit hors-ligne via Opus-MT / Pivot anglais / NLLB-200.
     """
     texts = [s[2] for s in subtitles]
     if not texts:
@@ -436,30 +549,47 @@ def translate_subtitles(
         log.info(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
         return subtitles
 
-    log.info(f"Recherche d'un modèle de traduction ({len(texts)} sous-titres, {src} -> {tgt})...")
+    translated_texts = None
+    engine_lower = (engine or "google").strip().lower()
 
-    # Stratégie 1 : Opus-MT direct multi-dépôts (gaudi, michaelfeil, manancode, fugumt)
-    translated_texts = _translate_with_opus_pair(texts, src, tgt, ui=ui)
+    if engine_lower == "google":
+        try:
+            translated_texts = _translate_with_google(texts, src, tgt, ui=ui)
+        except Exception as e:
+            err_msg = str(e).splitlines()[0][:120]
+            msg = t("pipeline_trans_google_failed_fallback")
+            log.warning(f"{msg} ({err_msg})")
+            translated_texts = None
 
-    # Stratégie 2 : Pivot anglais Opus-MT
-    if translated_texts is None and src != "en" and tgt != "en":
-        translated_texts = _translate_with_opus_pivot(texts, src, tgt, ui=ui)
-
-    # Stratégie 3 : Secours NLLB-200
     if translated_texts is None:
-        translated_texts = _translate_with_nllb(texts, src, tgt, ui=ui)
+        log.info(f"Recherche d'un modèle CTranslate2 ({len(texts)} sous-titres, {src} -> {tgt})...")
+
+        # Stratégie 1 : Opus-MT direct multi-dépôts (gaudi, michaelfeil, manancode, fugumt)
+        translated_texts = _translate_with_opus_pair(texts, src, tgt, ui=ui)
+
+        # Stratégie 2 : Pivot anglais Opus-MT
+        if translated_texts is None and src != "en" and tgt != "en":
+            translated_texts = _translate_with_opus_pivot(texts, src, tgt, ui=ui)
+
+        # Stratégie 3 : Secours NLLB-200
+        if translated_texts is None:
+            translated_texts = _translate_with_nllb(texts, src, tgt, ui=ui)
 
     new_subs = []
-    for i, (start, end, _) in enumerate(subtitles):
-        if i < len(translated_texts):
-            new_subs.append((start, end, translated_texts[i]))
-        else:
-            new_subs.append((start, end, subtitles[i][2]))
+    if translated_texts:
+        for i, (start, end, _) in enumerate(subtitles):
+            if i < len(translated_texts):
+                new_subs.append((start, end, translated_texts[i]))
+            else:
+                new_subs.append((start, end, subtitles[i][2]))
+    else:
+        new_subs = subtitles
 
     elapsed_overall = time.time() - start_overall
     log.info(f"Traduction terminée avec succès en {elapsed_overall:.2f}s.")
 
     return new_subs
+
 
 
 def write_srt_file(subtitles: List[Tuple[float, float, str]], output_path: str):

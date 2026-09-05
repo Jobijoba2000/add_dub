@@ -58,6 +58,8 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_trans.add_argument("--translate", action="store_true", help=t("help_translate"))
     g_trans.add_argument("--translate-to", metavar="LANG", default=fused["translate_to"], help=t("help_translate_to"))
     g_trans.add_argument("--translate-from", metavar="LANG", default=None, help=t("help_translate_from"))
+    g_trans.add_argument("--translation-engine", "--trans-engine", choices=["ctranslate2", "google"], default=fused.get("translation_engine", "ctranslate2"), help=t("help_translation_engine"))
+
 
     # 5. Mixing & Timing (Advanced)
     g_mix = parser.add_argument_group(t("grp_mix"))

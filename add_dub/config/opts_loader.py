@@ -65,7 +65,7 @@ KNOWN_KEYS = {
     "db", "offset", "offset_video", "bg", "tts",
     "audio_codec", "audio_bitrate", "orig_audio_lang",
     "ask_test_before_cleanup",
-    "translate", "translate_to", "translate_from", "reuse_translated_subs",
+    "translate", "translate_to", "translate_from", "translation_engine", "reuse_translated_subs",
     "logging.console_enable", "logging.console_level",
     "logging.file_enable", "logging.file_level",
     "logging.file_name", "logging.dir",

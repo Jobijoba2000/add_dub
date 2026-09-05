@@ -62,8 +62,8 @@ def _ask_source_lang(prompt: str, default: str) -> str | None:
 
 def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
     """
-    Demande si on veut traduire, et si oui, vers quelle langue.
-    Retourne la clé (do_trans, trans_to, trans_from).
+    Demande si on veut traduire, et si oui, vers quelle langue et avec quel moteur.
+    Retourne la clé (do_trans, trans_to, trans_from, trans_engine).
     """
     # 1. Ask translate?
     entry_trans = opts.get("translate")
@@ -78,6 +78,7 @@ def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
     
     trans_to = (base_opts.translate_to or "fr").strip().lower()[:2]
     trans_from = base_opts.translate_from
+    trans_engine = (getattr(base_opts, "translation_engine", "ctranslate2") or "ctranslate2").strip().lower()
 
     if do_trans:
         # 2. Target lang
@@ -117,7 +118,30 @@ def ask_translation_options(base_opts, opts: Dict[str, OptEntry]):
                 default=src_def
             )
 
-    return do_trans, trans_to, trans_from
+        # 4. Translation engine
+        entry_eng = opts.get("translation_engine")
+        should_ask_eng = True
+        if entry_eng and not entry_eng.display:
+            should_ask_eng = False
+            eng_val = str(entry_eng.value).strip().lower()
+            if eng_val in ("google", "ctranslate2"):
+                trans_engine = eng_val
+
+        if should_ask_eng:
+            engine_choices = [
+                ("ctranslate2", t("cli_trans_engine_1").strip()),
+                ("google", t("cli_trans_engine_2").strip()),
+            ]
+            chosen_eng = ask_choice(
+                t("cli_trans_engine_choice"),
+                engine_choices,
+                default_val=trans_engine
+            )
+            if chosen_eng:
+                trans_engine = chosen_eng
+
+    return do_trans, trans_to, trans_from, trans_engine
+
 
 def ask_choice(
     prompt: str,

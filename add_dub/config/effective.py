@@ -69,6 +69,10 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
         if translate_from.lower() == "auto" or not translate_from:
             translate_from = None
 
+    translation_engine = str(_conf_value(opts, "translation_engine", getattr(cfg, "TRANSLATION_ENGINE", "ctranslate2"))).strip().lower()
+    if translation_engine not in ("google", "ctranslate2"):
+        translation_engine = "ctranslate2"
+
     # ↓↓↓ nouveaux (dirs)
     input_dir = str(_conf_value(opts, "input_dir", getattr(cfg, "INPUT_DIR", "input")))
     output_dir = str(_conf_value(opts, "output_dir", getattr(cfg, "OUTPUT_DIR", "output")))
@@ -97,6 +101,7 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
         "translate": translate,
         "translate_to": translate_to,
         "translate_from": translate_from,
+        "translation_engine": translation_engine,
         "language": language,
     }
 
@@ -125,6 +130,10 @@ def build_default_opts() -> DubOptions:
         translate_from = str(translate_from).strip()
         if translate_from.lower() == "auto" or not translate_from:
             translate_from = None
+
+    translation_engine = str(_conf_value(opts, "translation_engine", getattr(cfg, "TRANSLATION_ENGINE", "google"))).strip().lower()
+    if translation_engine not in ("google", "ctranslate2"):
+        translation_engine = "google"
 
     # Reuse subs logic
     entry_reuse = opts.get("reuse_translated_subs")
@@ -158,6 +167,8 @@ def build_default_opts() -> DubOptions:
         translate=translate,
         translate_to=translate_to,
         translate_from=translate_from,
+        translation_engine=translation_engine,
         reuse_translated_subs=reuse_translated_subs,
         ask_reuse_subs=ask_reuse_subs,
     )
+

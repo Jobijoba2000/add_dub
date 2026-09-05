@@ -212,8 +212,9 @@ def process_one_video(
                     if not skip_trans:
                         while True:
                             new_srt_path = join_srt(f"{base_srt}.{tgt}.srt")
-                            subs_translated = translate_subtitles(subs_source, tgt, source_lang=source_lang, ui=svcs.ui)
+                            subs_translated = translate_subtitles(subs_source, tgt, source_lang=source_lang, ui=svcs.ui, engine=getattr(opts, "translation_engine", "google"))
                             if subs_translated is not None:
+
                                 write_srt_file(subs_translated, new_srt_path)
                                 srt_path = new_srt_path
                                 svcs.ui.message(t("pipeline_trans_done", path=srt_path))

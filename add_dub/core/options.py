@@ -33,7 +33,9 @@ class DubOptions:
     translate: bool = False                           # si True, traduire les sous-titres
     translate_to: str = "fr"                          # langue cible de traduction
     translate_from: Optional[str] = None              # langue source (pour éviter l'auto-détection)
+    translation_engine: str = "ctranslate2"             # moteur de traduction ("ctranslate2" ou "google")
     batch_mode: bool = False                          # si True, pas d'interaction utilisateur (prompts)
+
     overwrite: bool = False                           # si True, écrase les fichiers existants (y compris traduction)
     skip_existing: bool = False                       # si True, saute les vidéos dont la sortie existe déjà (avant TTS)
     reuse_translated_subs: bool = True                # si True, réutilise le SRT traduit existant
