@@ -199,6 +199,7 @@ def _get_opus_translator_and_tokenizer(
     try:
         from huggingface_hub import snapshot_download
     except ImportError:
+        log.warning("Module 'huggingface_hub' manquant. Impossible de rechercher/télécharger les modèles Opus-MT.")
         return None
 
 
@@ -345,6 +346,7 @@ def _get_nllb_translator_and_tokenizer(ui: Optional[UIInterface] = None):
         try:
             from huggingface_hub import snapshot_download
         except ImportError:
+            log.warning("Module 'huggingface_hub' manquant. Impossible de télécharger le modèle NLLB-200.")
             return None
         repo_id = "osa911/nllb-200-distilled-600M-ct2-int8"
         snapshot_download(repo_id=repo_id, local_dir=cache_dir)
@@ -561,34 +563,41 @@ def translate_subtitles(
             log.warning(f"{msg} ({err_msg})")
             translated_texts = None
 
-    if translated_texts is None:
+        if translated_texts is None:
+            log.info(f"Recherche d'un modèle CTranslate2 ({len(texts)} sous-titres, {src} -> {tgt})...")
+            translated_texts = _translate_with_opus_pair(texts, src, tgt, ui=ui)
+            if translated_texts is None and src != "en" and tgt != "en":
+                translated_texts = _translate_with_opus_pivot(texts, src, tgt, ui=ui)
+            if translated_texts is None:
+                translated_texts = _translate_with_nllb(texts, src, tgt, ui=ui)
+    else:
         log.info(f"Recherche d'un modèle CTranslate2 ({len(texts)} sous-titres, {src} -> {tgt})...")
-
-        # Stratégie 1 : Opus-MT direct multi-dépôts (gaudi, michaelfeil, manancode, fugumt)
         translated_texts = _translate_with_opus_pair(texts, src, tgt, ui=ui)
-
-        # Stratégie 2 : Pivot anglais Opus-MT
         if translated_texts is None and src != "en" and tgt != "en":
             translated_texts = _translate_with_opus_pivot(texts, src, tgt, ui=ui)
-
-        # Stratégie 3 : Secours NLLB-200
         if translated_texts is None:
             translated_texts = _translate_with_nllb(texts, src, tgt, ui=ui)
 
+        if translated_texts is None:
+            try:
+                log.warning("Échec des modèles CTranslate2, bascule de secours sur Google Traduction...")
+                translated_texts = _translate_with_google(texts, src, tgt, ui=ui)
+            except Exception as e:
+                log.warning(f"Échec du secours Google Traduction : {e}")
+
     new_subs = []
-    if translated_texts:
+    if translated_texts is not None:
         for i, (start, end, _) in enumerate(subtitles):
             if i < len(translated_texts):
                 new_subs.append((start, end, translated_texts[i]))
             else:
                 new_subs.append((start, end, subtitles[i][2]))
+        elapsed_overall = time.time() - start_overall
+        log.info(f"Traduction terminée avec succès en {elapsed_overall:.2f}s.")
+        return new_subs
     else:
-        new_subs = subtitles
-
-    elapsed_overall = time.time() - start_overall
-    log.info(f"Traduction terminée avec succès en {elapsed_overall:.2f}s.")
-
-    return new_subs
+        log.warning("Échec de la traduction des sous-titres : aucun moteur n'a pu traduire le texte.")
+        return None
 
 
 
