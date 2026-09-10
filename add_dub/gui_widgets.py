@@ -23,11 +23,15 @@ class Async(QObject):
         if isValid(owner) and not getattr(owner, '_closed', False):
             callback(result, error)
 
-    def run(self, owner, function, callback):
+    def run(self, owner, function, callback, progress=None):
+        def report(value):
+            if isValid(self):
+                self.delivered.emit((owner, lambda result, error: progress(result), value, None))
+
         def work():
             result, error = None, None
             try:
-                result = function()
+                result = function(report) if progress is not None else function()
             except Exception as exc:
                 error = str(exc)
             if isValid(self):

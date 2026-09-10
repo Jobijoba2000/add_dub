@@ -136,7 +136,7 @@ class Application(QMainWindow):
             return
         job = Job([os.path.abspath(p) for p in paths], Settings.from_args(self.args),
                   os.path.abspath(self.args.output_dir or fs.OUTPUT_DIR),
-                  recursive=self.args.recursive, preserve_tree=self.args.preserve_tree,
+                  recursive=True, preserve_tree=True,
                   resume=not self.args.overwrite, dry_run=self.args.dry_run)
         dialog = ConfigureDialog(job, self.tasks, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:

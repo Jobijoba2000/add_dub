@@ -2,13 +2,14 @@
 from copy import deepcopy
 import os
 from pathlib import Path
+from functools import lru_cache
 
-from PySide6.QtCore import Qt, QTimer, QFileInfo
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtCore import Qt, QTimer, QFileInfo, QSignalBlocker
+from PySide6.QtGui import QColor, QPixmap, QIcon
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QWidget, QLabel, QTreeWidget,
     QTreeWidgetItem, QPushButton, QCheckBox, QRadioButton, QButtonGroup,
-    QLineEdit, QFileDialog, QMessageBox, QGroupBox, QStyle, QFileIconProvider,
+    QLineEdit, QFileDialog, QMessageBox, QGroupBox, QStyle, QFileIconProvider, QProgressBar, QStyleFactory,
 )
 from add_dub.gui_model import discover, inspect_video, adapt_settings
 from add_dub.gui_widgets import SettingsEditor
@@ -17,10 +18,31 @@ ROLE = Qt.ItemDataRole.UserRole
 COMMON = '__common__'
 
 
+@lru_cache(maxsize=2)
+def yellow_folder_icon(opened):
+    """Conserve les dessins Qt ouvert/fermé et leurs ombres, en jaune."""
+    style = QStyleFactory.create('Fusion')
+    kind = QStyle.StandardPixmap.SP_DirOpenIcon if opened else QStyle.StandardPixmap.SP_DirClosedIcon
+    source = style.standardIcon(kind)
+    icon = QIcon()
+    for size in (16, 24, 32, 48, 64):
+        image = source.pixmap(size, size).toImage()
+        for y in range(image.height()):
+            for x in range(image.width()):
+                color = image.pixelColor(x, y)
+                hue, saturation, lightness, alpha = color.getHslF()
+                if color.alpha() and 0.48 <= hue <= 0.72:
+                    image.setPixelColor(x, y, QColor.fromHslF(0.12, saturation, lightness, alpha))
+        icon.addPixmap(QPixmap.fromImage(image))
+    return icon
+
+
 class ConfigureDialog(QDialog):
     def __init__(self, job, tasks, parent=None):
         super().__init__(parent)
         self.job = deepcopy(job)
+        self.job.recursive = True
+        self.job.preserve_tree = True
         self.tasks = tasks
         self._closed = False
         self.generation = 0
@@ -50,11 +72,13 @@ class ConfigureDialog(QDialog):
         left = QWidget()
         left_layout = QVBoxLayout(left)
         left_layout.setContentsMargins(0, 0, 8, 0)
-        self.recursive = QCheckBox('Inclure les sous-dossiers')
-        self.recursive.setChecked(self.job.recursive)
         self.has_folders = any(os.path.isdir(p) for p in self.job.sources)
-        self.recursive.setVisible(self.has_folders)
-        left_layout.addWidget(self.recursive)
+        self.scan_progress = QProgressBar()
+        self.scan_progress.setObjectName('scanProgress')
+        self.scan_progress.setAccessibleName('Progression de l’analyse des vidéos')
+        self.scan_progress.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.scan_progress.setFormat('%v/%m')
+        left_layout.addWidget(self.scan_progress)
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(['Fichiers', 'État'])
         self.tree.setAccessibleName('Sélection des vidéos et des dossiers')
@@ -97,7 +121,7 @@ class ConfigureDialog(QDialog):
         self.batch_options = QGroupBox('Options du lot')
         options = QVBoxLayout(self.batch_options)
         options.setSpacing(8)
-        policy_row = QHBoxLayout()
+        policy_row = QVBoxLayout()
         self.resume = QRadioButton('Reprendre : ignorer les sorties existantes')
         self.overwrite = QRadioButton('Remplacer les sorties existantes')
         self.policy = QButtonGroup(self)
@@ -107,12 +131,7 @@ class ConfigureDialog(QDialog):
         self.overwrite.setChecked(not self.job.resume)
         policy_row.addWidget(self.resume)
         policy_row.addWidget(self.overwrite)
-        policy_row.addStretch()
         options.addLayout(policy_row)
-        self.preserve = QCheckBox('Conserver l’arborescence des dossiers en sortie')
-        self.preserve.setChecked(self.job.preserve_tree)
-        self.preserve.setVisible(self.has_folders)
-        options.addWidget(self.preserve)
         outer.addWidget(self.batch_options)
         footer = QHBoxLayout()
         self.dry_run = QCheckBox('Vérifier uniquement (sans produire de vidéo)')
@@ -129,11 +148,10 @@ class ConfigureDialog(QDialog):
         self.add.clicked.connect(self.validate)
         footer.addWidget(self.add)
         outer.addLayout(footer)
-        self.tree.itemChanged.connect(self.check_item)
+        self.tree.model().dataChanged.connect(self.tree_data_changed)
         self.tree.currentItemChanged.connect(self.select_item)
         self.tree.itemExpanded.connect(lambda item: self.set_folder_icon(item, True))
         self.tree.itemCollapsed.connect(lambda item: self.set_folder_icon(item, False))
-        self.recursive.toggled.connect(self.scan)
         self.editor.changed.connect(self.edited)
         QTimer.singleShot(0, self.showMaximized)
         QTimer.singleShot(0, self.scan)
@@ -194,24 +212,36 @@ class ConfigureDialog(QDialog):
         self.tree.setEnabled(False)
         self.summary.setText('Détection des vidéos, des pistes audio et des sous-titres…')
         sources = list(self.job.sources)
-        recursive = self.recursive.isChecked()
+        self.scan_progress.setRange(0, 0)
+        self.scan_progress.show()
         known = deepcopy(self.known)
-        def work():
-            videos = discover(sources, recursive)
+        def progress(counts):
+            if generation != self.generation:
+                return
+            completed, total = counts
+            self.scan_progress.setRange(0, max(1, total))
+            self.scan_progress.setFormat('%v/%m' if total else '0/0')
+            self.scan_progress.setValue(completed)
+
+        def work(report):
+            videos = discover(sources, True)
+            report((0, len(videos)))
             result = []
             for video in videos:
                 if video.path in known:
                     video.selected = known[video.path].selected
                 result.append(inspect_video(video))
+                report((len(result), len(videos)))
             return result
         def done(videos, error):
             if generation != self.generation:
                 return
             self.tree.setEnabled(True)
             if error:
+                self.scan_progress.hide()
                 self.summary.setText(f'Détection impossible : {error}')
                 return
-            self.job.recursive = recursive
+            progress((len(videos), len(videos)))
             self.job.videos = videos
             self.known.update({v.path: v for v in videos})
             self.reference = next((v for v in videos if v.eligible), None)
@@ -225,9 +255,9 @@ class ConfigureDialog(QDialog):
             if self.reference:
                 self.load_scope(COMMON, self.reference)
             else:
-                self.scope.setText('Aucune vidéo admissible. Vérifiez les sous-titres ou incluez les sous-dossiers.')
+                self.scope.setText('Aucune vidéo admissible. Vérifiez les pistes audio et les sous-titres.')
                 self.reset.hide()
-        self.tasks.run(self, work, done)
+        self.tasks.run(self, work, done, progress=progress)
 
     def build_tree(self):
         self.tree.blockSignals(True)
@@ -270,6 +300,9 @@ class ConfigureDialog(QDialog):
             self.file_items[video.path] = item
         self.refresh_folders()
         self.tree.expandAll()
+        # Les signaux sont bloqués pendant la construction : synchroniser aussi les icônes.
+        for item in folders.values():
+            self.set_folder_icon(item, item.isExpanded())
         self.tree.setCurrentItem(common)
         self.tree.blockSignals(False)
         self.scope_text()
@@ -280,14 +313,19 @@ class ConfigureDialog(QDialog):
         return icon if not icon.isNull() else self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon)
 
     def folder_icon(self, opened):
-        """Icône de dossier native Windows, fermée ou ouverte."""
+        """Icône jaune de dossier, fermée ou ouverte."""
+        icon = yellow_folder_icon(opened)
+        if not icon.isNull():
+            return icon
         pixmap = (QStyle.StandardPixmap.SP_DirOpenIcon if opened
                   else QStyle.StandardPixmap.SP_DirClosedIcon)
         return self.style().standardIcon(pixmap)
 
     def set_folder_icon(self, item, opened):
         if item and item.childCount() and not item.data(0, ROLE):
-            item.setIcon(0, self.folder_icon(opened))
+            # Une modification d’icône émet aussi itemChanged : ce n’est pas un clic sur la case.
+            with QSignalBlocker(self.tree):
+                item.setIcon(0, self.folder_icon(opened))
 
     def descendants(self, item):
         for i in range(item.childCount()):
@@ -324,6 +362,17 @@ class ConfigureDialog(QDialog):
         self.tree.blockSignals(False)
         self.update_summary()
 
+    def tree_data_changed(self, top_left, bottom_right, roles):
+        if self.tree.signalsBlocked() or Qt.ItemDataRole.CheckStateRole not in roles:
+            return
+        self.check_item(self.tree.itemFromIndex(top_left), top_left.column())
+
+    def sync_selection(self):
+        """Les cases visibles font autorité, y compris après une détection asynchrone."""
+        for video in self.job.videos:
+            item = self.file_items.get(video.path)
+            video.selected = bool(video.eligible and item and item.checkState(0) == Qt.CheckState.Checked)
+
     def update_summary(self):
         self.summary.setText(f'{len(self.job.selected)} vidéo(s) sélectionnée(s) sur {len(self.job.videos)} · {len(self.job.overrides)} personnalisation(s)')
 
@@ -353,6 +402,8 @@ class ConfigureDialog(QDialog):
                 self.scope.setText(f'Détection impossible : {error}')
                 return
             index = self.job.videos.index(video)
+            item = self.file_items[path]
+            updated.selected = updated.eligible and item.checkState(0) == Qt.CheckState.Checked
             self.job.videos[index] = updated
             self.known[path] = updated
             if not updated.eligible:
@@ -385,8 +436,9 @@ class ConfigureDialog(QDialog):
 
     def validate(self):
         self.save_current()
+        self.sync_selection()
         self.job.output = self.output.text().strip()
-        self.job.preserve_tree = self.preserve.isChecked() if self.has_folders else False
+        self.job.preserve_tree = True
         self.job.resume = self.resume.isChecked()
         self.job.dry_run = self.dry_run.isChecked()
         try:

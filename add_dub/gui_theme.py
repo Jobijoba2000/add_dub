@@ -8,6 +8,20 @@ class WindowsCheckboxStyle(QProxyStyle):
     """Cases blanches à marquage noir, lisibles sur le thème sombre."""
 
     def drawPrimitive(self, element, option, painter, widget=None):
+        if element == QStyle.PrimitiveElement.PE_IndicatorRadioButton:
+            rect = option.rect.adjusted(1, 1, -1, -1)
+            painter.save()
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setPen(QPen(QColor('#8f8f8f'), 1))
+            painter.setBrush(QColor('#ffffff'))
+            painter.drawEllipse(rect)
+            if option.state & QStyle.StateFlag.State_On:
+                inset = max(3, rect.width() // 4)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(QColor('#050505'))
+                painter.drawEllipse(rect.adjusted(inset, inset, -inset, -inset))
+            painter.restore()
+            return
         indicators = (QStyle.PrimitiveElement.PE_IndicatorItemViewItemCheck,
                       QStyle.PrimitiveElement.PE_IndicatorCheckBox)
         if element in indicators:
@@ -61,6 +75,14 @@ def apply_theme(app):
     app.setStyleSheet('''
         QWidget { color: #f5f5f5; background-color: #090909; }
         QScrollArea { border: none; }
+        QProgressBar#scanProgress {
+            border: 1px solid #858585; border-radius: 4px;
+            background-color: #191919; color: #ffffff;
+            min-height: 26px; text-align: center; padding: 2px;
+        }
+        QProgressBar#scanProgress::chunk {
+            background-color: #005fb8; border-radius: 2px;
+        }
         QLabel, QCheckBox, QRadioButton { background-color: transparent; }
         QLabel#heading { font-size: 28px; font-weight: bold; }
         QGroupBox { background-color: #171717; border: none; border-radius: 8px;
@@ -77,9 +99,7 @@ def apply_theme(app):
         QPushButton#primary:hover { background-color: #0872cf; }
         QPushButton:focus, QComboBox:focus, QLineEdit:focus, QTextEdit:focus, QTreeWidget:focus { border: 1px solid #ffdf00; }
         QCheckBox:focus, QRadioButton:focus { outline: 2px solid #ffdf00; }
-        QRadioButton::indicator { width: 16px; height: 16px; border-radius: 9px;
-                                   border: 1px solid #a0a0a0; background-color: #0d0d0d; }
-        QRadioButton::indicator:checked { background-color: #75bfff; border-color: #c0dfff; }
+        QRadioButton::indicator { width: 20px; height: 20px; }
         QHeaderView::section { background-color: #242424; color: #f5f5f5; padding: 7px; border: none; border-bottom: 1px solid #858585; }
         QTreeWidget::item { padding: 3px 0; }
         QTreeWidget::indicator { width: 20px; height: 20px; }

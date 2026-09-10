@@ -1,6 +1,7 @@
 # add_dub/core/tts_generate.py
 import os
 import math
+import time
 from multiprocessing import cpu_count
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, wait, FIRST_COMPLETED
 from typing import List, Tuple, Optional
@@ -19,6 +20,26 @@ from add_dub.i18n import t
 
 # Mode de débogage pour afficher le nombre de tentatives et la vitesse par sous-titre
 DEBUG_TTS_ATTEMPTS = False
+
+
+def _shutdown_executor(ex):
+    """Borne la fermeture des workers natifs, qui peuvent rester bloqués dans OneCore."""
+    # Python 3.12 ne propose pas encore terminate_workers(). Capturer les
+    # processus avant shutdown(), qui efface la référence de l’exécuteur.
+    processes = list((getattr(ex, '_processes', None) or {}).values())
+    ex.shutdown(wait=False, cancel_futures=True)
+    deadline = time.monotonic() + 3
+    for process in processes:
+        process.join(timeout=max(0, deadline - time.monotonic()))
+    remaining = [process for process in processes if process.is_alive()]
+    for process in remaining:
+        log.warning('Arrêt du worker TTS bloqué à la fermeture (PID %s).', process.pid)
+        process.terminate()
+    for process in remaining:
+        process.join(timeout=1)
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=1)
 
 def _coerce_gtts_lang(voice_id: str) -> str:
     """
@@ -157,6 +178,10 @@ def generate_dub_audio(
             done_set, pending = wait(pending, timeout=FREEZE_TIMEOUT, return_when=FIRST_COMPLETED)
 
             if not done_set:
+                if isinstance(ex, ProcessPoolExecutor):
+                    # Arrêter les travaux encore actifs avant les reprises locales :
+                    # ils ne doivent pas écrire les mêmes WAV en parallèle.
+                    _shutdown_executor(ex)
                 if ui:
                     ui.message(t("tts_warn_freeze"))
                 else:
@@ -217,7 +242,7 @@ def generate_dub_audio(
                         ui.progress(pct)
 
     finally:
-        ex.shutdown(wait=False, cancel_futures=True)
+        _shutdown_executor(ex)
 
     first_path, _, _ = results[0]  # type: ignore
     first_seg = AudioSegment.from_file(first_path)

@@ -67,6 +67,122 @@ class ModesAndGuiTests(unittest.TestCase):
 
 
 class ConfigurationWindowTests(unittest.TestCase):
+    def test_twelve_selected_survive_late_detection_and_validation(self):
+        from copy import deepcopy
+        from unittest.mock import Mock
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QApplication
+        from add_dub.gui_dialog import ConfigureDialog
+        from add_dub.gui_model import Job, Settings, Video, Track
+
+        app = QApplication.instance() or QApplication([])
+        args = parse_args(['--gui', '--tts-engine', 'gtts', '--voice', 'fr'])[0]
+        tasks = Mock()
+        with tempfile.TemporaryDirectory() as directory:
+            videos = [Video(str(Path(directory) / f'{i}.mkv'), directory,
+                            [Track('0', 'Audio', kind='audio')],
+                            [Track('srt', 'SRT', kind='srt')]) for i in range(127)]
+            job = Job([directory], Settings.from_args(args), str(Path(directory) / 'out'), videos=videos)
+            for video in videos:
+                Path(video.path).touch()
+            dialog = ConfigureDialog(job, tasks)
+            try:
+                dialog.show()
+                app.processEvents()
+                dialog.build_tree()
+                folder = dialog.tree.topLevelItem(1)
+                first = dialog.file_items[videos[0].path]
+                dialog.select_item(first, None)
+                _, work, callback = tasks.run.call_args.args
+                stale_result = deepcopy(dialog.job.videos[0])
+                folder.setCheckState(0, Qt.CheckState.Unchecked)
+                for video in videos[1:13]:
+                    dialog.file_items[video.path].setCheckState(0, Qt.CheckState.Checked)
+                with patch.object(dialog.editor, 'load'):
+                    callback(stale_result, None)
+                self.assertFalse(dialog.job.videos[0].selected)
+                folder.setText(0, 'Dossier renommé dans la vue')
+                folder.setExpanded(False)
+                folder.setExpanded(True)
+                self.assertEqual(len(dialog.job.selected), 12)
+                with patch.object(dialog, 'save_current'), patch('add_dub.gui_dialog.QMessageBox.warning') as warning:
+                    dialog.validate()
+                self.assertFalse(warning.called, str(warning.call_args))
+                self.assertEqual(len(dialog.job.commands()), 12)
+                self.assertEqual({v.path for v, _ in dialog.job.commands()}, {v.path for v in videos[1:13]})
+            finally:
+                dialog.close()
+                dialog.deleteLater()
+
+    def test_nested_videos_are_counted_during_inspection(self):
+        from PySide6.QtWidgets import QApplication
+        from add_dub.gui_dialog import ConfigureDialog
+        from add_dub.gui_model import Job, Settings
+        from unittest.mock import Mock
+
+        app = QApplication.instance() or QApplication([])
+        tasks = Mock()
+        args = parse_args(['--gui'])[0]
+        with tempfile.TemporaryDirectory() as directory:
+            nested = Path(directory) / 'saison' / 'bonus'
+            nested.mkdir(parents=True)
+            (Path(directory) / 'episode.mp4').touch()
+            (nested / 'bonus.mkv').touch()
+            dialog = ConfigureDialog(Job([directory], Settings.from_args(args), directory, recursive=False), tasks)
+            try:
+                dialog.show()
+                app.processEvents()
+                owner, work, done = tasks.run.call_args.args
+                update = tasks.run.call_args.kwargs['progress']
+                counts = []
+                def report(value):
+                    update(value)
+                    counts.append(dialog.scan_progress.text())
+                # La découverte parcourt les vrais sous-dossiers ; seule l’inspection média est simulée.
+                with patch('add_dub.gui_dialog.inspect_video', side_effect=lambda video: video) as inspect:
+                    videos = work(report)
+                self.assertEqual(inspect.call_count, 2)
+                self.assertEqual(counts, ['0/2', '1/2', '2/2'])
+                done(videos, None)
+                self.assertEqual(len(dialog.file_items), 2)
+                self.assertTrue(dialog.job.preserve_tree)
+                nested_video = next(v for v in dialog.job.videos if Path(v.path).name == 'bonus.mkv')
+                self.assertEqual(Path(dialog.job.output_for(nested_video)),
+                                 Path(directory) / Path(directory).name / 'saison' / 'bonus')
+                folder = dialog.tree.topLevelItem(1)
+                self.assertTrue(folder.isExpanded())
+                opened = dialog.folder_icon(True).pixmap(28, 28).toImage()
+                closed = dialog.folder_icon(False).pixmap(28, 28).toImage()
+                self.assertNotEqual(opened, closed)
+                self.assertEqual(folder.icon(0).pixmap(28, 28).toImage(), opened)
+                folder.setExpanded(False)
+                self.assertEqual(folder.icon(0).pixmap(28, 28).toImage(), closed)
+                folder.setExpanded(True)
+                self.assertEqual(folder.icon(0).pixmap(28, 28).toImage(), opened)
+                self.assertEqual(dialog.scan_progress.text(), '2/2')
+                self.assertTrue(dialog.job.recursive)
+                # Replier un dossier partiellement coché doit conserver la sélection.
+                from PySide6.QtCore import Qt
+                from add_dub.gui_model import Track
+                for video in dialog.job.videos:
+                    video.audio = [Track('0', 'Audio')]
+                    video.subtitles = [Track('srt', 'Sous-titres')]
+                dialog.build_tree()
+                folder = dialog.tree.topLevelItem(1)
+                folder.setCheckState(0, Qt.CheckState.Unchecked)
+                first = next(iter(dialog.file_items.values()))
+                first.setCheckState(0, Qt.CheckState.Checked)
+                self.assertEqual(folder.checkState(0), Qt.CheckState.PartiallyChecked)
+                before = [v.selected for v in dialog.job.videos]
+                self.assertEqual(sum(before), 1)
+                for expanded in (False, True, False):
+                    folder.setExpanded(expanded)
+                    self.assertEqual(folder.checkState(0), Qt.CheckState.PartiallyChecked)
+                    self.assertEqual([v.selected for v in dialog.job.videos], before)
+            finally:
+                dialog.close()
+                dialog.deleteLater()
+
     def test_empty_folder_dialog_opens_and_closes(self):
         from PySide6.QtWidgets import QApplication
         from add_dub.gui_dialog import ConfigureDialog
@@ -78,7 +194,7 @@ class ConfigurationWindowTests(unittest.TestCase):
         apply_theme(app)
         tasks = Mock()
         # Exécute uniquement la découverte locale ; aucun moteur vocal ni réseau.
-        tasks.run.side_effect = lambda owner, work, done: done(work(), None)
+        tasks.run.side_effect = lambda owner, work, done, progress: done(work(progress), None)
         args = parse_args(['--gui'])[0]
         with tempfile.TemporaryDirectory() as directory:
             dialog = ConfigureDialog(Job([directory], Settings.from_args(args), directory), tasks)
@@ -86,9 +202,17 @@ class ConfigurationWindowTests(unittest.TestCase):
                 dialog.show()
                 app.processEvents()
                 self.assertTrue(dialog.isVisible())
-                self.assertTrue(dialog.recursive.isVisible())
+                self.assertTrue(dialog.job.recursive)
+                self.assertEqual(dialog.scan_progress.text(), '0/0')
                 self.assertTrue(dialog.tree.isEnabled())
                 self.assertFalse(dialog.add.isEnabled())
+                self.assertTrue(dialog.resume.isChecked())
+                dialog.overwrite.click()
+                self.assertTrue(dialog.overwrite.isChecked())
+                self.assertFalse(dialog.resume.isChecked())
+                dialog.resume.click()
+                self.assertTrue(dialog.resume.isChecked())
+                self.assertFalse(dialog.overwrite.isChecked())
                 self.assertEqual(dialog.tree.topLevelItemCount(), 1)
                 self.assertIn('Aucune vidéo admissible', dialog.scope.text())
                 tasks.run.assert_called_once()

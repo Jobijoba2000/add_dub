@@ -123,9 +123,11 @@ Depuis les sources :
 start_add_dub.bat --gui
 ```
 
-Utilisez **Ajouter des vidéos** ou **Ajouter un dossier** pour ouvrir la fenêtre de configuration. La liste de gauche permet de sélectionner les fichiers et d’inclure les sous-dossiers. Les vidéos sans sous-titres détectés sont signalées et ne peuvent pas être sélectionnées. Choisissez parmi les pistes audio et les sous-titres détectés, puis sélectionnez le moteur vocal, la langue, la régionalisation et la voix. La traduction et les réglages audio sont également configurables.
+Utilisez **Ajouter des vidéos** ou **Ajouter un dossier** pour ouvrir la fenêtre de configuration. Les sous-dossiers sont toujours inclus en mode GUI. La liste de gauche permet de sélectionner les fichiers ; pendant leur analyse, une barre de progression affiche le nombre de vidéos vérifiées sur le total (par exemple 17/125). Les vidéos sans sous-titres détectés sont signalées et ne peuvent pas être sélectionnées. Choisissez parmi les pistes audio et les sous-titres détectés, puis sélectionnez le moteur vocal, la langue, la régionalisation et la voix. La traduction et les réglages audio sont également configurables.
 
 Les réglages communs sont initialisés à partir de la première vidéo admissible du lot. Sélectionner une autre vidéo permet de personnaliser ses réglages sans modifier ceux des autres fichiers. Ajoutez ensuite le lot à la liste d’attente ; son bouton de configuration permet de le modifier avant de cliquer sur **Lancer le traitement**.
+
+En mode GUI, l’arborescence des dossiers est automatiquement conservée en sortie, y compris le nom du dossier ajouté. Les options du lot permettent de choisir entre reprendre en ignorant les sorties existantes et les remplacer.
 
 Les réglages sont initialisés depuis `options.conf` et les arguments CLI, par exemple `add_dub.exe --gui -i "C:\Videos" --tts-engine edge`. Les modifications restent propres aux lots de la session et ne réécrivent pas `options.conf`. Le journal indique les étapes et les erreurs. Le bouton d’arrêt demande l’arrêt après la vidéo en cours.
 
