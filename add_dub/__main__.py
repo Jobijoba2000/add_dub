@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sys
+import os
 
 from multiprocessing import freeze_support
 try:
@@ -31,7 +32,14 @@ def main(argv=None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 
+    if getattr(sys, "frozen", False):
+        os.environ.setdefault("ADD_DUB_OPTIONS", os.path.join(os.path.dirname(sys.executable), "options.conf"))
+
     args, _unknown = parse_args(argv)
+
+    if getattr(args, "gui", False):
+        from add_dub.gui import main as gui_main
+        return gui_main(args)
 
     # Actions utilitaires rapides
     if getattr(args, "list_voices", False):

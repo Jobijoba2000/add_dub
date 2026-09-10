@@ -5,6 +5,9 @@ __pycache__/
 tmp/
 build/
 dist/
+/build_*/
+/dist_*/
+/.cache/
 *.spec
 !add_dub.spec
 

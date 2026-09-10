@@ -154,6 +154,8 @@ def _build_services(args):
 
     def _choose_subtitle_source(input_video_path: str):
         mode = (getattr(args, "sub_mode", "auto") or "auto").lower()
+        if mode == "stream":
+            return ("stream", args.sub_index)
         if mode == "srt":
             # Priorité 1 : srt/
             in_srt = _srt_in_srt_dir_for_video(input_video_path)
@@ -187,7 +189,7 @@ def _build_services(args):
 # --------------------------
 def _make_options(args) -> DubOptions:
     # Codecs
-    audio_args = final_audio_codec_args(args.audio_codec, args.audio_bitrate)
+    audio_args = final_audio_codec_args(args.audio_codec, f"{args.audio_bitrate}k")
     sub_codec = subtitle_codec_for_container(".mkv")
 
     # Moteur & voix — lecture silencieuse depuis les valeurs effectives, avec override CLI
@@ -225,6 +227,7 @@ def _make_options(args) -> DubOptions:
         translate=args.translate,
         translate_to=args.translate_to,
         translate_from=args.translate_from,
+        translation_engine=args.translation_engine,
         batch_mode=True,
         overwrite=args.overwrite,
         skip_existing=getattr(args, "skip_existing", False),

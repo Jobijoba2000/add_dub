@@ -14,4 +14,5 @@ ctranslate2==4.8.1
 deep-translator==1.11.4
 huggingface_hub>=0.20.0
 pyinstaller==6.22.2
+PySide6-Essentials==6.8.2.1
 

@@ -341,6 +341,9 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
         force_choose_tracks_and_subs=True,
     )
 
+    if opts_local is None:
+        return 1
+
     for input_video_name in selected:
         try:
             video_opts = replace(opts_local)

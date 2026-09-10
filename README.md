@@ -106,3 +106,33 @@ start_add_dub.bat
 ## 📄 Licence
 
 Ce projet est sous licence **GNU General Public License v3.0 (GPLv3)**. Les outils tiers inclus dans la Toolbox restent soumis à leurs licences respectives.
+
+## Interface graphique (en cours de développement)
+
+> **Le mode `--gui` est en chantier.** Il est disponible pour les essais, mais des bugs peuvent subsister et son interface comme ses fonctionnalités peuvent encore évoluer. Il ne constitue pas encore une version finalisée. Le mode console interactif reste le mode par défaut.
+
+Le lancement sans argument conserve l’assistant console interactif. Pour ouvrir la fenêtre :
+
+```cmd
+add_dub.exe --gui
+```
+
+Depuis les sources :
+
+```cmd
+start_add_dub.bat --gui
+```
+
+Utilisez **Ajouter des vidéos** ou **Ajouter un dossier** pour ouvrir la fenêtre de configuration. La liste de gauche permet de sélectionner les fichiers et d’inclure les sous-dossiers. Les vidéos sans sous-titres détectés sont signalées et ne peuvent pas être sélectionnées. Choisissez parmi les pistes audio et les sous-titres détectés, puis sélectionnez le moteur vocal, la langue, la régionalisation et la voix. La traduction et les réglages audio sont également configurables.
+
+Les réglages communs sont initialisés à partir de la première vidéo admissible du lot. Sélectionner une autre vidéo permet de personnaliser ses réglages sans modifier ceux des autres fichiers. Ajoutez ensuite le lot à la liste d’attente ; son bouton de configuration permet de le modifier avant de cliquer sur **Lancer le traitement**.
+
+Les réglages sont initialisés depuis `options.conf` et les arguments CLI, par exemple `add_dub.exe --gui -i "C:\Videos" --tts-engine edge`. Les modifications restent propres aux lots de la session et ne réécrivent pas `options.conf`. Le journal indique les étapes et les erreurs. Le bouton d’arrêt demande l’arrêt après la vidéo en cours.
+
+### Compilation Windows
+
+Après préparation de l’environnement avec `start_add_dub.bat`, lancez `compil.bat`. Le script s’arrête avec un code d’erreur si la compilation ou la copie échoue. Distribuez **tout le dossier `dist\add_dub`**, qui contient l’EXE, les bibliothèques Python/Qt et les outils portables. Le même EXE propose la console par défaut et la fenêtre avec `--gui`.
+
+Le cadre architectural et les limites repérées sont détaillés dans [AUDIT.md](AUDIT.md).
+
+La fenêtre utilise PySide6/Qt et reste compatible avec l’agrandissement Windows et la Loupe. La dépendance est installée dans la venv du projet, créée avec le Python de `tools`.

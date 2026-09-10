@@ -26,6 +26,7 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_mode = parser.add_mutually_exclusive_group()
     g_mode.add_argument("--interactive", action="store_true", help=t("help_interactive"))
     g_mode.add_argument("--batch", action="store_true", help=t("help_batch"))
+    g_mode.add_argument("--gui", action="store_true", help="Ouvrir l'interface graphique")
 
     # --- Groupes d'arguments pour plus de clarté ---
     
@@ -45,7 +46,7 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_audio.add_argument("--voice", metavar="ID", default=fused["voice"], help=t("help_voice"))
     g_audio.add_argument("--audio-index", type=int, metavar="IDX", default=None, help=t("help_audio_index"))
     g_audio.add_argument("--audio-codec", metavar="CODEC", default=fused["audio_codec"], 
-                         choices=["ac3", "aac", "libopus", "opus", "flac", "libvorbis", "vorbis", "pcm_s16le"],
+                         choices=["ac3", "aac", "mp3", "libopus", "opus", "flac", "libvorbis", "vorbis", "pcm_s16le"],
                          help=t("help_audio_codec"))
     g_audio.add_argument("--audio-bitrate", type=int, metavar="KBPS", default=fused["audio_bitrate"], help=t("help_audio_bitrate"))
 
@@ -55,9 +56,9 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
 
     # 4. Translation
     g_trans = parser.add_argument_group(t("grp_trans"))
-    g_trans.add_argument("--translate", action="store_true", help=t("help_translate"))
+    g_trans.add_argument("--translate", action=argparse.BooleanOptionalAction, default=fused["translate"], help=t("help_translate"))
     g_trans.add_argument("--translate-to", metavar="LANG", default=fused["translate_to"], help=t("help_translate_to"))
-    g_trans.add_argument("--translate-from", metavar="LANG", default=None, help=t("help_translate_from"))
+    g_trans.add_argument("--translate-from", metavar="LANG", default=fused["translate_from"], help=t("help_translate_from"))
     g_trans.add_argument("--translation-engine", "--trans-engine", choices=["ctranslate2", "google"], default=fused.get("translation_engine", "ctranslate2"), help=t("help_translation_engine"))
 
 
@@ -78,9 +79,9 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     raw = (getattr(args, "sub", "auto") or "auto").strip().lower()
     sub_mode = "auto"
     sub_index = 0
-    m = re.match(r"^(mkv)\s*[:=]\s*(\d+)$", raw)
+    m = re.match(r"^(mkv|stream)\s*[:=]\s*(\d+)$", raw)
     if m:
-        sub_mode = "mkv"
+        sub_mode = m.group(1)
         sub_index = int(m.group(2))
     elif raw in ("auto", "srt", "mkv"):
         sub_mode = raw
@@ -100,6 +101,6 @@ def want_interactive(args: argparse.Namespace) -> bool:
     - False si --batch
     - True sinon (interactif par défaut)
     """
-    if getattr(args, "batch", False):
+    if getattr(args, "batch", False) or getattr(args, "gui", False):
         return False
     return True

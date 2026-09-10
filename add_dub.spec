@@ -28,7 +28,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['PyQt6', 'PyQt6.QtCore', 'PyQt6.QtWidgets', 'PyQt6.QtGui', 'PyQt6_sip', 'qfluentwidgets', 'qframelesswindow', 'transformers', 'torch', 'torchvision', 'torchaudio', 'onnxruntime', 'scipy', 'matplotlib'],
+    excludes=['tkinter', 'PyQt6', 'PyQt6.QtCore', 'PyQt6.QtWidgets', 'PyQt6.QtGui', 'PyQt6_sip', 'qfluentwidgets', 'qframelesswindow', 'transformers', 'torch', 'torchvision', 'torchaudio', 'onnxruntime', 'scipy', 'matplotlib'],
     noarchive=False,
     optimize=0,
 )

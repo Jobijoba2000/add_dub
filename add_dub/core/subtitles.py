@@ -294,6 +294,21 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Opt
     """
     kind, value = sub_choice_global
 
+    if kind == "stream":
+        destination = io_fs.join_srt(os.path.splitext(os.path.basename(video_fullpath))[0] + ".srt")
+        try:
+            subprocess.run(
+                ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", video_fullpath,
+                 "-map", f"0:{int(value)}", "-c:s", "srt", destination],
+                check=True, capture_output=True, timeout=120,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+            return destination
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            if ui:
+                ui.error(f"Extraction des sous-titres impossible : {exc}")
+            return None
+
     # CAS 1 — Choix explicite d'une piste MKV : extraction forcée (avec overwrite)
     if kind == "mkv":
         try:
@@ -316,8 +331,9 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Opt
         video_base = os.path.splitext(os.path.basename(video_fullpath))[0].lower()
         srt_base = os.path.splitext(os.path.basename(value))[0].lower()
         if os.path.exists(value) and (video_base in srt_base or srt_base in video_base):
-            strip_subtitle_tags_inplace(value)
-            return value
+            destination = _copy_into_srt_dir(value, video_fullpath)
+            strip_subtitle_tags_inplace(destination)
+            return destination
     # 2.1) srt/<base>.srt déjà présent → on l'utilise tel quel
     srt_in_srt = _srt_in_srt_dir_for_video(video_fullpath)
     if srt_in_srt:
