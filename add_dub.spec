@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('docs/favicon.png', 'docs'), ('docs/icons8', 'docs/icons8')]
+datas = [('docs/favicon.png', 'docs'), ('docs/add_dub.ico', 'docs'), ('docs/icons8', 'docs/icons8')]
 binaries = []
 hiddenimports = []
 
@@ -40,6 +40,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name='add_dub',
+    icon='docs/add_dub.ico',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

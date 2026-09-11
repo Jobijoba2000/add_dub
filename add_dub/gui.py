@@ -30,7 +30,10 @@ from add_dub.gui_dialog import ConfigureDialog, yellow_folder_icon
 from add_dub.gui_theme import apply_theme, playback_icon, video_file_icon, settings_icon, icons8_icon
 
 
-class Application(QMainWindow):
+from add_dub.gui_titlebar import CaptionWindow
+
+
+class Application(CaptionWindow):
     def __init__(self, args):
         super().__init__()
         self.args = args
@@ -68,7 +71,8 @@ class Application(QMainWindow):
         fs.ensure_base_dirs()
         self.setWindowTitle('add_dub')
         resource_root = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
-        self.setWindowIcon(QIcon(str(resource_root / 'docs' / 'favicon.png')))
+        self.setWindowIcon(QIcon(str(resource_root / 'docs' / 'add_dub.ico')))
+        self.install_caption()
         self.resize(1100, 780)
         self.setMinimumSize(760, 540)
         central = QWidget()
