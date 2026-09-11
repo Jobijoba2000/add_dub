@@ -67,6 +67,50 @@ class ModesAndGuiTests(unittest.TestCase):
 
 
 class ConfigurationWindowTests(unittest.TestCase):
+    def test_main_play_stop_button_states(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        from PySide6.QtWidgets import QApplication
+        from add_dub.gui import Application
+        app = QApplication.instance() or QApplication([])
+        args = parse_args(['--gui'])[0]
+        with patch('add_dub.gui.fs.ensure_base_dirs'):
+            window = Application(args)
+        try:
+            self.assertFalse(window.start_button.isEnabled())
+            self.assertEqual(len(window.open_button.menu().actions()), 2)
+            self.assertFalse(window.settings_button.isEnabled())
+            self.assertFalse(window.open_video_action.icon().isNull())
+            self.assertFalse(window.open_folder_action.icon().isNull())
+            video = SimpleNamespace(path='video.mkv')
+            job = SimpleNamespace(sources=['video.mkv'], selected=[video], status='En attente',
+                                  completed=set(), commands=Mock(return_value=[(video, ['fake'])]),
+                                  output_for=lambda video: 'output')
+            window.jobs = [job]
+            window.refresh()
+            self.assertTrue(window.start_button.isEnabled())
+            with patch.object(window, 'next_file'):
+                window.start_button.click()
+            self.assertTrue(window.running)
+            self.assertTrue(window.start_button.property('processing'))
+            self.assertEqual(window.start_button.text(), 'Arrêter')
+            with patch.object(window, 'process_started'):
+                window.start_button.click()
+            self.assertTrue(window.stop_requested)
+            self.assertFalse(window.start_button.isEnabled())
+            window.finish_cancel()
+            self.assertFalse(window.running)
+            self.assertTrue(window.start_button.isEnabled())
+            job.completed.add(video.path)
+            job.status = 'Terminé'
+            window.refresh()
+            self.assertFalse(window.start_button.isEnabled())
+            self.assertFalse(window.start_button.property('processing'))
+        finally:
+            window.running = False
+            window.close()
+            window.deleteLater()
+
     def test_twelve_selected_survive_late_detection_and_validation(self):
         from copy import deepcopy
         from unittest.mock import Mock
@@ -90,7 +134,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                 dialog.show()
                 app.processEvents()
                 dialog.build_tree()
-                folder = dialog.tree.topLevelItem(1)
+                folder = dialog.tree.topLevelItem(0)
                 first = dialog.file_items[videos[0].path]
                 dialog.select_item(first, None)
                 _, work, callback = tasks.run.call_args.args
@@ -149,7 +193,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                 nested_video = next(v for v in dialog.job.videos if Path(v.path).name == 'bonus.mkv')
                 self.assertEqual(Path(dialog.job.output_for(nested_video)),
                                  Path(directory) / Path(directory).name / 'saison' / 'bonus')
-                folder = dialog.tree.topLevelItem(1)
+                folder = dialog.tree.topLevelItem(0)
                 self.assertTrue(folder.isExpanded())
                 opened = dialog.folder_icon(True).pixmap(28, 28).toImage()
                 closed = dialog.folder_icon(False).pixmap(28, 28).toImage()
@@ -168,7 +212,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                     video.audio = [Track('0', 'Audio')]
                     video.subtitles = [Track('srt', 'Sous-titres')]
                 dialog.build_tree()
-                folder = dialog.tree.topLevelItem(1)
+                folder = dialog.tree.topLevelItem(0)
                 folder.setCheckState(0, Qt.CheckState.Unchecked)
                 first = next(iter(dialog.file_items.values()))
                 first.setCheckState(0, Qt.CheckState.Checked)
@@ -213,7 +257,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                 dialog.resume.click()
                 self.assertTrue(dialog.resume.isChecked())
                 self.assertFalse(dialog.overwrite.isChecked())
-                self.assertEqual(dialog.tree.topLevelItemCount(), 1)
+                self.assertEqual(dialog.tree.topLevelItemCount(), 0)
                 self.assertIn('Aucune vidéo admissible', dialog.scope.text())
                 tasks.run.assert_called_once()
                 dialog.reject()

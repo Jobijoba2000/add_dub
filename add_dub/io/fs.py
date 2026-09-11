@@ -21,7 +21,7 @@ _DEF_SRT_DIR = getattr(cfg, "SRT_DIR", "srt")  # SRT fixe à la racine (non modi
 # Dossiers **dynamiques** (initialisés sur defaults au chargement)
 INPUT_DIR = os.path.join(ROOT, _DEF_INPUT_DIR)
 OUTPUT_DIR = os.path.join(ROOT, _DEF_OUTPUT_DIR)
-TMP_DIR = os.path.join(ROOT, _DEF_TMP_DIR)
+TMP_DIR = os.environ.get('ADD_DUB_GUI_WORK_TMP') or os.path.join(ROOT, _DEF_TMP_DIR)
 
 # Dossier SRT **fixe** à la racine (non configurable)
 SRT_DIR = os.path.join(ROOT, _DEF_SRT_DIR)
@@ -37,7 +37,7 @@ for _tp in [
 # Flags : l’utilisateur a-t-il surchargé via `set_base_dirs()` ?
 _INPUT_OVERRIDDEN = False
 _OUTPUT_OVERRIDDEN = False
-_TMP_OVERRIDDEN = False
+_TMP_OVERRIDDEN = bool(os.environ.get('ADD_DUB_GUI_WORK_TMP'))
 
 
 def _abspath_under_root(p: str) -> str:
@@ -63,7 +63,7 @@ def set_base_dirs(input_dir: str | None = None,
         OUTPUT_DIR = _abspath_under_root(str(output_dir))
         _OUTPUT_OVERRIDDEN = True
     if tmp_dir is not None:
-        TMP_DIR = _abspath_under_root(str(tmp_dir))
+        TMP_DIR = _abspath_under_root(os.environ.get('ADD_DUB_GUI_WORK_TMP') or str(tmp_dir))
         _TMP_OVERRIDDEN = True
 
 

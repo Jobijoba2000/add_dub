@@ -15,7 +15,7 @@ Le mode --gui est en chantier. Son interface et ses fonctionnalités peuvent év
 - La configuration détecte les fichiers, les pistes et les voix en arrière-plan. Le choix vocal suit moteur, langue, régionalisation et voix.
 - Les réglages communs sont adaptés à la première vidéo admissible. Chaque vidéo peut recevoir des réglages personnalisés.
 - Les lots configurés sont ajoutés à une liste d’attente modifiable. La fenêtre lance le batch existant dans un processus séparé avec une liste d’arguments, sans shell.
-- La progression porte sur les fichiers traités. Le journal affiche les sorties du processus. L’arrêt demandé attend la fin de la vidéo en cours.
+- La progression porte sur les fichiers traités. Le journal affiche les sorties du processus. L’arrêt interrompt le batch et ses enfants. Chaque vidéo GUI dispose de temporaires isolés et d’un mixage provisoire, nettoyés après interruption ; la sortie finale est publiée uniquement après réussite.
 - L’interface est en français ; les messages du moteur conservent la langue configurée.
 
 ## Corrections associées

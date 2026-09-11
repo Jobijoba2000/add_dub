@@ -1,4 +1,5 @@
 import os
+import json
 from dataclasses import replace
 from typing import Optional
 
@@ -15,6 +16,7 @@ from add_dub.core.options import DubOptions
 from add_dub.core.services import Services
 from add_dub.logger import (log_call, log_time)
 from add_dub.i18n import t
+from add_dub.progress import emit, stage
 
 from add_dub.core.tts import list_available_voices
 
@@ -66,6 +68,7 @@ def process_one_video(
         dub_code = _dub_code_from_voice(getattr(opts, 'voice_id', None))
         final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}].mkv", output_dir_path)
         if os.path.exists(final_video):
+            emit('existing_output', path=final_video)
             svcs.ui.message(f"[SKIP] Fichier déjà existant : {os.path.basename(final_video)}")
             return final_video
 
@@ -84,6 +87,9 @@ def process_one_video(
             return None
 
     # 3) Résolution vers un SRT exploitable
+    emit('plan', subtitles=sub_choice[0] != 'srt', translation=bool(opts.translate and opts.translate_to))
+    if sub_choice[0] != 'srt':
+        stage('subtitles')
     srt_path = svcs.resolve_srt_for_video(input_video_path, sub_choice, ui=svcs.ui)
     if not srt_path:
         svcs.ui.error(t("pipeline_no_srt", name=input_video_name))
@@ -102,6 +108,7 @@ def process_one_video(
 
     # --- TRADUCTION (si demandée) ---
     if opts.translate and opts.translate_to:
+        stage('translation')
         from add_dub.core.translation import translate_subtitles, write_srt_file
         from add_dub.core.subtitles import parse_srt_file as _parse_srt_simple
         from add_dub.io.fs import join_srt
@@ -125,6 +132,7 @@ def process_one_video(
                 reuse_existing = True
                 
             if reuse_existing:
+                emit('skip', name='translation')
                 svcs.ui.message(t("pipeline_trans_found", path=new_srt_path))
                 svcs.ui.message(t("pipeline_trans_reusing"))
                 srt_path = new_srt_path
@@ -236,6 +244,8 @@ def process_one_video(
                                     break
                 else:
                     svcs.ui.error(t("pipeline_trans_err", err="Empty source SRT"))
+                if subs_source and skip_trans:
+                    emit('skip', name='translation')
             except Exception as e:
                 svcs.ui.error(t("pipeline_trans_err", err=e))
                 # On continue avec le SRT d'origine en cas d'erreur
@@ -248,6 +258,7 @@ def process_one_video(
 
     # 6) Extraction audio d'origine → **tmp/**
     orig_wav = join_tmp(f"{base}_orig.wav")
+    stage('audio')
     svcs.ui.message(t("pipeline_extract_audio"))
     extract_audio_track(
         input_video_path,
@@ -271,6 +282,7 @@ def process_one_video(
 
     # 8) Génération TTS alignée → **tmp/**
     tts_wav = join_tmp(f"{test_prefix}{base}_tts.wav")
+    stage('tts')
     svcs.ui.message(t("pipeline_gen_tts"))
     svcs.generate_dub_audio(
         srt_file=srt_path,
@@ -283,6 +295,7 @@ def process_one_video(
 
     # 9) Ducking → **tmp/**
     ducked_wav = join_tmp(f"{test_prefix}{base}_ducked.wav")
+    stage('ducking')
     svcs.ui.message(t("pipeline_ducking"))
     lower_audio_during_subtitles(
         audio_file=orig_wav,
@@ -299,13 +312,17 @@ def process_one_video(
     final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}]{final_ext}", output_dir_path)
 
     svcs.ui.message(t("pipeline_mux"))
+    stage('mux')
+    # La GUI ne publie le MKV qu’après la sortie réussie du processus.
+    # Un arrêt pendant le mixage ne touche ainsi aucune sortie précédente.
+    mux_output = os.environ.get('ADD_DUB_GUI_PARTIAL_OUTPUT') or final_video
     dub_in_one_pass(
         video_fullpath=input_video_path,
         bg_wav=ducked_wav,
         tts_wav=tts_wav,
         original_wav=orig_wav,
         subtitle_srt_path=srt_path,
-        output_video_path=final_video,
+        output_video_path=mux_output,
         opts=opts,
         progress_cb=svcs.ui.progress,
     )
@@ -334,7 +351,7 @@ def process_one_video(
                 tts_wav=tts_wav,
                 original_wav=orig_wav,
                 subtitle_srt_path=srt_path,
-                output_video_path=final_video,  # on écrase, -y est passé dans la commande
+                output_video_path=mux_output,  # on écrase, -y est passé dans la commande
                 opts=opts,
                 progress_cb=svcs.ui.progress,
             )
@@ -349,4 +366,7 @@ def process_one_video(
         except Exception:
             pass
 
+    if os.environ.get('ADD_DUB_GUI_PARTIAL_OUTPUT'):
+        with open(join_tmp('result.json'), 'w', encoding='utf-8') as manifest:
+            json.dump({'destination': final_video}, manifest)
     return final_video

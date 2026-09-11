@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = []
+datas = [('docs/favicon.png', 'docs'), ('docs/icons8', 'docs/icons8')]
 binaries = []
 hiddenimports = []
 

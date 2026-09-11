@@ -46,6 +46,8 @@ class ConsoleUI:
 
     def progress(self, percent: float) -> None:
         # Simple console progress, maybe just print or overwrite line
+        from add_dub.progress import emit
+        emit('progress', value=percent)
         # For now, let's match the translation worker behavior if possible,
         # or just print if it's a significant step.
         # The translation worker uses \r to overwrite.

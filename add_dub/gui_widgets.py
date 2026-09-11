@@ -2,13 +2,104 @@
 from copy import deepcopy
 import threading
 
-from PySide6.QtCore import QObject, Signal, QLocale, Qt
+from PySide6.QtCore import QObject, Signal, QLocale, Qt, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QPainter, QColor
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QFormLayout, QComboBox, QLabel, QCheckBox,
-    QLineEdit, QTabWidget, QScrollArea, QSpinBox, QDoubleSpinBox,
+    QWidget, QVBoxLayout, QFormLayout, QComboBox, QLabel, QCheckBox, QRadioButton, QButtonGroup,
+    QLineEdit, QTabWidget, QScrollArea, QSpinBox, QDoubleSpinBox, QTreeWidget, QAbstractItemView, QScroller, QMenu, QTabBar,
+    QStylePainter, QStyleOptionTab, QStyle, QStyleOptionButton, QSizePolicy,
 )
 from shiboken6 import isValid
 from add_dub.gui_model import FIELDS, Settings, adapt_settings
+
+
+class QueueTabBar(QTabBar):
+    """Prolonge la bordure de la liste en laissant l’onglet actif ouvert."""
+    def tabSizeHint(self, index):
+        size = super().tabSizeHint(index)
+        if self.count():
+            size.setWidth(max(super(QueueTabBar, self).tabSizeHint(i).width() for i in range(self.count())))
+        size.setHeight(max(size.height(), self.fontMetrics().height() + 22))
+        return size
+
+    def paintEvent(self, event):
+        painter = QStylePainter(self)
+        for index in range(self.count()):
+            option = QStyleOptionTab()
+            self.initStyleOption(option, index)
+            painter.drawControl(QStyle.ControlElement.CE_TabBarTabShape, option)
+            # Centrer dans la même zone pour les deux états, indépendamment
+            # des décalages de libellé appliqués par le style natif.
+            font = self.font()
+            font.setBold(index == self.currentIndex())
+            painter.setFont(font)
+            painter.setPen(QColor('#ffffff' if index == self.currentIndex() else '#eeeeee'))
+            text_rect = self.tabRect(index).adjusted(1, 1, -9, 0)
+            painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, self.tabText(index))
+            if self.hasFocus() and index == self.currentIndex():
+                painter.setPen(QColor('#ffdf00'))
+                painter.drawRect(text_rect.adjusted(4, 4, -4, -4))
+        painter.setPen(QColor('#858585'))
+        y = self.height() - 1
+        active = self.tabRect(self.currentIndex())
+        if active.isValid():
+            if active.left() > 0:
+                painter.drawLine(0, y, active.left(), y)
+            # La marge droite des onglets vaut 8 pixels dans le thème.
+            painter.drawLine(active.right() - 8, y, self.width() - 1, y)
+        else:
+            painter.drawLine(0, y, self.width() - 1, y)
+        painter.end()
+
+
+class SpacedMenu(QMenu):
+    """Garde un espace avec le bouton, y compris près du bord de l’écran."""
+    def showEvent(self, event):
+        self.setMinimumWidth(max(260, self.fontMetrics().horizontalAdvance('Ouvrir des vidéos…') + 110))
+        super().showEvent(event)
+        bounds = self.screen().availableGeometry()
+        y = self.y() + 8
+        if y + self.height() > bounds.bottom() + 1:
+            y = self.y() - 8
+        self.move(self.x(), max(bounds.top(), y))
+
+
+class SmoothScrollMixin:
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._scroll = QPropertyAnimation(self.verticalScrollBar(), b'value', self)
+        self._scroll.setDuration(220)
+        self._scroll.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.verticalScrollBar().sliderPressed.connect(self._scroll.stop)
+        QScroller.grabGesture(self.viewport(), QScroller.ScrollerGestureType.TouchGesture)
+
+    def wheelEvent(self, event):
+        if event.modifiers() or event.angleDelta().x():
+            return super().wheelEvent(event)
+        bar = self.verticalScrollBar()
+        pixel = event.pixelDelta().y()
+        if pixel:
+            self._scroll.stop()
+            bar.setValue(bar.value() - pixel)
+        else:
+            target = self._scroll.endValue() if self._scroll.state() == QPropertyAnimation.State.Running else bar.value()
+            target = max(bar.minimum(), min(bar.maximum(), int(target - event.angleDelta().y())))
+            self._scroll.stop()
+            self._scroll.setStartValue(bar.value())
+            self._scroll.setEndValue(target)
+            self._scroll.start()
+        event.accept()
+
+
+class SmoothTreeWidget(SmoothScrollMixin, QTreeWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+
+
+class SmoothScrollArea(SmoothScrollMixin, QScrollArea):
+    pass
 
 
 class Async(QObject):
@@ -57,12 +148,12 @@ def choose(box, value):
 def page_form(tabs, title):
     content = QWidget()
     form = QFormLayout(content)
-    form.setContentsMargins(18, 20, 18, 20)
-    form.setVerticalSpacing(14)
-    form.setHorizontalSpacing(18)
+    form.setContentsMargins(24, 26, 24, 26)
+    form.setVerticalSpacing(24)
+    form.setHorizontalSpacing(30)
     form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint)
     form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
-    scroll = QScrollArea()
+    scroll = SmoothScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setWidget(content)
     tabs.addTab(scroll, title)
@@ -72,19 +163,21 @@ def page_form(tabs, title):
 class VoicePicker(QWidget):
     changed = Signal()
 
-    def __init__(self, async_tasks, parent=None):
+    def __init__(self, async_tasks, parent=None, form=None):
         super().__init__(parent)
         self.tasks = async_tasks
         self.cache = {}
         self.voices = []
         self.desired = ''
         self.preferred_language = 'fr'
+        self.preferred_region = QLocale.system().name().replace('_', '-')
         self.generation = 0
         self.loading = False
-        form = QFormLayout(self)
-        form.setContentsMargins(0, 0, 0, 0)
-        form.setVerticalSpacing(14)
-        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        if form is None:
+            form = QFormLayout(self)
+            form.setContentsMargins(0, 0, 0, 0)
+            form.setVerticalSpacing(14)
+            form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.engine = combo([('Windows OneCore · hors ligne', 'onecore'), ('Edge · en ligne', 'edge'), ('Google TTS · en ligne', 'gtts')], 'Moteur vocal')
         self.language = combo(name='Langue de la voix')
         self.region = combo(name='Variante régionale')
@@ -101,6 +194,9 @@ class VoicePicker(QWidget):
 
     def set_value(self, engine, voice, preferred='fr'):
         self.preferred_language = preferred or 'fr'
+        # La région par défaut suit la locale Windows. Elle ne sera remplacée
+        # que si une voix précise est déjà sélectionnée.
+        self.preferred_region = QLocale.system().name().replace('_', '-')
         self.desired = voice or ''
         self.engine.blockSignals(True)
         choose(self.engine, engine)
@@ -173,6 +269,8 @@ class VoicePicker(QWidget):
         desired = next((v for v in self.voices if v['id'] == self.desired), None)
         if desired:
             choose(self.region, desired['lang'])
+        else:
+            choose(self.region, self.preferred_region)
         self.region.setEnabled(len(locales) > 1)
         self.region.blockSignals(False)
         self.region_changed()
@@ -192,6 +290,86 @@ class VoicePicker(QWidget):
         return self.engine.currentData(), (self.desired if self.loading else self.voice.currentData()) or ''
 
 
+class TrackRadioButton(QRadioButton):
+    """Conserve le libellé accessible complet sans imposer sa largeur."""
+
+    def minimumSizeHint(self):
+        size = super().minimumSizeHint()
+        size.setWidth(80)
+        return size
+
+    def sizeHint(self):
+        size = super().sizeHint()
+        size.setWidth(min(size.width(), 360))
+        return size
+
+    def paintEvent(self, event):
+        option = QStyleOptionButton()
+        self.initStyleOption(option)
+        indicator = self.style().pixelMetric(QStyle.PixelMetric.PM_ExclusiveIndicatorWidth)
+        spacing = self.style().pixelMetric(QStyle.PixelMetric.PM_RadioButtonLabelSpacing)
+        option.text = self.fontMetrics().elidedText(
+            self.text(), Qt.TextElideMode.ElideRight, max(0, self.width() - indicator - spacing - 8))
+        painter = QStylePainter(self)
+        painter.drawControl(QStyle.ControlElement.CE_RadioButton, option)
+
+
+class TrackPicker(QWidget):
+    """Sélecteur de piste accessible avec des boutons radio explicites."""
+    currentIndexChanged = Signal(int)
+
+    def __init__(self, accessible_name='', parent=None):
+        super().__init__(parent)
+        self.setAccessibleName(accessible_name)
+        self.group = QButtonGroup(self)
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(12)
+        self._values = []
+        self.group.idClicked.connect(self.currentIndexChanged)
+
+    def clear(self):
+        for button in self.group.buttons():
+            self.group.removeButton(button)
+            self.layout.removeWidget(button)
+            button.hide()
+            button.deleteLater()
+        self._values.clear()
+
+    def addItem(self, label, value):
+        index = len(self._values)
+        button = TrackRadioButton(label, self)
+        button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        button.setToolTip(label)
+        self.group.addButton(button, index)
+        self.layout.addWidget(button)
+        self._values.append(value)
+        if index == 0:
+            button.setChecked(True)
+
+    def currentData(self):
+        index = self.group.checkedId()
+        return self._values[index] if 0 <= index < len(self._values) else None
+
+    def findData(self, value):
+        try:
+            return self._values.index(value)
+        except ValueError:
+            return -1
+
+    def count(self):
+        return len(self._values)
+
+    def currentText(self):
+        button = self.group.checkedButton()
+        return button.text() if button else ''
+
+    def setCurrentIndex(self, index):
+        button = self.group.button(index)
+        if button:
+            button.setChecked(True)
+
+
 class SettingsEditor(QTabWidget):
     changed = Signal()
 
@@ -201,16 +379,25 @@ class SettingsEditor(QTabWidget):
         self.base = None
         self.video = None
         self.setAccessibleName('Réglages du doublage')
-        sources = page_form(self, 'Pistes et voix')
-        self.audio = combo(name='Piste audio originale')
-        self.sub = combo(name='Source des sous-titres')
-        # Les intitulés longs peuvent utiliser l'espace disponible.
-        self.audio.setMinimumContentsLength(26)
-        self.sub.setMinimumContentsLength(26)
+        self.setObjectName('settingsTabs')
+        tab_bar = QueueTabBar(self)
+        tab_bar.setObjectName('queueTabs')
+        tab_bar.setExpanding(False)
+        tab_bar.setDrawBase(False)
+        self.setTabBar(tab_bar)
+        sources = page_form(self, 'Pistes')
+        sources.setVerticalSpacing(32)
+        sources.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+        sources.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        sources.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.audio = TrackPicker('Piste audio originale')
+        self.sub = TrackPicker('Source des sous-titres')
         sources.addRow('Audio original', self.audio)
         sources.addRow('Sous-titres', self.sub)
-        self.voice = VoicePicker(tasks)
-        sources.addRow(self.voice)
+        voices = page_form(self, 'Voix')
+        voices.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        self.voice = VoicePicker(tasks, self, form=voices)
+        self.voice.hide()
         trans = page_form(self, 'Traduction')
         self.translate = QCheckBox('Traduire les sous-titres avant le doublage')
         self.translation_engine = combo([('Traduction locale · CTranslate2', 'ctranslate2'), ('Google · en ligne', 'google')], 'Moteur de traduction')
@@ -248,7 +435,7 @@ class SettingsEditor(QTabWidget):
             self.fields[key] = widget
             advanced.addRow(label.split(' ;')[0], widget)
         for widget in (self.audio, self.sub, self.translation_engine, *self.fields.values()):
-            signal = widget.currentIndexChanged if isinstance(widget, QComboBox) else widget.valueChanged
+            signal = widget.currentIndexChanged if hasattr(widget, 'currentIndexChanged') else widget.valueChanged
             signal.connect(self.emit_change)
         self.voice.changed.connect(self.emit_change)
         self.translate.toggled.connect(self.translation_enabled)

@@ -12,7 +12,8 @@ from PySide6.QtWidgets import (
     QLineEdit, QFileDialog, QMessageBox, QGroupBox, QStyle, QFileIconProvider, QProgressBar, QStyleFactory,
 )
 from add_dub.gui_model import discover, inspect_video, adapt_settings
-from add_dub.gui_widgets import SettingsEditor
+from add_dub.gui_widgets import SettingsEditor, SmoothTreeWidget
+from add_dub.gui_theme import icons8_icon
 
 ROLE = Qt.ItemDataRole.UserRole
 COMMON = '__common__'
@@ -20,7 +21,11 @@ COMMON = '__common__'
 
 @lru_cache(maxsize=2)
 def yellow_folder_icon(opened):
-    """Conserve les dessins Qt ouvert/fermé et leurs ombres, en jaune."""
+    """Icône SVG Icons8 en couleur, nette à toutes les tailles."""
+    icon = icons8_icon('folder-open' if opened else 'folder')
+    if not icon.isNull():
+        return icon
+    # Repli natif si une distribution ne contient pas les ressources.
     style = QStyleFactory.create('Fusion')
     kind = QStyle.StandardPixmap.SP_DirOpenIcon if opened else QStyle.StandardPixmap.SP_DirClosedIcon
     source = style.standardIcon(kind)
@@ -55,71 +60,121 @@ class ConfigureDialog(QDialog):
         self.file_items = {}
         self.icon_provider = QFileIconProvider()
         self.setWindowTitle('Configurer le doublage — add_dub')
-        self.resize(1220, 850)
+        # La configuration est une vraie fenêtre de travail : elle reste
+        # redimensionnable et s’ouvre agrandie comme la fenêtre principale.
+        self.setWindowFlags(
+            Qt.WindowType.Window
+            | Qt.WindowType.WindowTitleHint
+            | Qt.WindowType.WindowSystemMenuHint
+            | Qt.WindowType.WindowMinimizeButtonHint
+            | Qt.WindowType.WindowMaximizeButtonHint
+            | Qt.WindowType.WindowCloseButtonHint
+        )
+        available = self.screen().availableGeometry()
+        self.resize(min(1220, available.width() - 40), min(850, available.height() - 80))
         self.setMinimumSize(860, 560)
+        self._maximize_pending = True
         self.finished.connect(self.closed)
         outer = QVBoxLayout(self)
         outer.setContentsMargins(22, 20, 22, 20)
         outer.setSpacing(14)
-        heading = QLabel('Configurer les vidéos')
-        heading.setObjectName('heading')
-        outer.addWidget(heading)
         self.summary = QLabel('Recherche des vidéos…')
         self.summary.setWordWrap(True)
-        outer.addWidget(self.summary)
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.columns = splitter
         outer.addWidget(splitter, 1)
         left = QWidget()
         left_layout = QVBoxLayout(left)
         left_layout.setContentsMargins(0, 0, 8, 0)
+        left_layout.setSpacing(12)
+        header_height = max(48, self.fontMetrics().lineSpacing() * 2 + 12)
+        left_header = QWidget()
+        left_header.setFixedHeight(header_height)
+        header_layout = QVBoxLayout(left_header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(0)
+        left_layout.addWidget(left_header)
         self.has_folders = any(os.path.isdir(p) for p in self.job.sources)
         self.scan_progress = QProgressBar()
         self.scan_progress.setObjectName('scanProgress')
         self.scan_progress.setAccessibleName('Progression de l’analyse des vidéos')
         self.scan_progress.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.scan_progress.setFormat('%v/%m')
-        left_layout.addWidget(self.scan_progress)
-        self.tree = QTreeWidget()
+        header_layout.addWidget(self.scan_progress, alignment=Qt.AlignmentFlag.AlignVCenter)
+        self.summary.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        header_layout.addWidget(self.summary)
+        self.summary.hide()
+        self.tree = SmoothTreeWidget()
         self.tree.setHeaderLabels(['Fichiers', 'État'])
+        self.tree.setHeaderHidden(True)
+        self.tree.setColumnHidden(1, True)
         self.tree.setAccessibleName('Sélection des vidéos et des dossiers')
         self.tree.setColumnWidth(0, 220)
         self.tree.setIconSize(QPixmap(28, 28).size())
         self.tree.setMinimumWidth(270)
-        left_layout.addWidget(self.tree)
+        left_layout.addWidget(self.tree, 1)
         left_hint = QLabel('Cochez les vidéos à traiter. Un dossier partiellement sélectionné porte une coche intermédiaire. Les vidéos sans sous-titres sont désactivées.')
         left_hint.setWordWrap(True)
-        left_layout.addWidget(left_hint)
+        self.tree.setToolTip(left_hint.text())
+        left_hint.deleteLater()
         splitter.addWidget(left)
         right = QWidget()
         right_layout = QVBoxLayout(right)
         right_layout.setContentsMargins(8, 0, 0, 0)
-        self.scope = QLabel()
+        right_layout.setSpacing(12)
+        right_header = QWidget()
+        right_header.setFixedHeight(header_height)
+        reference_layout = QHBoxLayout(right_header)
+        reference_layout.setContentsMargins(0, 0, 0, 0)
+        reference_layout.setSpacing(12)
+        right_layout.addWidget(right_header)
+        self.scope = QLabel(self)
         self.scope.setObjectName('scope')
         self.scope.setWordWrap(True)
-        right_layout.addWidget(self.scope)
+        self.scope.hide()
         self.reference_label = QLabel()
         self.reference_label.setWordWrap(True)
-        right_layout.addWidget(self.reference_label)
+        self.reference_label.setMinimumWidth(0)
+        self.reference_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        reference_layout.addWidget(self.reference_label, 1)
         self.reset = QPushButton('Revenir aux réglages communs')
         self.reset.setAccessibleName('Supprimer les réglages personnalisés de cette vidéo')
         self.reset.clicked.connect(self.reset_file)
-        right_layout.addWidget(self.reset, alignment=Qt.AlignmentFlag.AlignLeft)
+        reference_layout.addWidget(self.reset, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.editor = SettingsEditor(tasks)
         self.editor.setEnabled(False)
         right_layout.addWidget(self.editor, 1)
         splitter.addWidget(right)
         splitter.setSizes([380, 800])
+        bottom_options = QHBoxLayout()
+        bottom_options.setSpacing(splitter.handleWidth() + 16)
+        output_panel = QWidget()
+        output_panel.setObjectName('outputPanel')
+        output_layout = QVBoxLayout(output_panel)
+        output_layout.setContentsMargins(0, 0, 0, 0)
+        output_layout.setSpacing(8)
+        output_title = QLabel('Dossier de sortie')
+        output_layout.addWidget(output_title)
         output_row = QHBoxLayout()
-        output_row.addWidget(QLabel('Dossier de sortie'))
+        output_row.setContentsMargins(0, 0, 0, 0)
+        output_row.setSpacing(12)
         self.output = QLineEdit(self.job.output)
         self.output.setAccessibleName('Dossier de sortie du lot')
         output_row.addWidget(self.output, 1)
         browse = QPushButton('Parcourir…')
         browse.clicked.connect(self.choose_output)
         output_row.addWidget(browse)
-        outer.addLayout(output_row)
+        output_layout.addLayout(output_row)
+        bottom_options.addWidget(output_panel, 1)
+        # Pour un seul fichier, conserver la colonne gauche vide afin que le
+        # dossier de sortie reste aligné sur la colonne droite, comme pour un
+        # lot de plusieurs vidéos.
+        self.bottom_placeholder = QWidget()
+        self.bottom_placeholder.setVisible(False)
+        bottom_options.insertWidget(0, self.bottom_placeholder, 1)
         self.batch_options = QGroupBox('Options du lot')
         options = QVBoxLayout(self.batch_options)
+        options.setContentsMargins(18, 14, 18, 14)
         options.setSpacing(8)
         policy_row = QVBoxLayout()
         self.resume = QRadioButton('Reprendre : ignorer les sorties existantes')
@@ -132,11 +187,16 @@ class ConfigureDialog(QDialog):
         policy_row.addWidget(self.resume)
         policy_row.addWidget(self.overwrite)
         options.addLayout(policy_row)
-        outer.addWidget(self.batch_options)
-        footer = QHBoxLayout()
-        self.dry_run = QCheckBox('Vérifier uniquement (sans produire de vidéo)')
-        self.dry_run.setChecked(self.job.dry_run)
-        footer.addWidget(self.dry_run)
+        # Les options et le dossier de sortie partagent la même ligne basse,
+        # toujours visible sous la zone centrale redimensionnable.
+        bottom_options.insertWidget(0, self.batch_options, 1)
+        outer.addLayout(bottom_options)
+        splitter.splitterMoved.connect(self.align_bottom_columns)
+        QTimer.singleShot(0, self.align_bottom_columns)
+        footer_panel = QWidget()
+        footer = QHBoxLayout(footer_panel)
+        footer.setContentsMargins(0, 0, 0, 0)
+        footer.setSpacing(12)
         footer.addStretch()
         cancel = QPushButton('Annuler')
         cancel.clicked.connect(self.reject)
@@ -147,14 +207,42 @@ class ConfigureDialog(QDialog):
         self.add.setEnabled(False)
         self.add.clicked.connect(self.validate)
         footer.addWidget(self.add)
-        outer.addLayout(footer)
+        outer.addWidget(footer_panel, 0)
         self.tree.model().dataChanged.connect(self.tree_data_changed)
         self.tree.currentItemChanged.connect(self.select_item)
         self.tree.itemExpanded.connect(lambda item: self.set_folder_icon(item, True))
         self.tree.itemCollapsed.connect(lambda item: self.set_folder_icon(item, False))
         self.editor.changed.connect(self.edited)
-        QTimer.singleShot(0, self.showMaximized)
         QTimer.singleShot(0, self.scan)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self._maximize_pending:
+            self._maximize_pending = False
+            # L’état est appliqué après la création de la fenêtre native,
+            # ce qui évite que QDialog.exec() ne le remplace par une taille
+            # normale et ne laisse la fenêtre principale visible derrière.
+            QTimer.singleShot(0, self.maximize_initial_window)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, 'batch_options'):
+            QTimer.singleShot(0, self.align_bottom_columns)
+
+    def align_bottom_columns(self, *_):
+        if not self._closed:
+            width = max(0, self.columns.sizes()[0] - 8)
+            self.batch_options.setFixedWidth(width)
+            self.bottom_placeholder.setFixedWidth(width)
+
+    def maximize_initial_window(self):
+        if not self._closed:
+            self.showNormal()
+            # Donner une géométrie cohérente avec l'écran à la fenêtre native
+            # avant la maximisation (notamment avec un DPI Windows de 125 %).
+            available = self.screen().availableGeometry()
+            self.setGeometry(available.adjusted(0, 30, 0, -10))
+            self.showMaximized()
 
     def closed(self):
         self._closed = True
@@ -214,6 +302,7 @@ class ConfigureDialog(QDialog):
         sources = list(self.job.sources)
         self.scan_progress.setRange(0, 0)
         self.scan_progress.show()
+        self.summary.hide()
         known = deepcopy(self.known)
         def progress(counts):
             if generation != self.generation:
@@ -237,6 +326,8 @@ class ConfigureDialog(QDialog):
             if generation != self.generation:
                 return
             self.tree.setEnabled(True)
+            self.scan_progress.hide()
+            self.summary.show()
             if error:
                 self.scan_progress.hide()
                 self.summary.setText(f'Détection impossible : {error}')
@@ -249,7 +340,10 @@ class ConfigureDialog(QDialog):
                 self.job.common = adapt_settings(self.job.common, self.reference)
                 self.initialized = True
             self.build_tree()
-            self.batch_options.setVisible(len(videos) > 1)
+            # Les options de sortie restent toujours disponibles, y compris
+            # lorsqu'un seul fichier est ajouté.
+            self.batch_options.setVisible(True)
+            self.bottom_placeholder.setVisible(False)
             self.add.setEnabled(bool(self.reference))
             self.update_summary()
             if self.reference:
@@ -263,8 +357,6 @@ class ConfigureDialog(QDialog):
         self.tree.blockSignals(True)
         self.tree.clear()
         self.file_items = {}
-        common = QTreeWidgetItem(self.tree, ['Réglages communs du lot', ''])
-        common.setData(0, ROLE, COMMON)
         folders = {}
         for video in self.job.videos:
             parent = self.tree
@@ -303,7 +395,6 @@ class ConfigureDialog(QDialog):
         # Les signaux sont bloqués pendant la construction : synchroniser aussi les icônes.
         for item in folders.values():
             self.set_folder_icon(item, item.isExpanded())
-        self.tree.setCurrentItem(common)
         self.tree.blockSignals(False)
         self.scope_text()
 
@@ -381,6 +472,9 @@ class ConfigureDialog(QDialog):
             return
         path = item.data(0, ROLE)
         if not path:
+            if self.reference:
+                self.save_current()
+                self.load_scope(COMMON, self.reference)
             return
         self.save_current()
         self.detect_generation += 1
@@ -440,7 +534,7 @@ class ConfigureDialog(QDialog):
         self.job.output = self.output.text().strip()
         self.job.preserve_tree = True
         self.job.resume = self.resume.isChecked()
-        self.job.dry_run = self.dry_run.isChecked()
+        self.job.dry_run = False
         try:
             self.job.commands()
         except ValueError as exc:
