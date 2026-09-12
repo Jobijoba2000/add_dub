@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QStylePainter, QStyleOptionTab, QStyle, QStyleOptionButton, QSizePolicy,
 )
 from shiboken6 import isValid
-from add_dub.gui_model import FIELDS, Settings, adapt_settings
+from add_dub.gui.model import FIELDS, Settings, adapt_settings
 
 
 class QueueTabBar(QTabBar):

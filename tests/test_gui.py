@@ -7,7 +7,7 @@ from unittest.mock import patch
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
 from add_dub.cli.args import parse_args, want_interactive
-from add_dub.gui import FIELDS, BOOLS, batch_command
+from add_dub.gui.model import FIELDS, BOOLS, batch_command
 
 
 class ModesAndGuiTests(unittest.TestCase):
@@ -71,13 +71,14 @@ class ConfigurationWindowTests(unittest.TestCase):
         from types import SimpleNamespace
         from unittest.mock import Mock
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui import Application
+        from add_dub.gui.application import Application
         app = QApplication.instance() or QApplication([])
         args = parse_args(['--gui'])[0]
-        with patch('add_dub.gui.fs.ensure_base_dirs'):
+        with patch('add_dub.gui.application.fs.ensure_base_dirs'):
             window = Application(args)
         try:
             self.assertFalse(window.start_button.isEnabled())
+            self.assertFalse(window.windowIcon().isNull())
             self.assertEqual(len(window.open_button.menu().actions()), 2)
             self.assertFalse(window.settings_button.isEnabled())
             self.assertFalse(window.open_video_action.icon().isNull())
@@ -116,8 +117,8 @@ class ConfigurationWindowTests(unittest.TestCase):
         from unittest.mock import Mock
         from PySide6.QtCore import Qt
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui_dialog import ConfigureDialog
-        from add_dub.gui_model import Job, Settings, Video, Track
+        from add_dub.gui.dialog import ConfigureDialog
+        from add_dub.gui.model import Job, Settings, Video, Track
 
         app = QApplication.instance() or QApplication([])
         args = parse_args(['--gui', '--tts-engine', 'gtts', '--voice', 'fr'])[0]
@@ -149,7 +150,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                 folder.setExpanded(False)
                 folder.setExpanded(True)
                 self.assertEqual(len(dialog.job.selected), 12)
-                with patch.object(dialog, 'save_current'), patch('add_dub.gui_dialog.QMessageBox.warning') as warning:
+                with patch.object(dialog, 'save_current'), patch('add_dub.gui.dialog.QMessageBox.warning') as warning:
                     dialog.validate()
                 self.assertFalse(warning.called, str(warning.call_args))
                 self.assertEqual(len(dialog.job.commands()), 12)
@@ -160,8 +161,8 @@ class ConfigurationWindowTests(unittest.TestCase):
 
     def test_nested_videos_are_counted_during_inspection(self):
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui_dialog import ConfigureDialog
-        from add_dub.gui_model import Job, Settings
+        from add_dub.gui.dialog import ConfigureDialog
+        from add_dub.gui.model import Job, Settings
         from unittest.mock import Mock
 
         app = QApplication.instance() or QApplication([])
@@ -183,7 +184,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                     update(value)
                     counts.append(dialog.scan_progress.text())
                 # La découverte parcourt les vrais sous-dossiers ; seule l’inspection média est simulée.
-                with patch('add_dub.gui_dialog.inspect_video', side_effect=lambda video: video) as inspect:
+                with patch('add_dub.gui.dialog.inspect_video', side_effect=lambda video: video) as inspect:
                     videos = work(report)
                 self.assertEqual(inspect.call_count, 2)
                 self.assertEqual(counts, ['0/2', '1/2', '2/2'])
@@ -207,7 +208,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                 self.assertTrue(dialog.job.recursive)
                 # Replier un dossier partiellement coché doit conserver la sélection.
                 from PySide6.QtCore import Qt
-                from add_dub.gui_model import Track
+                from add_dub.gui.model import Track
                 for video in dialog.job.videos:
                     video.audio = [Track('0', 'Audio')]
                     video.subtitles = [Track('srt', 'Sous-titres')]
@@ -229,9 +230,9 @@ class ConfigurationWindowTests(unittest.TestCase):
 
     def test_empty_folder_dialog_opens_and_closes(self):
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui_dialog import ConfigureDialog
-        from add_dub.gui_model import Job, Settings
-        from add_dub.gui_theme import apply_theme
+        from add_dub.gui.dialog import ConfigureDialog
+        from add_dub.gui.model import Job, Settings
+        from add_dub.gui.theme import apply_theme
         from unittest.mock import Mock
 
         app = QApplication.instance() or QApplication([])

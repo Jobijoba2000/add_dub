@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QStyleFactory, QProxyStyle, QStyle
 
 
 def icons8_icon(name):
-    root = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
+    root = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[2]
     asset_root = root / 'docs' / 'icons8'
     path = asset_root / f'{name}.png'
     if not path.is_file():

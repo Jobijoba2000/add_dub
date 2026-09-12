@@ -11,9 +11,9 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem, QPushButton, QCheckBox, QRadioButton, QButtonGroup,
     QLineEdit, QFileDialog, QMessageBox, QGroupBox, QStyle, QFileIconProvider, QProgressBar, QStyleFactory,
 )
-from add_dub.gui_model import discover, inspect_video, adapt_settings
-from add_dub.gui_widgets import SettingsEditor, SmoothTreeWidget
-from add_dub.gui_theme import icons8_icon
+from add_dub.gui.model import discover, inspect_video, adapt_settings
+from add_dub.gui.widgets import SettingsEditor, SmoothTreeWidget
+from add_dub.gui.theme import icons8_icon
 
 ROLE = Qt.ItemDataRole.UserRole
 COMMON = '__common__'

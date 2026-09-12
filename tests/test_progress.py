@@ -6,11 +6,11 @@ class ProgressTests(unittest.TestCase):
     def test_queue_menu_paths_removal_and_immediate_transfer(self):
         from unittest.mock import patch
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui import Application
-        from add_dub.gui_model import Job, Settings, Video, Track
+        from add_dub.gui.application import Application
+        from add_dub.gui.model import Job, Settings, Video, Track
         from add_dub.cli.args import parse_args
         app = QApplication.instance() or QApplication([])
-        with patch('add_dub.gui.fs.ensure_base_dirs'):
+        with patch('add_dub.gui.application.fs.ensure_base_dirs'):
             window = Application(parse_args(['--gui'])[0])
         videos = [Video(f'C:/source/episode{i}.mkv', audio=[Track('0', 'Audio')],
                         subtitles=[Track('srt', 'Sous-titres')]) for i in range(3)]
@@ -57,10 +57,10 @@ class ProgressTests(unittest.TestCase):
         from types import SimpleNamespace
         from unittest.mock import patch
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui import Application
+        from add_dub.gui.application import Application
         from add_dub.cli.args import parse_args
         app = QApplication.instance() or QApplication([])
-        with patch('add_dub.gui.fs.ensure_base_dirs'):
+        with patch('add_dub.gui.application.fs.ensure_base_dirs'):
             window = Application(parse_args(['--gui'])[0])
         video = SimpleNamespace(path='simulation.mkv')
         script = "from add_dub.progress import stage, emit; stage('audio'); emit('progress',value=50); stage('mux'); emit('progress',value=100)"
@@ -100,7 +100,7 @@ class ProgressTests(unittest.TestCase):
         from unittest.mock import Mock
         from PySide6.QtCore import QPoint
         from PySide6.QtWidgets import QApplication, QTreeWidgetItem
-        from add_dub.gui_widgets import SmoothTreeWidget
+        from add_dub.gui.widgets import SmoothTreeWidget
         app = QApplication.instance() or QApplication([])
         tree = SmoothTreeWidget()
         tree.resize(300, 200)
@@ -164,11 +164,11 @@ class ProgressTests(unittest.TestCase):
         from types import SimpleNamespace
         from unittest.mock import patch
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui import Application
+        from add_dub.gui.application import Application
         from add_dub.cli.args import parse_args
         from add_dub.progress import PREFIX
         app = QApplication.instance() or QApplication([])
-        with patch('add_dub.gui.fs.ensure_base_dirs'):
+        with patch('add_dub.gui.application.fs.ensure_base_dirs'):
             window = Application(parse_args(['--gui'])[0])
         try:
             videos = [SimpleNamespace(path=f'episode{i}.mkv') for i in range(2)]

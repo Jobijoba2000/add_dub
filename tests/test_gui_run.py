@@ -2,7 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from add_dub.gui_run import VideoRunFiles, partition_existing
+from add_dub.gui.run import VideoRunFiles, partition_existing
 
 
 class RunFilesTests(unittest.TestCase):
@@ -12,7 +12,7 @@ class RunFilesTests(unittest.TestCase):
         import os
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui import Application
+        from add_dub.gui.application import Application
         from add_dub.cli.args import parse_args
         app = QApplication.instance() or QApplication([])
         with tempfile.TemporaryDirectory() as directory:
@@ -23,7 +23,7 @@ class RunFilesTests(unittest.TestCase):
             job = SimpleNamespace(selected=videos, completed=set(), status='En attente',
                                   output_for=lambda v: directory,
                                   commands=lambda: [(v, command) for v in videos])
-            with patch('add_dub.gui.fs.ensure_base_dirs'):
+            with patch('add_dub.gui.application.fs.ensure_base_dirs'):
                 window = Application(parse_args(['--gui'])[0])
             window.jobs = [job]
             try:
@@ -69,7 +69,7 @@ class RunFilesTests(unittest.TestCase):
         from unittest.mock import patch
         os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
         from PySide6.QtWidgets import QApplication
-        from add_dub.gui import Application
+        from add_dub.gui.application import Application
         from add_dub.cli.args import parse_args
         app = QApplication.instance() or QApplication([])
         script = '''import os, subprocess, sys, time
@@ -84,7 +84,7 @@ Path(fs.TMP_DIR, 'ready').write_text(str(child.pid))
 time.sleep(60)
 '''
         with tempfile.TemporaryDirectory() as directory:
-            with patch('add_dub.gui.fs.ensure_base_dirs'):
+            with patch('add_dub.gui.application.fs.ensure_base_dirs'):
                 window = Application(parse_args(['--gui'])[0])
             video = SimpleNamespace(path='simulation.mkv')
             window.jobs = [SimpleNamespace(selected=[video], status='En attente', completed=set(),

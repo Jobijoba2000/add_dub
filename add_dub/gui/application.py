@@ -22,15 +22,15 @@ from PySide6.QtWidgets import (
     QProgressBar, QMessageBox, QDialog, QScrollArea, QFileIconProvider, QToolButton, QMenu, QStyle, QHeaderView, QStackedWidget, QTabBar,
 )
 from add_dub.io import fs
-from add_dub.gui_model import FIELDS, BOOLS, batch_command, Job, Settings
-from add_dub.gui_widgets import Async, SmoothTreeWidget, SpacedMenu, QueueTabBar
-from add_dub.gui_run import VideoRunFiles, partition_existing
+from add_dub.gui.model import FIELDS, BOOLS, batch_command, Job, Settings
+from add_dub.gui.widgets import Async, SmoothTreeWidget, SpacedMenu, QueueTabBar
+from add_dub.gui.run import VideoRunFiles, partition_existing
 from add_dub.progress import PREFIX, VideoProgress, aggregate, remaining_seconds
-from add_dub.gui_dialog import ConfigureDialog, yellow_folder_icon
-from add_dub.gui_theme import apply_theme, playback_icon, video_file_icon, settings_icon, icons8_icon
+from add_dub.gui.dialog import ConfigureDialog, yellow_folder_icon
+from add_dub.gui.theme import apply_theme, playback_icon, video_file_icon, settings_icon, icons8_icon
 
 
-from add_dub.gui_titlebar import CaptionWindow
+from add_dub.gui.titlebar import CaptionWindow
 
 
 class Application(CaptionWindow):
@@ -70,7 +70,7 @@ class Application(CaptionWindow):
         self.clock_timer.timeout.connect(self.update_totals)
         fs.ensure_base_dirs()
         self.setWindowTitle('add_dub')
-        resource_root = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[1]
+        resource_root = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[2]
         self.setWindowIcon(QIcon(str(resource_root / 'docs' / 'add_dub.ico')))
         self.install_caption()
         self.resize(1100, 780)

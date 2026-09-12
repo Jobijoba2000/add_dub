@@ -111,6 +111,11 @@ Ce projet est sous licence **GNU General Public License v3.0 (GPLv3)**. Les outi
 
 > **Le mode `--gui` est en chantier.** Il est disponible pour les essais, mais des bugs peuvent subsister et son interface comme ses fonctionnalités peuvent encore évoluer. Il ne constitue pas encore une version finalisée. Le mode console interactif reste le mode par défaut.
 
+Le code de l’interface est regroupé dans `add_dub/gui/` : `application.py`
+(fenêtre principale), `dialog.py` (configuration), `widgets.py`, `theme.py`,
+`titlebar.py`, `model.py` et `run.py`. Le point d’entrée `main` du paquet charge
+Qt uniquement pour le mode graphique. Les ressources restent dans `docs/`.
+
 Le lancement sans argument conserve l’assistant console interactif. Pour ouvrir la fenêtre :
 
 ```cmd
