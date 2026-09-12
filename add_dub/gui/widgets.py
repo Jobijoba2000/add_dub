@@ -16,6 +16,8 @@ from add_dub.gui.model import FIELDS, Settings, adapt_settings
 class QueueTabBar(QTabBar):
     """Prolonge la bordure de la liste en laissant l’onglet actif ouvert."""
     def tabSizeHint(self, index):
+        # Le thème réserve la largeur en gras pour tous les onglets ;
+        # paintEvent ne dessine en gras que celui qui est sélectionné.
         size = super().tabSizeHint(index)
         if self.count():
             size.setWidth(max(super(QueueTabBar, self).tabSizeHint(i).width() for i in range(self.count())))

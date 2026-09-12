@@ -167,11 +167,11 @@ def apply_theme(app):
         }
         QScrollBar::handle:vertical {
             background: #707070; min-height: 36px; margin: 2px;
-            border-radius: 4px;
+            border-radius: 0;
         }
         QScrollBar::handle:horizontal {
             background: #707070; min-width: 36px; margin: 2px;
-            border-radius: 4px;
+            border-radius: 0;
         }
         QScrollBar::handle:hover { background: #a0a0a0; }
         QScrollBar::handle:pressed { background: #c0c0c0; }
@@ -181,16 +181,16 @@ def apply_theme(app):
         QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
         QAbstractScrollArea::corner { background: #151515; border: none; }
         QProgressBar {
-            border: 1px solid #858585; border-radius: 4px;
+            border: 1px solid #858585; border-radius: 0;
             background-color: #191919; color: #ffffff;
             min-height: 26px; text-align: center; padding: 2px;
         }
         QProgressBar::chunk {
-            background-color: #176b35; border-radius: 2px;
+            background-color: #176b35; border-radius: 0;
         }
         QLabel, QCheckBox, QRadioButton { background-color: transparent; }
         QLabel#heading { font-size: 28px; font-weight: bold; }
-        QGroupBox { background-color: #171717; border: none; border-radius: 8px;
+        QGroupBox { background-color: #171717; border: none; border-radius: 0;
                     margin-top: 12px; padding: 20px 14px 14px; }
         QGroupBox::title { subcontrol-origin: margin; left: 14px; padding: 0 6px; }
         QGroupBox#outputPanel { background-color: transparent; border: none;
@@ -198,7 +198,7 @@ def apply_theme(app):
         QGroupBox#outputPanel::title { left: 0; padding: 0; }
         QPushButton, QComboBox, QLineEdit, QTextEdit, QTreeWidget {
             background-color: #0d0d0d; border: 1px solid #858585;
-            border-radius: 5px; padding: 7px 10px;
+            border-radius: 0; padding: 7px 10px;
         }
         QComboBox, QLineEdit { min-height: 24px; }
         QPushButton { background-color: #242424; min-height: 30px; padding: 8px 20px; }
@@ -207,13 +207,13 @@ def apply_theme(app):
         QPushButton#primary:hover { background-color: #0872cf; }
         QTabBar#queueTabs::tab { background: #191919; color: #eeeeee;
             border: 1px solid #858585; border-bottom: none;
-            padding: 8px 16px; margin-right: 8px; }
+            padding: 8px 16px; margin-right: 8px; font-weight: bold; }
         QTabBar#queueTabs::tab:selected { background: #242424;
-            color: #ffffff; font-weight: bold; }
+            color: #ffffff; }
         QTabBar#queueTabs::tab:hover { background: #404040; }
         QTabWidget#settingsTabs::pane { border: 1px solid #858585; border-top: none; }
         QTabWidget#settingsTabs QScrollArea { border: none; border-radius: 0; }
-        QToolButton { border: 1px solid #858585; border-radius: 5px; padding: 8px; background: #242424; }
+        QToolButton { border: 1px solid #858585; border-radius: 0; padding: 8px; background: #242424; }
         QToolButton:hover { background: #404040; border-color: #d0d0d0; }
         QToolButton:pressed { background: #505050; }
         QToolButton#openSources::menu-indicator {

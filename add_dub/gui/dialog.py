@@ -10,10 +10,12 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QWidget, QLabel, QTreeWidget,
     QTreeWidgetItem, QPushButton, QCheckBox, QRadioButton, QButtonGroup,
     QLineEdit, QFileDialog, QMessageBox, QGroupBox, QStyle, QFileIconProvider, QProgressBar, QStyleFactory,
+    QPlainTextEdit, QApplication,
 )
 from add_dub.gui.model import discover, inspect_video, adapt_settings
 from add_dub.gui.widgets import SettingsEditor, SmoothTreeWidget
 from add_dub.gui.theme import icons8_icon
+from add_dub.gui.batch import export_commands, batch_text, open_batch_terminal
 
 ROLE = Qt.ItemDataRole.UserRole
 COMMON = '__common__'
@@ -213,7 +215,70 @@ class ConfigureDialog(QDialog):
         self.tree.itemExpanded.connect(lambda item: self.set_folder_icon(item, True))
         self.tree.itemCollapsed.connect(lambda item: self.set_folder_icon(item, False))
         self.editor.changed.connect(self.edited)
+        self.batch_page = QWidget()
+        batch_layout = QVBoxLayout(self.batch_page)
+        batch_layout.setContentsMargins(20, 20, 20, 20)
+        batch_layout.setSpacing(16)
+        explanation = QLabel('Commandes pour toutes les vidéos cochées, avec leurs réglages et dossiers de sortie. '
+                             'L’exécution dans CMD traite le lot à la suite, hors de la file d’attente.')
+        explanation.setWordWrap(True)
+        batch_layout.addWidget(explanation)
+        self.batch_text = QPlainTextEdit()
+        self.batch_text.setReadOnly(True)
+        self.batch_text.setAccessibleName('Commande batch')
+        batch_layout.addWidget(self.batch_text, 1)
+        batch_buttons = QHBoxLayout()
+        self.batch_copy = QPushButton('Copier les commandes')
+        self.batch_execute = QPushButton('Exécuter dans CMD')
+        batch_buttons.addWidget(self.batch_copy)
+        batch_buttons.addWidget(self.batch_execute)
+        batch_buttons.addStretch()
+        batch_layout.addLayout(batch_buttons)
+        self.editor.addTab(self.batch_page, 'Batch')
+        self.batch_command = None
+        self.batch_copy.clicked.connect(self.copy_batch)
+        self.batch_execute.clicked.connect(self.execute_batch)
+        self.editor.currentChanged.connect(self.refresh_batch)
+        self.editor.changed.connect(self.refresh_batch)
+        self.output.textChanged.connect(self.refresh_batch)
+        self.resume.toggled.connect(self.refresh_batch)
         QTimer.singleShot(0, self.scan)
+
+    def refresh_batch(self, *_):
+        if self.editor.currentWidget() is not self.batch_page:
+            return
+        self.batch_command = None
+        try:
+            if not self.loaded or self.editor.video is None:
+                raise ValueError('Attendez la détection des pistes.')
+            self.save_current()
+            self.sync_selection()
+            job = deepcopy(self.job)
+            job.output = self.output.text().strip()
+            job.preserve_tree = True
+            job.resume = self.resume.isChecked()
+            job.dry_run = False
+            commands = export_commands(job)
+            self.batch_text.setPlainText(batch_text(commands))
+            self.batch_command = commands
+            self.batch_execute.setText(f'Exécuter {len(job.selected)} vidéo(s) dans CMD')
+        except ValueError as exc:
+            self.batch_text.setPlainText(str(exc))
+        self.batch_copy.setEnabled(self.batch_command is not None)
+        self.batch_execute.setEnabled(self.batch_command is not None)
+
+    def copy_batch(self):
+        self.refresh_batch()
+        if self.batch_command:
+            QApplication.clipboard().setText(self.batch_text.toPlainText())
+
+    def execute_batch(self):
+        self.refresh_batch()
+        if self.batch_command:
+            try:
+                open_batch_terminal(self.batch_command)
+            except (OSError, ValueError) as exc:
+                QMessageBox.warning(self, 'Impossible d’ouvrir CMD', str(exc))
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -466,6 +531,8 @@ class ConfigureDialog(QDialog):
 
     def update_summary(self):
         self.summary.setText(f'{len(self.job.selected)} vidéo(s) sélectionnée(s) sur {len(self.job.videos)} · {len(self.job.overrides)} personnalisation(s)')
+        if hasattr(self, 'batch_page'):
+            self.refresh_batch()
 
     def select_item(self, item, previous):
         if not item:
@@ -520,6 +587,7 @@ class ConfigureDialog(QDialog):
         self.add.setEnabled(True)
         self.reference_label.setText(('Fichier de référence : ' if common else 'Fichier : ') + Path(video.path).name)
         self.scope_text()
+        self.refresh_batch()
 
     def reset_file(self):
         if self.current_path != COMMON:
