@@ -143,11 +143,10 @@ def dub_in_one_pass(
     offset_video_s = (opts.offset_video_ms or 0) / 1000.0
 
     # Titrages
-    lang_orig = opts.orig_audio_lang or "Original"
-    lang_dest = opts.translate_to or "Dubbed"
-    dub_title = f"{lang_orig} -> {lang_dest}"
-    orig_title = lang_orig
-    sub_title = lang_dest
+    from add_dub.core.languages import language_name, dubbed_track_title
+    dub_title = dubbed_track_title(opts.dubbed_language, opts.dubbed_locale)
+    orig_title = language_name(opts.original_language)
+    sub_title = language_name(opts.subtitle_language)
 
     # Choix de copie/transcodage vidéo selon extension
     extension_source = Path(video_fullpath).suffix.lower()
@@ -204,6 +203,10 @@ def dub_in_one_pass(
         "-disposition:a:1", "0",
         "-disposition:s:0", "0",
 
+        # Métadonnées de langue : les WAV/SRT intermédiaires ont perdu les tags.
+        "-metadata:s:a:0", f"language={opts.dubbed_language}",
+        "-metadata:s:a:1", f"language={opts.original_language}",
+        "-metadata:s:s:0", f"language={opts.subtitle_language}",
         # Métadonnées
         "-metadata:s:a:0", f"title={dub_title}",
         "-metadata:s:a:1", f"title={orig_title}",

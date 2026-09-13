@@ -195,6 +195,15 @@ class PreviewPane(QWidget):
         self.position = QLabel('00:00 / 00:00')
         playback.addWidget(self.position)
         playback.addStretch()
+        self.subtitles = QToolButton()
+        self.subtitles.setText('CC')
+        self.subtitles.setAccessibleName('Sous-titres')
+        self.subtitles.setCheckable(True)
+        self.subtitles.setEnabled(False)
+        self.subtitles.setStyleSheet('QToolButton { color: #eeeeee; font-weight: bold; } QToolButton:checked { border-bottom: 2px solid #3bba72; }')
+        self.subtitles.setToolTip('Sous-titres indisponibles')
+        self.subtitles.clicked.connect(self.toggle_subtitles)
+        playback.addWidget(self.subtitles)
         self.mute = button(QStyle.StandardPixmap.SP_MediaVolume, 'Couper / rétablir le son (M)', lambda: None)
         self.mute.setCheckable(True)
         self.mute.toggled.connect(self.set_muted)
@@ -393,6 +402,7 @@ class PreviewPane(QWidget):
             self.player.lib.libvlc_media_player_set_position(self.player.player, self.seek.value() / 1000)
 
     def update_position(self):
+        self.refresh_subtitles()
         if self.player and not self.seek.isSliderDown():
             self.seek.setValue(max(0, round(self.player.lib.libvlc_media_player_get_position(self.player.player) * 1000)))
             icon = QStyle.StandardPixmap.SP_MediaPause if self.player.is_playing() else QStyle.StandardPixmap.SP_MediaPlay
@@ -409,6 +419,19 @@ class PreviewPane(QWidget):
         painter.fillRect(pixmap.rect(), QColor('#eeeeee'))
         painter.end()
         return QIcon(pixmap)
+
+    def refresh_subtitles(self):
+        available = bool(self.player and self.player.subtitle_tracks())
+        enabled = bool(available and self.player.subtitles_enabled())
+        self.subtitles.setEnabled(available)
+        self.subtitles.setChecked(enabled)
+        self.subtitles.setToolTip(('Masquer les sous-titres' if enabled else 'Afficher les sous-titres')
+                                 if available else 'Sous-titres indisponibles')
+
+    def toggle_subtitles(self, enabled):
+        if self.player:
+            self.player.set_subtitles(enabled)
+        self.refresh_subtitles()
 
     def set_muted(self, muted):
         if self.player:
@@ -444,6 +467,8 @@ class PreviewPane(QWidget):
 
     def clear_result(self):
         self.timer.stop()
+        self.subtitles.setChecked(False)
+        self.subtitles.setEnabled(False)
         self.range_controls.show()
         self.new_test.hide()
         self.test.setText('Tester')

@@ -86,6 +86,17 @@ def process_one_video(
         if sub_choice is None:
             return None
 
+    from add_dub.core.languages import source_languages, language_code, voice_language, voice_locale, external_subtitle_language
+    original_language, subtitle_language = source_languages(input_video_path, audio_idx, sub_choice)
+    try:
+        voices = list_available_voices()
+    except Exception:
+        voices = []
+    dubbed_language = voice_language(opts.voice_id, voices)
+    opts = replace(opts, original_language=original_language,
+                   dubbed_language=dubbed_language, dubbed_locale=voice_locale(opts.voice_id, voices),
+                   subtitle_language=subtitle_language)
+
     # 3) Résolution vers un SRT exploitable
     emit('plan', subtitles=sub_choice[0] != 'srt', translation=bool(opts.translate and opts.translate_to))
     if sub_choice[0] != 'srt':
@@ -94,6 +105,9 @@ def process_one_video(
     if not srt_path:
         svcs.ui.error(t("pipeline_no_srt", name=input_video_name))
         return None
+
+    if opts.subtitle_language == 'und':
+        opts = replace(opts, subtitle_language=external_subtitle_language(srt_path, opts.translate_from))
 
     # 4) Nettoyage SRT
     if os.getenv('ADD_DUB_PREVIEW_RANGE'):
@@ -152,6 +166,7 @@ def process_one_video(
                 svcs.ui.message(t("pipeline_trans_found", path=new_srt_path))
                 svcs.ui.message(t("pipeline_trans_reusing"))
                 srt_path = new_srt_path
+                opts = replace(opts, subtitle_language=language_code(opts.translate_to))
         else:
             # Si on ne réutilise pas : on supprime l'ancien fichier traduit existant pour forcer une nouvelle traduction
             if os.path.exists(new_srt_path):
@@ -241,6 +256,7 @@ def process_one_video(
 
                                 write_srt_file(subs_translated, new_srt_path)
                                 srt_path = new_srt_path
+                                opts = replace(opts, subtitle_language=language_code(tgt))
                                 svcs.ui.message(t("pipeline_trans_done", path=srt_path))
                                 break
                             else:

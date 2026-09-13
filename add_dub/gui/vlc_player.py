@@ -5,6 +5,14 @@ from pathlib import Path
 import sys
 
 
+class TrackDescription(c.Structure):
+    pass
+
+
+TrackDescription._fields_ = [('id', c.c_int), ('name', c.c_char_p),
+                            ('next', c.POINTER(TrackDescription))]
+
+
 class Player:
     def __init__(self, hwnd):
         if sys.platform != 'win32':
@@ -17,6 +25,10 @@ class Player:
         self.core = c.CDLL(str(directory / 'libvlccore.dll'))
         self.lib = c.CDLL(str(directory / 'libvlc.dll'))
         signatures = {
+            'libvlc_video_get_spu_description': (c.POINTER(TrackDescription), [c.c_void_p]),
+            'libvlc_track_description_list_release': (None, [c.POINTER(TrackDescription)]),
+            'libvlc_video_get_spu': (c.c_int, [c.c_void_p]),
+            'libvlc_video_set_spu': (c.c_int, [c.c_void_p, c.c_int]),
             'libvlc_new': (c.c_void_p, [c.c_int, c.POINTER(c.c_char_p)]),
             'libvlc_release': (None, [c.c_void_p]),
             'libvlc_media_player_new': (c.c_void_p, [c.c_void_p]),
@@ -89,3 +101,26 @@ class Player:
         self.lib.libvlc_media_player_release(self.player)
         self.lib.libvlc_release(self.instance)
         self.dll_directory.close()
+
+    def subtitle_tracks(self):
+        head = self.lib.libvlc_video_get_spu_description(self.player)
+        tracks = []
+        try:
+            item = head
+            while item:
+                if item.contents.id >= 0:
+                    tracks.append(item.contents.id)
+                item = item.contents.next
+        finally:
+            if head:
+                self.lib.libvlc_track_description_list_release(head)
+        return tracks
+
+    def subtitles_enabled(self):
+        return self.lib.libvlc_video_get_spu(self.player) >= 0
+
+    def set_subtitles(self, enabled):
+        tracks = self.subtitle_tracks() if enabled else []
+        if enabled and not tracks:
+            return False
+        return self.lib.libvlc_video_set_spu(self.player, tracks[0] if enabled else -1) == 0

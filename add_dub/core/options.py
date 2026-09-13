@@ -14,6 +14,10 @@ class DubOptions:
     audio_ffmpeg_index: Optional[int] = None          # index de la piste source (ffmpeg)
     sub_choice: Optional[tuple] = None                # ("srt", path) ou ("mkv", idx)
     orig_audio_lang: Optional[str] = None             # libellé de la piste originale dans la sortie
+    original_language: str = 'und'
+    dubbed_language: str = 'und'
+    dubbed_locale: str = ''
+    subtitle_language: str = 'und'
     db_reduct: float = -5.0                           # ducking en dB
     offset_ms: int = 0                                # décalage ST/TTS
     bg_mix: float = 1.0                               # gain BG
