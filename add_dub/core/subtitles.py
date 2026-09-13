@@ -311,7 +311,7 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Opt
                 ui.error(f"Extraction des sous-titres impossible : {exc}")
             return None
 
-    # CAS 1 — Choix explicite d'une piste MKV : extraction forcée (avec overwrite)
+    # CAS 1 - Choix explicite d'une piste MKV : extraction forcée (avec overwrite)
     if kind == "mkv":
         try:
             local_idx = int(value)
@@ -327,7 +327,7 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Opt
         else: log.error(t("sub_auto_extract_failed", video=video_fullpath))
         return None
 
-    # CAS 2 — Choix SRT (depuis srt/ ou sidecar)
+    # CAS 2 - Choix SRT (depuis srt/ ou sidecar)
     # Si un chemin spécifique a été passé, on vérifie qu'il correspond bien à cette vidéo.
     if kind == "srt" and value:
         video_base = os.path.splitext(os.path.basename(video_fullpath))[0].lower()

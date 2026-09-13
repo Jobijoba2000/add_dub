@@ -5,15 +5,15 @@ from pathlib import Path
 from functools import lru_cache
 
 from PySide6.QtCore import Qt, QTimer, QFileInfo, QSignalBlocker
-from PySide6.QtGui import QColor, QPixmap, QIcon
+from PySide6.QtGui import QColor, QPixmap, QIcon, QBrush
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QWidget, QLabel, QTreeWidget,
     QTreeWidgetItem, QPushButton, QCheckBox, QRadioButton, QButtonGroup,
     QLineEdit, QFileDialog, QMessageBox, QGroupBox, QStyle, QFileIconProvider, QProgressBar, QStyleFactory,
-    QPlainTextEdit, QApplication,
+    QPlainTextEdit, QApplication, QMenu, QScrollArea, QHeaderView, QGraphicsOpacityEffect,
 )
 from add_dub.gui.model import discover, inspect_video, adapt_settings
-from add_dub.gui.widgets import SettingsEditor, SmoothTreeWidget
+from add_dub.gui.widgets import SettingsEditor, SmoothTreeWidget, ConfigButton
 from add_dub.gui.theme import icons8_icon
 from add_dub.gui.batch import export_commands, batch_text, open_batch_terminal
 
@@ -47,6 +47,9 @@ def yellow_folder_icon(opened):
 class ConfigureDialog(QDialog):
     def __init__(self, job, tasks, parent=None):
         super().__init__(parent)
+        from add_dub.cli.args import parse_args
+        from add_dub.gui.model import Settings
+        self.config_defaults = Settings.from_args(parse_args([])[0])
         self.job = deepcopy(job)
         self.job.recursive = True
         self.job.preserve_tree = True
@@ -61,7 +64,7 @@ class ConfigureDialog(QDialog):
         self.known = {v.path: v for v in self.job.videos}
         self.file_items = {}
         self.icon_provider = QFileIconProvider()
-        self.setWindowTitle('Configurer le doublage — add_dub')
+        self.setWindowTitle('Configurer le doublage - add_dub')
         # La configuration est une vraie fenêtre de travail : elle reste
         # redimensionnable et s’ouvre agrandie comme la fenêtre principale.
         self.setWindowFlags(
@@ -107,10 +110,19 @@ class ConfigureDialog(QDialog):
         header_layout.addWidget(self.summary)
         self.summary.hide()
         self.tree = SmoothTreeWidget()
-        self.tree.setHeaderLabels(['Fichiers', 'État'])
+        self.tree.setHeaderLabels(['Fichiers', 'État', 'Configuration'])
+        self.tree.setTreePosition(0)
+        self.tree.header().moveSection(2, 0)
+        self.tree.header().setStretchLastSection(False)
+        self.tree.header().setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        self.tree.setColumnWidth(2, 54)
         self.tree.setHeaderHidden(True)
         self.tree.setColumnHidden(1, True)
+        self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self.folder_menu)
         self.tree.setAccessibleName('Sélection des vidéos et des dossiers')
+        self.tree.setObjectName('configurationFiles')
         self.tree.setColumnWidth(0, 220)
         self.tree.setIconSize(QPixmap(28, 28).size())
         self.tree.setMinimumWidth(270)
@@ -126,24 +138,45 @@ class ConfigureDialog(QDialog):
         right_layout.setSpacing(12)
         right_header = QWidget()
         right_header.setFixedHeight(header_height)
-        reference_layout = QHBoxLayout(right_header)
+        reference_layout = QVBoxLayout(right_header)
         reference_layout.setContentsMargins(0, 0, 0, 0)
-        reference_layout.setSpacing(12)
+        reference_layout.setSpacing(0)
         right_layout.addWidget(right_header)
         self.scope = QLabel(self)
         self.scope.setObjectName('scope')
-        self.scope.setWordWrap(True)
-        self.scope.hide()
+        self.scope.setWordWrap(False)
+        self.scope.show()
+        self.config_bar = QHBoxLayout()
+        self.config_bar.setContentsMargins(0, 0, 0, 0)
+        self.config_bar.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.config_bar.setSpacing(10)
+        nav = QWidget()
+        nav.setLayout(self.config_bar)
+        nav_scroll = QScrollArea()
+        nav_scroll.setWidgetResizable(True)
+        nav_scroll.setContentsMargins(0, 0, 0, 0)
+        nav_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        nav_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        nav_scroll.setWidget(nav)
+        nav_scroll.setFixedHeight(46)
+        right_layout.addWidget(nav_scroll)
+        reference_layout.addWidget(self.scope)
+        self.rebuild_config_buttons()
         self.reference_label = QLabel()
-        self.reference_label.setWordWrap(True)
+        self.reference_label.setWordWrap(False)
         self.reference_label.setMinimumWidth(0)
         self.reference_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         reference_layout.addWidget(self.reference_label, 1)
         self.reset = QPushButton('Revenir aux réglages communs')
+        self.reset.hide()
         self.reset.setAccessibleName('Supprimer les réglages personnalisés de cette vidéo')
         self.reset.clicked.connect(self.reset_file)
         reference_layout.addWidget(self.reset, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.editor = SettingsEditor(tasks)
+        from add_dub.gui.preview import PreviewPane
+        self.preview = PreviewPane(self, tasks)
+        self.editor.addTab(self.preview, 'Essai')
+        self.editor.currentChanged.connect(self.refresh_preview)
         self.editor.setEnabled(False)
         right_layout.addWidget(self.editor, 1)
         splitter.addWidget(right)
@@ -154,12 +187,15 @@ class ConfigureDialog(QDialog):
         output_panel.setObjectName('outputPanel')
         output_layout = QVBoxLayout(output_panel)
         output_layout.setContentsMargins(0, 0, 0, 0)
-        output_layout.setSpacing(8)
-        output_title = QLabel('Dossier de sortie')
-        output_layout.addWidget(output_title)
+        output_layout.setSpacing(14)
         output_row = QHBoxLayout()
         output_row.setContentsMargins(0, 0, 0, 0)
         output_row.setSpacing(12)
+        output_icon = QLabel()
+        output_icon.setPixmap(yellow_folder_icon(False).pixmap(22, 22))
+        output_row.addWidget(output_icon)
+        output_title = QLabel('Sorti')
+        output_row.addWidget(output_title)
         self.output = QLineEdit(self.job.output)
         self.output.setAccessibleName('Dossier de sortie du lot')
         output_row.addWidget(self.output, 1)
@@ -174,9 +210,9 @@ class ConfigureDialog(QDialog):
         self.bottom_placeholder = QWidget()
         self.bottom_placeholder.setVisible(False)
         bottom_options.insertWidget(0, self.bottom_placeholder, 1)
-        self.batch_options = QGroupBox('Options du lot')
+        self.batch_options = QWidget()
         options = QVBoxLayout(self.batch_options)
-        options.setContentsMargins(18, 14, 18, 14)
+        options.setContentsMargins(0, 0, 0, 0)
         options.setSpacing(8)
         policy_row = QVBoxLayout()
         self.resume = QRadioButton('Reprendre : ignorer les sorties existantes')
@@ -188,7 +224,9 @@ class ConfigureDialog(QDialog):
         self.overwrite.setChecked(not self.job.resume)
         policy_row.addWidget(self.resume)
         policy_row.addWidget(self.overwrite)
+        options.addStretch(1)
         options.addLayout(policy_row)
+        options.addStretch(1)
         # Les options et le dossier de sortie partagent la même ligne basse,
         # toujours visible sous la zone centrale redimensionnable.
         bottom_options.insertWidget(0, self.batch_options, 1)
@@ -200,6 +238,9 @@ class ConfigureDialog(QDialog):
         footer.setContentsMargins(0, 0, 0, 0)
         footer.setSpacing(12)
         footer.addStretch()
+        self.batch_open = QPushButton('Commandes Batch…')
+        self.batch_open.clicked.connect(self.show_batch)
+        footer.addWidget(self.batch_open)
         cancel = QPushButton('Annuler')
         cancel.clicked.connect(self.reject)
         footer.addWidget(cancel)
@@ -209,16 +250,22 @@ class ConfigureDialog(QDialog):
         self.add.setEnabled(False)
         self.add.clicked.connect(self.validate)
         footer.addWidget(self.add)
-        outer.addWidget(footer_panel, 0)
+        output_layout.addWidget(footer_panel)
         self.tree.model().dataChanged.connect(self.tree_data_changed)
         self.tree.currentItemChanged.connect(self.select_item)
         self.tree.itemExpanded.connect(lambda item: self.set_folder_icon(item, True))
         self.tree.itemCollapsed.connect(lambda item: self.set_folder_icon(item, False))
         self.editor.changed.connect(self.edited)
-        self.batch_page = QWidget()
+        self.batch_page = QDialog(self)
+        self.batch_page.setWindowTitle('Commandes Batch du lot')
+        self.batch_page.setModal(True)
+        self.batch_page.resize(min(1050, available.width() - 60), min(620, available.height() - 80))
         batch_layout = QVBoxLayout(self.batch_page)
         batch_layout.setContentsMargins(20, 20, 20, 20)
         batch_layout.setSpacing(16)
+        self.batch_summary = QLabel()
+        self.batch_summary.setWordWrap(True)
+        batch_layout.addWidget(self.batch_summary)
         explanation = QLabel('Commandes pour toutes les vidéos cochées, avec leurs réglages et dossiers de sortie. '
                              'L’exécution dans CMD traite le lot à la suite, hors de la file d’attente.')
         explanation.setWordWrap(True)
@@ -233,26 +280,35 @@ class ConfigureDialog(QDialog):
         batch_buttons.addWidget(self.batch_copy)
         batch_buttons.addWidget(self.batch_execute)
         batch_buttons.addStretch()
+        close_batch = QPushButton('Fermer')
+        close_batch.clicked.connect(self.batch_page.reject)
+        batch_buttons.addWidget(close_batch)
+        for button in (self.batch_copy, self.batch_execute, close_batch):
+            button.setAutoDefault(False)
         batch_layout.addLayout(batch_buttons)
-        self.editor.addTab(self.batch_page, 'Batch')
         self.batch_command = None
         self.batch_copy.clicked.connect(self.copy_batch)
         self.batch_execute.clicked.connect(self.execute_batch)
-        self.editor.currentChanged.connect(self.refresh_batch)
         self.editor.changed.connect(self.refresh_batch)
         self.output.textChanged.connect(self.refresh_batch)
         self.resume.toggled.connect(self.refresh_batch)
         QTimer.singleShot(0, self.scan)
 
+    def show_batch(self):
+        self.batch_page.open()
+        self.refresh_batch()
+
     def refresh_batch(self, *_):
-        if self.editor.currentWidget() is not self.batch_page:
+        if not self.batch_page.isVisible():
             return
         self.batch_command = None
+        self.batch_summary.setText('Analyse des fichiers en cours… Toutes les configurations seront prises en compte.')
         try:
             if not self.loaded or self.editor.video is None:
                 raise ValueError('Attendez la détection des pistes.')
             self.save_current()
             self.sync_selection()
+            self.batch_summary.setText(f'{len(self.job.selected)} vidéo(s) cochée(s), toutes configurations comprises.')
             job = deepcopy(self.job)
             job.output = self.output.text().strip()
             job.preserve_tree = True
@@ -310,6 +366,7 @@ class ConfigureDialog(QDialog):
             self.showMaximized()
 
     def closed(self):
+        self.preview.shutdown()
         self._closed = True
         self.generation += 1
         self.detect_generation += 1
@@ -325,6 +382,8 @@ class ConfigureDialog(QDialog):
         settings = self.editor.settings()
         if self.current_path == COMMON:
             self.job.common = settings
+        elif self.current_path in self.job.folder_configs:
+            self.job.folder_configs[self.current_path] = settings
         else:
             video = next((v for v in self.job.videos if v.path == self.current_path), None)
             if video:
@@ -341,18 +400,112 @@ class ConfigureDialog(QDialog):
             self.update_summary()
 
     def scope_text(self):
-        common = self.current_path == COMMON
-        if common:
-            text = 'Réglages communs — appliqués à toutes les vidéos sans personnalisation.'
-        else:
-            custom = self.current_path in self.job.overrides
-            text = ('Réglages personnalisés — ' if custom else 'Réglages communs adaptés à cette vidéo — ') + 'vos modifications ici ne concernent que ce fichier.'
+        folder = self.current_path if self.current_path in self.job.folder_configs else None
+        text = (f'Config. n°{self.job.config_numbers[folder]} - {folder} et ses sous-dossiers'
+                if folder else 'Général - vidéos sans configuration de dossier')
         self.scope.setText(text)
-        self.reset.setVisible(not common)
-        for path, item in self.file_items.items():
+        self.reset.hide()
+        self.tree.active_config_scope = folder
+        self.tree.viewport().update()
+        for p, item in getattr(self, 'folder_items', {}).items():
+            marker = self.tree.itemWidget(item, 2)
+            if marker:
+                effect = marker.graphicsEffect()
+                if effect is None:
+                    effect = QGraphicsOpacityEffect(marker)
+                    marker.setGraphicsEffect(effect)
+                effect.setOpacity(1.0 if p == folder else 0.57)
+        for path, button in getattr(self, 'config_buttons', {}).items():
+            button.setChecked(path == self.current_path)
+
+    def rebuild_config_buttons(self):
+        while self.config_bar.count():
+            item = self.config_bar.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self.config_buttons = {}
+        for path in [COMMON, *self.job.folder_configs]:
+            label = 'Général' if path == COMMON else f'Config. n°{self.job.config_numbers[path]}'
+            button = ConfigButton(label)
+            button.setObjectName('configSelector')
+            button.setStyleSheet('min-height: 36px; max-height: 36px; padding: 0; border: none;')
+            button.setFixedHeight(36)
+            button.setMinimumWidth(130)
+            button.setCheckable(True)
+            button.setToolTip('Réglages généraux' if path == COMMON else path)
+            button.clicked.connect(lambda checked=False, p=path: self.open_config(p))
+            self.config_bar.addWidget(button, alignment=Qt.AlignmentFlag.AlignTop)
+            self.config_buttons[path] = button
+        self.config_bar.addStretch()
+
+    def reference_for(self, folder):
+        candidates = [v for v in self.job.videos if v.eligible and
+                      (folder == COMMON or Path(folder) in Path(v.path).parents)]
+        candidates.sort(key=lambda v: (len(Path(v.path).parts), v.path.casefold()))
+        return candidates[0] if candidates else None
+
+    def open_config(self, folder):
+        self.save_current()
+        self.detect_generation += 1
+        video = self.reference_for(folder)
+        if video:
+            self.load_scope(folder, video)
+
+    def create_folder_config(self, folder):
+        self.save_current()
+        if folder not in self.job.folder_configs:
+            self.job.folder_configs[folder] = deepcopy(self.config_defaults)
+            self.job.config_numbers[folder] = self.job.next_config_number
+            self.job.next_config_number += 1
+        self.rebuild_config_buttons()
+        self.update_config_markers()
+        self.open_config(folder)
+        self.update_summary()
+
+    def remove_folder_config(self, folder):
+        self.save_current()
+        self.job.folder_configs.pop(folder, None)
+        self.job.config_numbers.pop(folder, None)
+        self.loaded = False
+        self.rebuild_config_buttons()
+        self.update_config_markers()
+        self.open_config(self.job.folder_scope(folder) or COMMON)
+        self.update_summary()
+
+    def folder_menu(self, position):
+        item = self.tree.itemAt(position)
+        folder = item.data(0, ROLE + 1) if item else None
+        if not folder or not self.reference_for(folder):
+            return
+        menu = QMenu(self)
+        if folder in self.job.folder_configs:
+            menu.addAction('Modifier les réglages de ce dossier', lambda: self.open_config(folder))
+            menu.addAction('Supprimer la configuration de ce dossier', lambda: self.remove_folder_config(folder))
+        else:
+            menu.addAction('Personnaliser les réglages de ce dossier', lambda: self.create_folder_config(folder))
+        menu.exec(self.tree.viewport().mapToGlobal(position))
+
+    def update_config_markers(self):
+        for path, item in {**getattr(self, 'folder_items', {}), **self.file_items}.items():
             video = self.known.get(path)
-            if video and video.eligible:
-                item.setText(1, 'Personnalisé' if path in self.job.overrides else 'Commun')
+            if video and not video.eligible:
+                continue
+            item.setData(0, ROLE + 8, self.job.folder_scope(path))
+            for column in range(self.tree.columnCount()):
+                item.setBackground(column, QBrush())
+        for folder, item in getattr(self, 'folder_items', {}).items():
+            number = self.job.config_numbers.get(folder)
+            previous = self.tree.itemWidget(item, 2)
+            if previous:
+                self.tree.removeItemWidget(item, 2)
+                previous.deleteLater()
+            if number:
+                button = QPushButton(f'⚙ {number}')
+                button.setStyleSheet('padding: 0; border: none; min-height: 24px;')
+                button.setToolTip(f'Ouvrir Config. n°{number} - {folder}')
+                button.clicked.connect(lambda checked=False, p=folder: self.open_config(p))
+                self.tree.setItemWidget(item, 2, button)
+            item.setToolTip(0, folder + (f' - Config. n°{number}' if number else ''))
 
     def scan(self):
         self.save_current()
@@ -423,6 +576,7 @@ class ConfigureDialog(QDialog):
         self.tree.clear()
         self.file_items = {}
         folders = {}
+        self.folder_items = folders
         for video in self.job.videos:
             parent = self.tree
             if video.root:
@@ -439,6 +593,7 @@ class ConfigureDialog(QDialog):
                         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                         item.setCheckState(0, Qt.CheckState.Unchecked)
                         item.setToolTip(0, key)
+                        item.setData(0, ROLE + 1, key)
                         folders[key] = item
                     parent = folders[key]
             item = QTreeWidgetItem(parent, [Path(video.path).name, 'Commun' if video.eligible else video.reason])
@@ -455,6 +610,7 @@ class ConfigureDialog(QDialog):
                     item.setBackground(col, QColor('#601a22'))
                     item.setForeground(col, QColor('#ffffff'))
             self.file_items[video.path] = item
+        self.update_config_markers()
         self.refresh_folders()
         self.tree.expandAll()
         # Les signaux sont bloqués pendant la construction : synchroniser aussi les icônes.
@@ -530,57 +686,30 @@ class ConfigureDialog(QDialog):
             video.selected = bool(video.eligible and item and item.checkState(0) == Qt.CheckState.Checked)
 
     def update_summary(self):
-        self.summary.setText(f'{len(self.job.selected)} vidéo(s) sélectionnée(s) sur {len(self.job.videos)} · {len(self.job.overrides)} personnalisation(s)')
+        self.summary.setText(f'{len(self.job.selected)} vidéo(s) sélectionnée(s) sur {len(self.job.videos)} · {len(self.job.folder_configs)} configuration(s)')
         if hasattr(self, 'batch_page'):
             self.refresh_batch()
 
     def select_item(self, item, previous):
         if not item:
             return
-        path = item.data(0, ROLE)
-        if not path:
-            if self.reference:
-                self.save_current()
-                self.load_scope(COMMON, self.reference)
+        path = item.data(0, ROLE + 1) or item.data(0, ROLE)
+        self.open_config(self.job.folder_scope(path) if path and self.job.folder_scope(path) else COMMON)
+        self.refresh_preview()
+
+    def refresh_preview(self, *_):
+        if self.editor.currentWidget() is not self.preview:
             return
-        self.save_current()
-        self.detect_generation += 1
-        generation = self.detect_generation
-        if path == COMMON and self.reference:
-            self.load_scope(COMMON, self.reference)
-            return
-        video = next((v for v in self.job.videos if v.path == path), None)
-        if not video:
-            return
-        self.loaded = False
-        self.editor.setEnabled(False)
-        self.add.setEnabled(False)
-        self.scope.setText(f'Actualisation des pistes — {Path(path).name}…')
-        def done(updated, error):
-            if generation != self.detect_generation:
-                return
-            if error:
-                self.scope.setText(f'Détection impossible : {error}')
-                return
-            index = self.job.videos.index(video)
-            item = self.file_items[path]
-            updated.selected = updated.eligible and item.checkState(0) == Qt.CheckState.Checked
-            self.job.videos[index] = updated
-            self.known[path] = updated
-            if not updated.eligible:
-                self.build_tree()
-                self.update_summary()
-                self.scope.setText(updated.reason)
-                return
-            self.add.setEnabled(True)
-            self.load_scope(path, updated)
-        self.tasks.run(self, lambda: inspect_video(video), done)
+        item = self.tree.currentItem()
+        path = item.data(0, ROLE) if item else None
+        video = next((v for v in self.job.videos if v.path == path and v.eligible), None)
+        self.preview.choose_video(video or self.reference_for(self.current_path))
 
     def load_scope(self, path, video):
         self.loaded = False
         self.current_path = path
         common = path == COMMON
-        settings = self.job.common if common else self.job.overrides.get(path, self.job.common)
+        settings = self.job.common if common else self.job.folder_configs.get(path, self.job.overrides.get(path, self.job.common))
         self.editor.load(settings, video)
         self.editor.setEnabled(True)
         self.loaded = True

@@ -235,7 +235,7 @@ def _synthesize(text: str, voice_shortname: str) -> AudioSegment:
 def _looks_like_silence(text: str) -> bool:
     """
     True si 'text' ne contient que espaces/ellipses/ponctuation/symboles.
-    Ex.: "", "...", "…", ". . .", "--", "♪", "—", etc.
+    Ex.: "", "...", "…", ". . .", "--", "♪", "-", etc.
     """
     if text is None:
         return True
@@ -275,14 +275,14 @@ def synthesize_tts_for_subtitle(
 
     shortname = voice_id if is_valid_voice_id(voice_id) else DEFAULT_EDGE_VOICE
 
-    # Étape 1 — synthèse (protégée)
+    # Étape 1 - synthèse (protégée)
     try:
         seg = _synthesize(text, shortname)
     except Exception:
         # Sécurité : si Edge échoue (ex. NoAudioReceived), renvoyer du silence
         return AudioSegment.silent(duration=max(0, int(target_duration_ms)))
 
-    # Étape 2 — vitesse minimale pilotée (post-traitement)
+    # Étape 2 - vitesse minimale pilotée (post-traitement)
     try:
         base_rate = float(getattr(opts, "min_rate_tts", 1.0) or 1.0)
     except Exception:
@@ -295,7 +295,7 @@ def synthesize_tts_for_subtitle(
             # Continuer avec la synthèse brute si atempo échoue
             pass
 
-    # Étape 3 — ajustement à la durée cible
+    # Étape 3 - ajustement à la durée cible
     tgt = max(0, int(target_duration_ms))
     cur = len(seg)
 

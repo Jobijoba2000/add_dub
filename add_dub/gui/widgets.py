@@ -7,10 +7,27 @@ from PySide6.QtGui import QPainter, QColor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QComboBox, QLabel, QCheckBox, QRadioButton, QButtonGroup,
     QLineEdit, QTabWidget, QScrollArea, QSpinBox, QDoubleSpinBox, QTreeWidget, QAbstractItemView, QScroller, QMenu, QTabBar,
-    QStylePainter, QStyleOptionTab, QStyle, QStyleOptionButton, QSizePolicy,
+    QStylePainter, QStyleOptionTab, QStyle, QStyleOptionButton, QSizePolicy, QPushButton, QHBoxLayout, QAbstractSpinBox,
 )
 from shiboken6 import isValid
 from add_dub.gui.model import FIELDS, Settings, adapt_settings
+
+
+class ConfigButton(QPushButton):
+    """Bouton capsule dont le dessin est indépendant du style natif Windows."""
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        selected = self.isChecked()
+        painter.setBrush(QColor('#505050' if selected else '#222222'))
+        painter.setPen(QColor('#ffffff' if self.underMouse() or self.hasFocus() else '#b0b0b0' if selected else '#606060'))
+        rect = self.rect().adjusted(1, 1, -1, -1)
+        painter.drawRoundedRect(rect, rect.height() / 2, rect.height() / 2)
+        painter.setPen(QColor('#f0f0f0' if selected else '#aaaaaa'))
+        font = self.font()
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.text())
 
 
 class QueueTabBar(QTabBar):
@@ -94,6 +111,18 @@ class SmoothScrollMixin:
 
 
 class SmoothTreeWidget(SmoothScrollMixin, QTreeWidget):
+    def drawRow(self, painter, option, index):
+        super().drawRow(painter, option, index)
+        if (self.objectName() == 'configurationFiles'
+                and index.siblingAtColumn(0).data(Qt.ItemDataRole.UserRole + 8)
+                != getattr(self, 'active_config_scope', None)):
+            painter.save()
+            rect = option.rect.adjusted(0, 0, 0, 0)
+            rect.setLeft(0)
+            rect.setRight(self.viewport().width())
+            painter.fillRect(rect, QColor(0, 0, 0, 110))
+            painter.restore()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
@@ -417,6 +446,8 @@ class SettingsEditor(QTabWidget):
         advanced = page_form(self, 'Audio et temps')
         self.fields = {}
         for key, label, choices in FIELDS[7:]:
+            if key == 'limit_duration_sec':
+                continue  # La plage d’essai est gérée hors des réglages de production.
             if choices:
                 widget = combo([(x.upper(), x) for x in choices], label)
             elif key in ('audio_bitrate', 'offset_ms', 'offset_video_ms', 'limit_duration_sec'):
@@ -429,13 +460,35 @@ class SettingsEditor(QTabWidget):
                     widget.setMaximum(1536)
             else:
                 widget = QDoubleSpinBox()
-                widget.setRange(-100 if key == 'ducking_db' else 0.01 if key.endswith('rate_tts') else 0, 100)
-                widget.setDecimals(2)
+                widget.setDecimals(1)
+                widget.setRange(-100 if key == 'ducking_db' else 0.1 if key.endswith('rate_tts') else 0, 100)
                 widget.setSingleStep(0.1)
             widget.setAccessibleName(label)
             widget.setMaximumWidth(260)
             self.fields[key] = widget
-            advanced.addRow(label.split(' ;')[0], widget)
+            if isinstance(widget, QAbstractSpinBox):
+                widget.setLocale(QLocale.c())
+                widget.setGroupSeparatorShown(False)
+                widget.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+                widget.setStyleSheet('min-height: 30px; padding: 0 8px; border: 1px solid #858585; border-radius: 0;')
+                row = QWidget()
+                row.setMaximumWidth(260)
+                layout = QHBoxLayout(row)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(6)
+                for text, action, name in (('+', widget.stepUp, 'Augmenter'), ('-', widget.stepDown, 'Diminuer')):
+                    button = QPushButton(text)
+                    button.setAutoDefault(False)
+                    button.setAccessibleName(f'{name} : {label}')
+                    button.setToolTip(f'{name} : {label}')
+                    button.setAutoRepeat(True)
+                    button.setStyleSheet('min-height: 30px; max-width: 30px; min-width: 30px; padding: 0;')
+                    button.clicked.connect(action)
+                    layout.addWidget(button)
+                layout.addWidget(widget, 1)
+                advanced.addRow(label.split(' ;')[0], row)
+            else:
+                advanced.addRow(label.split(' ;')[0], widget)
         for widget in (self.audio, self.sub, self.translation_engine, *self.fields.values()):
             signal = widget.currentIndexChanged if hasattr(widget, 'currentIndexChanged') else widget.valueChanged
             signal.connect(self.emit_change)
@@ -483,6 +536,7 @@ class SettingsEditor(QTabWidget):
         if result is None:
             raise ValueError('Attendez la détection des pistes.')
         result.translate = self.translate.isChecked()
+        result.values['limit_duration_sec'] = ''
         for key, box in (('audio_index', self.audio), ('sub', self.sub), ('translation_engine', self.translation_engine)):
             result.values[key] = box.currentData() or ''
         result.audio = next((t for t in self.video.audio if t.value == result.values['audio_index']), None)

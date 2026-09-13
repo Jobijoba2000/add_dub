@@ -175,6 +175,9 @@ class Job:
     dry_run: bool = False
     videos: list[Video] = field(default_factory=list)
     overrides: dict[str, Settings] = field(default_factory=dict)
+    folder_configs: dict[str, Settings] = field(default_factory=dict)
+    config_numbers: dict[str, int] = field(default_factory=dict)
+    next_config_number: int = 1
     status: str = 'En attente'
     completed: set[str] = field(default_factory=set)
 
@@ -182,8 +185,16 @@ class Job:
     def selected(self):
         return [v for v in self.videos if v.selected and v.eligible]
 
+    def folder_scope(self, path):
+        path = Path(os.path.abspath(path))
+        matches = [folder for folder in self.folder_configs
+                   if path == Path(os.path.abspath(folder)) or Path(os.path.abspath(folder)) in path.parents]
+        return max(matches, key=lambda folder: len(Path(folder).parts), default=None)
+
     def settings_for(self, video):
-        return adapt_settings(self.overrides.get(video.path, self.common), video)
+        folder = self.folder_scope(video.path)
+        inherited = self.folder_configs[folder] if folder else self.common
+        return adapt_settings(self.overrides.get(video.path, inherited), video)
 
     def output_for(self, video):
         if self.preserve_tree and video.root:
@@ -252,7 +263,7 @@ def inspect_video(video):
         streams = json.loads(process.stdout).get('streams', [])
         sidecar = _srt_in_srt_dir_for_video(video.path) or find_sidecar_srt(video.path)
         if sidecar:
-            result.subtitles.append(Track('srt', f'SRT externe — {Path(sidecar).name}', kind='srt'))
+            result.subtitles.append(Track('srt', f'SRT externe - {Path(sidecar).name}', kind='srt'))
         sub_index = 0
         for stream in streams:
             kind = stream.get('codec_type')
@@ -263,12 +274,12 @@ def inspect_video(video):
             codec = stream.get('codec_name', '?')
             description = ' · '.join(x for x in (language or 'Langue inconnue', title, codec) if x)
             if kind == 'audio':
-                result.audio.append(Track(str(stream['index']), f'Piste {len(result.audio) + 1} — {description}', language, title, 'audio', len(result.audio)))
+                result.audio.append(Track(str(stream['index']), f'Piste {len(result.audio) + 1} - {description}', language, title, 'audio', len(result.audio)))
             else:
                 # MKV conserve l'extraction et l'OCR existants ; les autres conteneurs passent par FFmpeg.
                 mode = 'mkv' if Path(video.path).suffix.lower() == '.mkv' else 'stream'
                 value = f'{mode}:{sub_index if mode == "mkv" else stream["index"]}'
-                result.subtitles.append(Track(value, f'Piste {sub_index + 1} — {description}', language, title, mode, sub_index))
+                result.subtitles.append(Track(value, f'Piste {sub_index + 1} - {description}', language, title, mode, sub_index))
                 sub_index += 1
     except Exception as exc:
         result.error = f'Détection impossible : {exc}'

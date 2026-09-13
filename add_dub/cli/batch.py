@@ -192,7 +192,7 @@ def _make_options(args) -> DubOptions:
     audio_args = final_audio_codec_args(args.audio_codec, f"{args.audio_bitrate}k")
     sub_codec = subtitle_codec_for_container(".mkv")
 
-    # Moteur & voix — lecture silencieuse depuis les valeurs effectives, avec override CLI
+    # Moteur & voix - lecture silencieuse depuis les valeurs effectives, avec override CLI
     fused = effective_values()  # options.conf > defaults
     engine = normalize_engine(getattr(args, "tts_engine", None) or fused["tts_engine"])
 

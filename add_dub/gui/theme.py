@@ -211,7 +211,12 @@ def apply_theme(app):
         QTabBar#queueTabs::tab:selected { background: #242424;
             color: #ffffff; }
         QTabBar#queueTabs::tab:hover { background: #404040; }
+        /* Le panneau de réglages reprend la même bordure que les listes.
+           Les quatre côtés restent visibles, y compris sous les onglets. */
         QTabWidget#settingsTabs::pane { border: 1px solid #858585; border-top: none; }
+        QTabWidget#settingsTabs QTabBar::tab {
+            margin-top: 1px; border-bottom: 1px solid #0d0d0d;
+        }
         QTabWidget#settingsTabs QScrollArea { border: none; border-radius: 0; }
         QToolButton { border: 1px solid #858585; border-radius: 0; padding: 8px; background: #242424; }
         QToolButton:hover { background: #404040; border-color: #d0d0d0; }
@@ -244,6 +249,12 @@ def apply_theme(app):
         QTreeWidget::item:hover:!selected { background-color: #303030; }
         QTreeWidget::indicator { width: 16px; height: 16px; }
         QTreeWidget::item:selected { background-color: #005fb8; color: #ffffff; }
+        QTreeWidget#configurationFiles::item {
+            background: transparent; border: none; border-radius: 0;
+        }
+        QTreeWidget#configurationFiles::item:hover:!selected { background: transparent; }
+        QTreeWidget#configurationFiles::item:selected { background: #005fb8; color: #ffffff; }
+        QTreeWidget#configurationFiles::branch { background: transparent; }
         QTreeWidget#queueList { padding: 0; border-radius: 0; border-top: none; }
         QTreeWidget#queueList::item { padding: 0px 4px; margin: 0;
             border: none; border-top: 1px solid transparent; border-bottom: 1px solid transparent; }

@@ -225,7 +225,7 @@ def lower_audio_during_subtitles(
             # Court segment : tout à gain
             envelope[s:e] = np.minimum(envelope[s:e], gain)
 
-    # Application de l'enveloppe en blocs (threads) – hors dialogues = 1.0 (inchangé)
+    # Application de l'enveloppe en blocs (threads) - hors dialogues = 1.0 (inchangé)
     max_workers = min((os.cpu_count() or 4), 8)
     blocks = max_workers * 4
     block_size = (n_frames + blocks - 1) // blocks

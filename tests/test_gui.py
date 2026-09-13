@@ -112,7 +112,7 @@ class ConfigurationWindowTests(unittest.TestCase):
             window.close()
             window.deleteLater()
 
-    def test_twelve_selected_survive_late_detection_and_validation(self):
+    def test_twelve_selected_survive_navigation_and_validation(self):
         from copy import deepcopy
         from unittest.mock import Mock
         from PySide6.QtCore import Qt
@@ -138,13 +138,10 @@ class ConfigurationWindowTests(unittest.TestCase):
                 folder = dialog.tree.topLevelItem(0)
                 first = dialog.file_items[videos[0].path]
                 dialog.select_item(first, None)
-                _, work, callback = tasks.run.call_args.args
-                stale_result = deepcopy(dialog.job.videos[0])
                 folder.setCheckState(0, Qt.CheckState.Unchecked)
                 for video in videos[1:13]:
                     dialog.file_items[video.path].setCheckState(0, Qt.CheckState.Checked)
-                with patch.object(dialog.editor, 'load'):
-                    callback(stale_result, None)
+                dialog.select_item(first, None)
                 self.assertFalse(dialog.job.videos[0].selected)
                 folder.setText(0, 'Dossier renommé dans la vue')
                 folder.setExpanded(False)

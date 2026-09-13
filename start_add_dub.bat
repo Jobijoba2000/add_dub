@@ -220,6 +220,11 @@ if exist "%ROOT%requirements.txt" (
     echo [INFO] requirements.txt missing - step skipped.
 )
 
+rem Moteur video portable pour l'interface, jamais le VLC du systeme.
+if /I "%~1"=="--gui" (
+    python "%ROOT%scripts\prepare_vlc.py" || goto fail
+)
+
 rem --- Boucle d'execution -----------------------------------------------------
 :loop
 echo.

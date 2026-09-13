@@ -10,12 +10,14 @@ if not exist ".venv\Scripts\python.exe" (
 )
 .venv\Scripts\python.exe -c "from PySide6 import QtWidgets; import PyInstaller, ctranslate2, sentencepiece"
 if errorlevel 1 exit /b 1
+.venv\Scripts\python.exe scripts\prepare_vlc.py
+if errorlevel 1 exit /b 1
 .venv\Scripts\python.exe -m PyInstaller --clean --noconfirm add_dub.spec
 if errorlevel 1 (
     echo [ERREUR] Compilation interrompue.
     exit /b 1
 )
-for %%D in (ffmpeg MKVToolNix subtitle_edit) do (
+for %%D in (ffmpeg MKVToolNix subtitle_edit vlc) do (
     if not exist "tools\%%D" (
         echo [ERREUR] Outil portable manquant : tools\%%D
         exit /b 1

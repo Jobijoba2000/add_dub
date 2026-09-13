@@ -34,7 +34,7 @@ class RunFilesTests(unittest.TestCase):
                 self.assertEqual(len(job.completed), 42)
                 self.assertEqual(window.progress.value(), 0)
                 self.assertEqual(window.durations, [])
-                self.assertIn('Restant estimé : —', window.time_label.text())
+                self.assertIn('Restant estimé : -', window.time_label.text())
                 window.position = 10
                 window.update_totals()
                 self.assertGreater(window.progress.value(), 0)

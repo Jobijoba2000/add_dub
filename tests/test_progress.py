@@ -3,6 +3,41 @@ from add_dub.progress import VideoProgress, aggregate, remaining_seconds
 
 
 class ProgressTests(unittest.TestCase):
+    def test_restart_after_clearing_old_jobs_ignores_empty_batches(self):
+        from unittest.mock import patch, Mock
+        from PySide6.QtWidgets import QApplication
+        from add_dub.gui.application import Application
+        from add_dub.gui.model import Job, Settings, Video, Track
+        from add_dub.cli.args import parse_args
+        app = QApplication.instance() or QApplication([])
+        with patch('add_dub.gui.application.fs.ensure_base_dirs'):
+            window = Application(parse_args(['--gui'])[0])
+        old_video = Video('old.mkv', audio=[Track('0', 'Audio')], subtitles=[Track('srt', 'SRT')])
+        old_job = Job([], Settings({}), 'output', videos=[old_video])
+        try:
+            window.jobs = [old_job]
+            window.refresh()
+            window.remove_entries('all')
+            old_job.commands = Mock(side_effect=AssertionError('Ancien lot vide validé'))
+            video = Video('new.mkv', audio=[Track('0', 'Audio')], subtitles=[Track('srt', 'SRT')])
+            new_job = Job([], Settings({}), 'output', videos=[video])
+            new_job.commands = Mock(return_value=[(video, ['python', '--batch'])])
+            window.jobs.append(new_job)
+            with patch('add_dub.gui.application.partition_existing', side_effect=lambda pending: (pending, [])), \
+                 patch.object(window, 'next_file'), \
+                 patch('add_dub.gui.application.QMessageBox.warning') as warning:
+                window.start()
+            warning.assert_not_called()
+            old_job.commands.assert_not_called()
+            new_job.commands.assert_called_once()
+            self.assertTrue(window.running)
+            self.assertEqual(window.pending, [(1, video, ['python', '--batch'])])
+        finally:
+            window.running = False
+            window.clock_timer.stop()
+            window.close()
+            window.deleteLater()
+
     def test_queue_menu_paths_removal_and_immediate_transfer(self):
         from unittest.mock import patch
         from PySide6.QtWidgets import QApplication

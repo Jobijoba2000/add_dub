@@ -109,7 +109,7 @@ def _ask_voice_for_engine(engine: str) -> str | None:
         log.info(t("cli_no_voice"))
         return None
 
-    # Étape 1 — langue de base
+    # Étape 1 - langue de base
     groups = _group_by_lang_base(all_voices)
     print(t("cli_lang_avail"))
     for idx, (base, vs) in enumerate(groups, start=1):
@@ -120,7 +120,7 @@ def _ask_voice_for_engine(engine: str) -> str | None:
     lang_idx = _read_index(t("cli_choose_lang"), len(groups), 1)
     base_lang, voices_in_base = groups[lang_idx - 1]
 
-    # Étape 2 — locale (si plusieurs)
+    # Étape 2 - locale (si plusieurs)
     locales = sorted({v.get("lang") for v in voices_in_base if v.get("lang")})
     chosen_locale = None
     if len(locales) <= 1:
@@ -139,7 +139,7 @@ def _ask_voice_for_engine(engine: str) -> str | None:
         # Sécurité : si rien, on retombe sur toutes les voix de la langue de base
         voices = voices_in_base
 
-    # Étape 3 — voix
+    # Étape 3 - voix
     print(t("cli_voices_avail"))
     for i, v in enumerate(voices, start=1):
         print(f"    {i}. {_display_name_short(v['display_name'])} | voice_id={v['id']} | lang={v['lang']}")

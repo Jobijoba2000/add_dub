@@ -5,20 +5,23 @@ from add_dub.core.options import DubOptions
 from add_dub.logger import (log_call, log_time)
 
 
-def run_ffmpeg_with_percentage(cmd, duration_source, progress_cb=None):
+def run_ffmpeg_with_percentage(cmd, duration_source, progress_cb=None, duration_override=None):
     """
     cmd : liste FFmpeg déjà contenant -nostats -progress pipe:1
     duration_source : fichier dont on prend la durée (ex: la vidéo d'entrée)
     progress_cb : callback optionnel pour transmettre le pourcentage (0-100)
     """
-    try:
-        duration = float(subprocess.check_output(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-             "-of", "default=nw=1:nk=1", duration_source],
-            text=True, encoding="utf-8", errors="replace"
-        ).strip())
-    except Exception:
-        duration = 0.0
+    if duration_override is not None:
+        duration = float(duration_override)
+    else:
+        try:
+            duration = float(subprocess.check_output(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "default=nw=1:nk=1", duration_source],
+                text=True, encoding="utf-8", errors="replace"
+            ).strip())
+        except Exception:
+            duration = 0.0
 
     p = subprocess.Popen(
         cmd,

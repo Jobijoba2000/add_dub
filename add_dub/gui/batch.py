@@ -15,7 +15,7 @@ def launcher_command(command):
 def export_commands(job):
     """Exporte le dossier complet avec les réglages communs du formulaire."""
     if (len(job.sources) == 1 and os.path.isdir(job.sources[0])
-            and job.recursive and not job.overrides
+            and job.recursive and not job.overrides and not job.folder_configs
             and len(job.selected) == len(job.videos)
             and all(os.path.normcase(os.path.abspath(v.root or '.')) ==
                     os.path.normcase(os.path.abspath(job.sources[0])) for v in job.videos)):

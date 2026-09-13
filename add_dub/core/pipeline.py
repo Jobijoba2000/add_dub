@@ -96,6 +96,11 @@ def process_one_video(
         return None
 
     # 4) Nettoyage SRT
+    if os.getenv('ADD_DUB_PREVIEW_RANGE'):
+        import shutil
+        local_srt = join_tmp('preview-input.srt')
+        shutil.copyfile(srt_path, local_srt)
+        srt_path = local_srt
     strip_subtitle_tags_inplace(srt_path)
 
     # 4b) Décalage physique des sous-titres (si demandé)
@@ -105,6 +110,17 @@ def process_one_video(
         # On remet l'offset à 0 pour la suite du pipeline (TTS, ducking, mux)
         # car le fichier SRT est maintenant "physiquement" calé.
         opts = replace(opts, offset_ms=0)
+
+    if os.getenv('ADD_DUB_PREVIEW_RANGE'):
+        from add_dub.core.preview import prepare_excerpt
+        import add_dub.io.fs as preview_fs
+        start, end = json.loads(os.environ['ADD_DUB_PREVIEW_RANGE'])
+        # Les traductions de l’essai restent elles aussi dans le répertoire isolé.
+        preview_fs.SRT_DIR = preview_fs.TMP_DIR
+        input_video_path, srt_path, audio_idx = prepare_excerpt(
+            input_video_path, srt_path, audio_idx, start, end, preview_fs.TMP_DIR,
+            progress_cb=lambda value: emit('preview_extract', value=value))
+        limit_duration_sec = None
 
     # --- TRADUCTION (si demandée) ---
     if opts.translate and opts.translate_to:

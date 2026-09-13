@@ -98,7 +98,7 @@ class Application(CaptionWindow):
         self.settings_button = QToolButton()
         self.settings_button.setText('Paramètres')
         self.settings_button.setIcon(settings_icon())
-        self.settings_button.setToolTip('Options globales — à venir')
+        self.settings_button.setToolTip('Options globales - à venir')
         self.settings_button.setEnabled(False)
         for button in (self.open_button, self.settings_button):
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
@@ -181,7 +181,7 @@ class Application(CaptionWindow):
         self.progress.setValue(0)
         totals = QHBoxLayout()
         totals.addWidget(self.progress, 1)
-        self.time_label = QLabel('Écoulé : 00:00:00\nRestant estimé : —')
+        self.time_label = QLabel('Écoulé : 00:00:00\nRestant estimé : -')
         totals.addWidget(self.time_label)
         layout.addLayout(totals)
         self.log_lines = deque(maxlen=2500)
@@ -254,7 +254,7 @@ class Application(CaptionWindow):
     def set_full_paths(self, enabled):
         self.full_paths = enabled
         for tree in (self.queue, self.finished_queue):
-            tree.headerItem().setText(0, 'Vidéo — chemin source' if enabled else 'Vidéo')
+            tree.headerItem().setText(0, 'Vidéo - chemin source' if enabled else 'Vidéo')
         self.refresh()
 
     def remove_entries(self, scope):
@@ -376,7 +376,7 @@ class Application(CaptionWindow):
             return f'{seconds // 3600:02d}:{seconds // 60 % 60:02d}:{seconds % 60:02d}'
         remaining = remaining_seconds(self.durations, len(self.pending) - self.position,
                                       self.video_progress.percent if self.active_key else 0)
-        estimate = duration(remaining) if remaining is not None and self.running else '—'
+        estimate = duration(remaining) if remaining is not None and self.running else '-'
         self.time_label.setText(f'Écoulé : {duration(self.elapsed)}\nRestant estimé : {estimate}')
 
     def update_playback_button(self):
@@ -407,7 +407,8 @@ class Application(CaptionWindow):
         self.pending = []
         try:
             for index, job in enumerate(self.jobs):
-                if job.status != 'Terminé':
+                if (job.status != 'Terminé'
+                        and any(v.path not in job.completed for v in job.selected)):
                     for video, command in job.commands():
                         if video.path not in job.completed:
                             self.pending.append((index, video, command))
@@ -468,8 +469,8 @@ class Application(CaptionWindow):
         self.file_skipped = False
         self.output_buffer = ''
         self.log_lines.clear()
-        self.jobs[index].status = f'En cours — {Path(video.path).name}'
-        self.status.setText(f'Vidéo {self.position + 1} / {len(self.pending)} — {Path(video.path).name}')
+        self.jobs[index].status = f'En cours - {Path(video.path).name}'
+        self.status.setText(f'Vidéo {self.position + 1} / {len(self.pending)} - {Path(video.path).name}')
         self.log_lines.append(f'\n── {video.path} ──')
         self.decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
         self.file_finished = False
@@ -561,7 +562,7 @@ class Application(CaptionWindow):
         self.active_key = None
         self.update_totals()
         more_for_job = any(i == index for i, _, _ in self.pending[self.position:])
-        job.status = 'En attente' if more_for_job else 'Erreur — relancer ou modifier' if index in self.failed_jobs else 'Terminé'
+        job.status = 'En attente' if more_for_job else 'Erreur - relancer ou modifier' if index in self.failed_jobs else 'Terminé'
         self.refresh()
         QTimer.singleShot(0, self.next_file)
 

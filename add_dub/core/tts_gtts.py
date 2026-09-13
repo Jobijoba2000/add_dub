@@ -138,7 +138,7 @@ def _speed_change_with_ffmpeg(segment: AudioSegment, factor: float) -> AudioSegm
 def _looks_like_silence(text: str) -> bool:
     """
     True si 'text' ne contient que espaces/ellipses/ponctuation/symboles.
-    Ex.: "", "...", "…", ". . .", "--", "♪", "—", etc.
+    Ex.: "", "...", "…", ". . .", "--", "♪", "-", etc.
     """
     if text is None:
         return True

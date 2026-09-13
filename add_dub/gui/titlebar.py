@@ -42,6 +42,11 @@ class CaptionWindow(QMainWindow):
         title = QLabel(self.windowTitle())
         self.windowTitleChanged.connect(title.setText)
         row.addWidget(title, 1)
+        # Embedded native video surfaces can cause mouse messages to reach
+        # these Qt children instead of the top-level WM_NCHITTEST handler.
+        self._caption_drag_widgets = (self.caption, icon, title)
+        for widget in self._caption_drag_widgets:
+            widget.installEventFilter(self)
         self.caption_buttons = QWidget()
         buttons = QHBoxLayout(self.caption_buttons)
         buttons.setContentsMargins(0, 0, 0, 0)
@@ -75,6 +80,17 @@ class CaptionWindow(QMainWindow):
 
     def toggle_maximized(self):
         self.showNormal() if self.isMaximized() else self.showMaximized()
+
+    def eventFilter(self, watched, event):
+        if watched in getattr(self, '_caption_drag_widgets', ()):
+            if event.type() == QEvent.Type.MouseButtonDblClick and event.button() == Qt.MouseButton.LeftButton:
+                self.toggle_maximized()
+                return True
+            if event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+                handle = self.windowHandle()
+                if handle and handle.startSystemMove():
+                    return True
+        return super().eventFilter(watched, event)
 
     def caption_icon(self, standard):
         # Draw at the display's pixel density instead of using theme glyphs,
@@ -127,6 +143,18 @@ class CaptionWindow(QMainWindow):
             rect.top = top + (border if self._user32.IsZoomed(msg.hWnd) else 0)
             return True, 0
         if msg.message == 0x0084:  # WM_NCHITTEST
+            rect = wintypes.RECT()
+            self._user32.GetWindowRect(msg.hWnd, ctypes.byref(rect))
+            x = ctypes.c_short(msg.lParam & 0xffff).value - rect.left
+            y = ctypes.c_short((msg.lParam >> 16) & 0xffff).value - rect.top
+            scale = self._user32.GetDpiForWindow(msg.hWnd) / 96
+            # A custom client frame cannot rely on DefWindowProc identifying
+            # its resize borders. Test all eight zones before caption buttons.
+            if not self._user32.IsZoomed(msg.hWnd):
+                hit = self.resize_hit(x, y, rect.right - rect.left,
+                                      rect.bottom - rect.top, max(1, round(8 * scale)))
+                if hit:
+                    return True, hit
             if hasattr(self, 'caption_buttons'):
                 # Native messages use physical desktop coordinates, Qt uses DIPs.
                 point = wintypes.POINT(ctypes.c_short(msg.lParam & 0xffff).value,
@@ -137,19 +165,22 @@ class CaptionWindow(QMainWindow):
                 local = self.caption_buttons.mapFrom(self, QPoint(round(point.x / scale), round(point.y / scale)))
                 if self.caption_buttons.rect().contains(local):
                     return True, 1
-            # Native side/bottom hit tests preserve resize cursors and behavior.
-            hit = self._user32.DefWindowProcW(msg.hWnd, msg.message, msg.wParam, msg.lParam)
-            if hit in (10, 11, 12, 13, 14, 15, 16, 17):
-                return True, hit
-            rect = wintypes.RECT()
-            self._user32.GetWindowRect(msg.hWnd, ctypes.byref(rect))
-            y = ctypes.c_short((msg.lParam >> 16) & 0xffff).value - rect.top
-            scale = self._user32.GetDpiForWindow(msg.hWnd) / 96
-            if not self._user32.IsZoomed(msg.hWnd) and y < round(6 * scale):
-                return True, 12  # HTTOP
             if y < round(self.caption_height * scale):
                 return True, 2  # HTCAPTION: native drag, double-click and menu.
             return True, 1  # HTCLIENT
         if msg.message in (0x0006, 0x02E0):  # activation / DPI change
             self._extend_caption(msg.hWnd)
         return super().nativeEvent(event_type, message)
+
+    @staticmethod
+    def resize_hit(x, y, width, height, border):
+        """Windows hit-test code for each physical resize edge and corner."""
+        if not (0 <= x < width and 0 <= y < height):
+            return 0
+        left, right = x < border, x >= width - border
+        top, bottom = y < border, y >= height - border
+        if top:
+            return 13 if left else 14 if right else 12
+        if bottom:
+            return 16 if left else 17 if right else 15
+        return 10 if left else 11 if right else 0

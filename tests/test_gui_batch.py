@@ -79,13 +79,19 @@ class BatchCommandTests(unittest.TestCase):
                 dialog.job.overrides[videos[1].path] = custom
                 from PySide6.QtCore import Qt
                 dialog.file_items[videos[2].path].setCheckState(0, Qt.CheckState.Unchecked)
-                dialog.editor.setCurrentWidget(dialog.batch_page)
+                self.assertEqual([dialog.editor.tabText(i) for i in range(dialog.editor.count())],
+                                 ['Pistes', 'Voix', 'Traduction', 'Audio et temps', 'Essai'])
+                dialog.show_batch()
+                self.assertTrue(dialog.batch_page.isVisible())
+                self.assertIn('2 vidéo(s)', dialog.batch_summary.text())
                 dialog.refresh_batch()
                 self.assertEqual(len(dialog.batch_command), 2)
                 self.assertEqual([c[c.index('--input') + 1] for c in dialog.batch_command],
                                  [v.path for v in videos[:2]])
                 second = dialog.batch_command[1]
                 self.assertEqual(second[second.index('--min-rate-tts') + 1], '1.5')
+                dialog.batch_page.reject()
+                self.assertFalse(dialog.batch_page.isVisible())
             finally:
                 dialog.close()
                 dialog.deleteLater()
