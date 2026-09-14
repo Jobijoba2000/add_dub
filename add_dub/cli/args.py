@@ -27,6 +27,8 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_mode.add_argument("--interactive", action="store_true", help=t("help_interactive"))
     g_mode.add_argument("--batch", action="store_true", help=t("help_batch"))
     g_mode.add_argument("--gui", action="store_true", help="Ouvrir l'interface graphique")
+    g_mode.add_argument("--player", action="store_true", help="Ouvrir le lecteur vidéo avec vocalisation")
+    g_mode.add_argument("--player-generate", metavar="REQUEST", help=argparse.SUPPRESS)
 
     # --- Groupes d'arguments pour plus de clarté ---
     
@@ -101,6 +103,6 @@ def want_interactive(args: argparse.Namespace) -> bool:
     - False si --batch
     - True sinon (interactif par défaut)
     """
-    if getattr(args, "batch", False) or getattr(args, "gui", False):
+    if any(getattr(args, mode, False) for mode in ('batch', 'gui', 'player', 'player_generate')):
         return False
     return True

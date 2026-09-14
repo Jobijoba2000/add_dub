@@ -107,7 +107,21 @@ start_add_dub.bat
 
 Ce projet est sous licence **GNU General Public License v3.0 (GPLv3)**. Les outils tiers inclus dans la Toolbox restent soumis à leurs licences respectives.
 
-## Interface graphique (en cours de développement)
+## Lecteur vidéo séparé (`--player`)
+
+Lancer `start_add_dub.bat --player` depuis les sources, ou `add_dub.exe --player` dans une distribution recompilée. Pour ouvrir directement un fichier : `add_dub.exe --player -i "C:\Videos\film.mkv"`.
+
+Ce mode utilise mpv embarqué dans `tools/mpv`. Il lit la vidéo originale et les deux WAV préparés (voix TTS et audio original atténué), sans fabriquer de nouvelle vidéo. Le mode `--gui` conserve son fonctionnement d'export et son aperçu VLC.
+
+Le clic droit donne accès aux pistes audio, aux sous-titres et à « Vocaliser les sous-titres ». Le lecteur choisit les sous-titres selon la langue système lorsqu'une piste correspondante est disponible. La vocalisation utilise la piste sélectionnée et les fonctions existantes d'add_dub : extraction SRT, génération TTS, extraction audio et ducking.
+
+La fenêtre de vocalisation permet de choisir moteur, langue, région, voix, atténuation en dB, vitesses TTS minimale/maximale et niveaux TTS/BG (1 = normal, 0 = muet). « Enregistrer les réglages » les conserve dans `player-data/settings.json`. Ctrl+Maj+D lance directement la préparation avec ces réglages : pause, fenêtre de traitement, fermeture après réussite et lecture depuis le début. En lancement manuel, « Rejouer » et « Continuer » restent proposés.
+
+Les WAV sont conservés dans `player-data/wav/`, les travaux temporaires sont isolés dans `tmp/player/`. Les réglages du lecteur ne modifient pas `options.conf`. Aucune réutilisation automatique des WAV comme cache n'est encore implémentée. Les sous-titres externes ouverts dans mpv ne sont pas encore raccordés à la vocalisation.
+
+Le code spécifique est regroupé dans `add_dub/player/` (interface, adaptateur mpv, commandes, préparation et fichiers). Les moteurs TTS et le ducking restent ceux de `add_dub/core/`, et le sélecteur vocal est celui du GUI.
+
+## Interface de production (`--gui`)
 
 > **Le mode `--gui` est en chantier.** Il est disponible pour les essais, mais des bugs peuvent subsister et son interface comme ses fonctionnalités peuvent encore évoluer. Il ne constitue pas encore une version finalisée. Le mode console interactif reste le mode par défaut.
 

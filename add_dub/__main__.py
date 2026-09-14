@@ -37,6 +37,14 @@ def main(argv=None) -> int:
 
     args, _unknown = parse_args(argv)
 
+    if getattr(args, 'player_generate', None):
+        from add_dub.player.core.generation import main as generate_main
+        return generate_main(args.player_generate)
+
+    if getattr(args, 'player', False):
+        from add_dub.player.gui.run import main as player_main
+        return player_main(args)
+
     if getattr(args, "gui", False):
         from add_dub.gui import main as gui_main
         return gui_main(args)

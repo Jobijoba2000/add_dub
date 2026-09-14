@@ -17,7 +17,7 @@ if errorlevel 1 (
     echo [ERREUR] Compilation interrompue.
     exit /b 1
 )
-for %%D in (ffmpeg MKVToolNix subtitle_edit vlc) do (
+for %%D in (ffmpeg MKVToolNix subtitle_edit vlc mpv) do (
     if not exist "tools\%%D" (
         echo [ERREUR] Outil portable manquant : tools\%%D
         exit /b 1
@@ -39,5 +39,6 @@ echo =========================================
 echo   Compilation terminee dans dist\add_dub
  echo   Console : add_dub.exe
  echo   Fenetre : add_dub.exe --gui
+ echo   Lecteur : add_dub.exe --player
 echo =========================================
 exit /b 0
