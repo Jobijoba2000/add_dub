@@ -1027,8 +1027,8 @@ start_add_dub.bat</code></pre>
         <p>Le script <code>start_add_dub.bat</code> est conçu pour automatiser l'intégralité de la configuration de votre environnement de développement :</p>
         <ol>
             <li><strong>Environnement virtuel Python :</strong> Il crée automatiquement un environnement virtuel (venv) et installe l'ensemble des bibliothèques nécessaires à partir de <code>requirements.txt</code>.</li>
-            <li><strong>Téléchargement automatique de la Toolbox (<code>tools/</code>) :</strong> 
-                <p style="margin-top: 6px;">add_dub repose sur plusieurs utilitaires indispensables pour le traitement multimédia et l'OCR (FFmpeg, MKVToolNix, SubtitleEdit, vobsub2srt...). Plutôt que d'obliger le développeur à installer et configurer manuellement ces outils système, <code>start_add_dub.bat</code> télécharge automatiquement une archive d'outils portables pré-configurés et les extrait directement dans le dossier <code>tools/</code>.</p>
+            <li><strong>Téléchargements individuels dans <code>tools/</code> :</strong>
+                <p style="margin-top: 6px;">Le lanceur prépare Python avec <code>scripts/prepare_python.ps1</code>, puis <code>scripts/prepare_tools.py</code> prépare FFmpeg, MKVToolNix, Subtitle Edit, Tesseract et mpv. Les archives sont contrôlées par SHA-256 et conservées dans <code>.cache/</code>. Les modèles OCR sont téléchargés par add_dub à la demande. Subtitle Edit utilise .NET Framework 4.8.</p>
             </li>
         </ol>
 

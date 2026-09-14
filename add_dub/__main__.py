@@ -62,7 +62,8 @@ def main(argv=None) -> int:
 
     # Batch
     from add_dub.cli.batch import main as batch_main
-    return batch_main(args)
+    from add_dub.cli.batch_lifecycle import run
+    return run(batch_main, args, argv)
 
 
 if __name__ == "__main__":

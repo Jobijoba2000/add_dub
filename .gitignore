@@ -7,7 +7,7 @@ build/
 dist/
 /build_*/
 /dist_*/
-/.cache/
+.cache/
 *.spec
 !add_dub.spec
 
@@ -16,13 +16,13 @@ input/
 output/
 srt/
 tools/
+tools_old/
 licenses/
 add_dub/logs/
 logs/
 player-data/
 
 # Fichiers locaux/packaging
-TOOLBOX_VERSION.txt
 options.conf
 gen_requirements.py
 README.txt

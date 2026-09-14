@@ -11,14 +11,19 @@ La coupe dépend des images clés du flux source et ne garantit pas une précisi
 Les sous-titres sont copiés, décalés et coupés avant traduction et synthèse vocale.
 La fermeture de la fenêtre ou le remplacement de l’essai nettoie ses fichiers.
 
-Le lecteur charge exclusivement `tools/vlc/libvlc.dll` et les modules livrés à
-côté. Aucune recherche dans Program Files ou le registre. Le lancement de
-développement `start_add_dub.bat --gui` prépare le moteur si nécessaire ;
-`compil.bat` le copie dans la distribution, qui fonctionne sans téléchargement
-ni installation de VLC chez l’utilisateur.
+Le lecteur charge exclusivement `tools/mpv/libmpv-2.dll`, avec le même adaptateur
+que `--player` (`add_dub/adapters/mpv.py`). Aucun VLC ni installation personnelle
+de mpv n'est utilisé. L'aperçu continue de lire le MKV de test produit par le
+pipeline existant ; les fonctions de fabrication du doublage ne changent pas.
 
-Version : VLC 3.0.23 Windows x64, distribution officielle VideoLAN.
-Source : https://download.videolan.org/pub/videolan/vlc/3.0.23/
-Le script `scripts/prepare_vlc.py` vérifie le SHA-256 officiel de l’archive.
-Les fichiers COPYING, AUTHORS et THANKS accompagnent le moteur.
-Le code source correspondant est disponible dans ce même répertoire officiel.
+`start_add_dub.bat` prépare les outils via `scripts/prepare_tools.py`, qui appelle
+la préparation de mpv si nécessaire, avant de lancer le mode demandé.
+`scripts/prepare_mpv.py` télécharge une version fixe, contrôle le SHA-256 de
+l'archive et de la DLL, puis extrait uniquement la DLL avec le tar fourni par
+Windows. `compil.bat` la copie dans la distribution : l'utilisateur du logiciel
+compilé n'a rien à télécharger ni à installer séparément.
+
+Version Windows x64 : `20260903-git-69e63f425a`, build shinchiro référencé sur
+https://mpv.io/installation/ . Archive et sources de construction :
+https://github.com/shinchiro/mpv-winbuild-cmake/releases/tag/20260903 .
+Les empreintes figées sont dans `scripts/prepare_mpv.py`.

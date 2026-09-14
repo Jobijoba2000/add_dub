@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, QTimer, QSize, QLocale
 from PySide6.QtGui import QShortcut, QKeySequence, QPainter, QColor, QIcon, QActionGroup
 from PySide6.QtWidgets import (QMainWindow, QWidget, QFrame, QVBoxLayout, QHBoxLayout,
                               QLabel, QSlider, QToolButton, QStyle, QFileDialog, QMenu, QMessageBox)
-from add_dub.player.adapters.mpv_player import Player
+from add_dub.adapters.mpv import Player
 from add_dub.player.core.playback import Playback
 from add_dub.player.config.defaults import APP_NAME, DEFAULT_VOLUME
 from add_dub.player.io.fs import ensure_base_dirs

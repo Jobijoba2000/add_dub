@@ -99,19 +99,19 @@ git clone https://github.com/Jobijoba2000/add_dub.git
 cd add_dub
 start_add_dub.bat
 ```
-*Le script `start_add_dub.bat` déploiera automatiquement la toolbox requise (FFmpeg, environnement virtuel et dépendances).*
+*Le script `start_add_dub.bat` prépare Python avec `scripts/prepare_python.ps1`, puis lance `scripts/prepare_tools.py` pour télécharger séparément FFmpeg, MKVToolNix, Subtitle Edit, Tesseract et mpv dans `tools/`. Les archives sont vérifiées par SHA-256 et conservées dans `.cache/`. Il crée ensuite l'environnement virtuel et installe les dépendances. Les modèles OCR restent téléchargés à la demande par add_dub. Subtitle Edit nécessite .NET Framework 4.8 sur Windows.*
 
 ---
 
 ## 📄 Licence
 
-Ce projet est sous licence **GNU General Public License v3.0 (GPLv3)**. Les outils tiers inclus dans la Toolbox restent soumis à leurs licences respectives.
+Ce projet est sous licence **GNU General Public License v3.0 (GPLv3)**. Les outils tiers téléchargés restent soumis à leurs licences respectives.
 
 ## Lecteur vidéo séparé (`--player`)
 
 Lancer `start_add_dub.bat --player` depuis les sources, ou `add_dub.exe --player` dans une distribution recompilée. Pour ouvrir directement un fichier : `add_dub.exe --player -i "C:\Videos\film.mkv"`.
 
-Ce mode utilise mpv embarqué dans `tools/mpv`. Il lit la vidéo originale et les deux WAV préparés (voix TTS et audio original atténué), sans fabriquer de nouvelle vidéo. Le mode `--gui` conserve son fonctionnement d'export et son aperçu VLC.
+Ce mode utilise mpv embarqué dans `tools/mpv`. Il lit la vidéo originale et les deux WAV préparés (voix TTS et audio original atténué), sans fabriquer de nouvelle vidéo. Le mode `--gui` conserve son fonctionnement d'export et son aperçu mpv.
 
 Le clic droit donne accès aux pistes audio, aux sous-titres et à « Vocaliser les sous-titres ». Le lecteur choisit les sous-titres selon la langue système lorsqu'une piste correspondante est disponible. La vocalisation utilise la piste sélectionnée et les fonctions existantes d'add_dub : extraction SRT, génération TTS, extraction audio et ducking.
 
@@ -119,7 +119,9 @@ La fenêtre de vocalisation permet de choisir moteur, langue, région, voix, att
 
 Les WAV sont conservés dans `player-data/wav/`, les travaux temporaires sont isolés dans `tmp/player/`. Les réglages du lecteur ne modifient pas `options.conf`. Aucune réutilisation automatique des WAV comme cache n'est encore implémentée. Les sous-titres externes ouverts dans mpv ne sont pas encore raccordés à la vocalisation.
 
-Le code spécifique est regroupé dans `add_dub/player/` (interface, adaptateur mpv, commandes, préparation et fichiers). Les moteurs TTS et le ducking restent ceux de `add_dub/core/`, et le sélecteur vocal est celui du GUI.
+L'adaptateur mpv partagé avec l'aperçu du GUI est dans `add_dub/adapters/mpv.py`. La préparation centralisée dans `scripts/prepare_tools.py` appelle `scripts/prepare_mpv.py` pour sa DLL.
+
+Le code spécifique est regroupé dans `add_dub/player/` (interface, commandes, préparation et fichiers). Les moteurs TTS et le ducking restent ceux de `add_dub/core/`, et le sélecteur vocal est celui du GUI.
 
 ## Interface de production (`--gui`)
 

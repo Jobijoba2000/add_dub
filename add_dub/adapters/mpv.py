@@ -1,7 +1,8 @@
 """Lecteur libmpv embarqué, sans configuration ni installation extérieure."""
 import ctypes as c
 import os
-from add_dub.player.io.fs import TOOLS_DIR
+from pathlib import Path
+from add_dub.io.fs import ROOT
 
 
 class Event(c.Structure):
@@ -18,7 +19,7 @@ class LogMessage(c.Structure):
 
 class Player:
     def __init__(self, hwnd, subtitle_language=''):
-        directory = TOOLS_DIR / 'mpv'
+        directory = Path(ROOT) / 'tools' / 'mpv'
         library = directory / 'libmpv-2.dll'
         if not library.is_file():
             raise RuntimeError('Moteur vidéo absent : tools/mpv/libmpv-2.dll est nécessaire.')
@@ -145,6 +146,10 @@ class Player:
     def set_position(self, fraction):
         self._command('seek', max(0, min(100, fraction * 100)), 'absolute-percent+exact')
 
+    def get_position(self):
+        total = self.get_length()
+        return max(0, min(1, self.get_time() / total)) if total > 0 else 0
+
     def set_volume(self, value):
         self._set('volume', max(0, min(100, value)))
 
@@ -221,6 +226,18 @@ class Player:
 
     def select_subtitle_track(self, track_id):
         return self._select('sid', track_id)
+
+    def subtitle_tracks(self):
+        return [track['id'] for track in self._tracks('sub')]
+
+    def subtitles_enabled(self):
+        return self.current_subtitle_track() >= 0
+
+    def set_subtitles(self, enabled):
+        tracks = self.subtitle_tracks()
+        if enabled and not tracks:
+            return False
+        return self.select_subtitle_track(tracks[0] if enabled else -1)
 
     def close(self):
         if self.handle:

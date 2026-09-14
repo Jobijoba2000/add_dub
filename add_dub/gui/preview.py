@@ -297,7 +297,7 @@ class PreviewPane(QWidget):
             if not settings.values.get('voice'):
                 raise ValueError('Choisissez une voix pour cette configuration.')
             self.clear_result()
-            from add_dub.gui.vlc_player import Player
+            from add_dub.adapters.mpv import Player
             self.player = Player(self.screen.winId())
             Path(fs.TMP_DIR).mkdir(parents=True, exist_ok=True)
             self.directory = Path(tempfile.mkdtemp(prefix='gui-preview-', dir=fs.TMP_DIR)).resolve()
@@ -399,12 +399,12 @@ class PreviewPane(QWidget):
 
     def seek_to(self):
         if self.player:
-            self.player.lib.libvlc_media_player_set_position(self.player.player, self.seek.value() / 1000)
+            self.player.set_position(self.seek.value() / 1000)
 
     def update_position(self):
         self.refresh_subtitles()
         if self.player and not self.seek.isSliderDown():
-            self.seek.setValue(max(0, round(self.player.lib.libvlc_media_player_get_position(self.player.player) * 1000)))
+            self.seek.setValue(round(self.player.get_position() * 1000))
             icon = QStyle.StandardPixmap.SP_MediaPause if self.player.is_playing() else QStyle.StandardPixmap.SP_MediaPlay
             self.pause.setIcon(self.control_icon(icon))
             current = self.player.get_time()
@@ -444,7 +444,7 @@ class PreviewPane(QWidget):
             total = self.player.get_length()
             if total > 0:
                 target = max(0, min(total - 1, self.player.get_time() + seconds * 1000))
-                self.player.lib.libvlc_media_player_set_position(self.player.player, target / total)
+                self.player.set_position(target / total)
 
     def toggle_playback(self):
         if not self.player:

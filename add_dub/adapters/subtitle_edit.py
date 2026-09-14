@@ -1,7 +1,10 @@
 # add_dub/adapters/subtitle_edit.py
 import os
+import re
 import subprocess
 import shutil
+import threading
+from contextlib import contextmanager
 from add_dub.io.fs import ROOT
 
 def _find_exe(candidates):
@@ -30,6 +33,29 @@ LANG_TO_TESS = {
     "ko": "kor", "kor": "kor",
     "ar": "ara", "ara": "ara",
 }
+
+_SETTINGS_LOCK = threading.Lock()
+
+
+@contextmanager
+def _subtitle_edit_language(settings_file: str, language: str):
+    """Force la langue avant le lancement, puis libère immédiatement le verrou."""
+    if not settings_file or not os.path.isfile(settings_file) or not language:
+        yield
+        return
+    with _SETTINGS_LOCK:
+        with open(settings_file, "r", encoding="utf-8") as stream:
+            text = stream.read()
+        updated, count = re.subn(
+            r"(<TesseractLastLanguage>)(.*?)(</TesseractLastLanguage>)",
+            lambda match: f"{match.group(1)}{language}{match.group(3)}",
+            text,
+            count=1,
+        )
+        if count:
+            with open(settings_file, "w", encoding="utf-8", newline="") as stream:
+                stream.write(updated)
+        yield
 
 def ensure_tesseract_lang(lang_code: str) -> str:
     """
@@ -105,7 +131,14 @@ def subtitle_edit_ocr(ocr_input, output_path, lang="fr", cwd=None):
         "/FixCommonErrors",
         "/overwrite",
     ]
-    subprocess.run(cmd, check=True, cwd=cwd)
+    settings_file = os.path.join(os.path.dirname(se), "Settings.xml")
+    # Subtitle Edit 4.0.13 ne propose pas la langue Tesseract en argument CLI.
+    # Son Settings.xml est ajusté avant son lancement et lu à son démarrage.
+    with _subtitle_edit_language(settings_file, tess_lang):
+        process = subprocess.Popen(cmd, cwd=cwd)
+    return_code = process.wait()
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, cmd)
     return os.path.exists(output_path) and os.path.getsize(output_path) > 0
 
 def vobsub2srt_ocr(base_noext, lang="fr", cwd=None):
