@@ -1,4 +1,4 @@
-# add_dub — Vocalisation de Sous-titres & Doublage Automatisé pour Windows
+# add_dub — Vocalisation de Sous-titres & Doublage Automatisé pour Windows 10 / 11
 
 📖 **[Consulter la Documentation Officielle & le Manuel d'Utilisation](https://jobijoba2000.github.io/add_dub/)**
 
@@ -10,7 +10,8 @@ Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le 
 
 ## ✨ Fonctionnalités clés
 
-* 🎙️ **Doublage synchronisé** : Convertit les sous-titres (intégrés ou `.srt` externes) en voix-off calée au milliseconde près.
+* 🪟 **Compatibilité Windows** : Conçu spécifiquement pour **Windows 10** et **Windows 11** (64 bits).
+* 🎙️ **Doublage synchronisé** : Convertit les sous-titres (intégrés aux MKV ou fichiers `.srt` externes) en voix-off calée à la milliseconde près.
 * 🌐 **Traduction IA intégrée** : Traduit automatiquement les sous-titres vers votre langue avant vocalisation (via CTranslate2).
 * 🔊 **Audio Ducking intelligent** : Baisse automatiquement le volume de la piste originale pendant les dialogues pour une clarté parfaite.
 * 🗣️ **Moteurs TTS au choix** :
@@ -23,8 +24,16 @@ Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le 
 
 ---
 
-## 📥 En entrée & en sortie
+## 📥 Formats pris en charge (Entrée & Sortie)
 
+### 🎬 Formats de sous-titres acceptés :
+* **Fichiers externes (*sidecar*) :** `.srt` (placé à côté de la vidéo avec le même nom, ou dans le dossier `srt/`).
+* **Pistes intégrées aux conteneurs MKV (`.mkv`) :**
+  * **Formats texte** (conversion directe) : `SRT`, `ASS` / `SSA`, `WebVTT`.
+  * **Formats images** (conversion automatique par **OCR**) : `PGS` (Blu-ray), `VobSub` (DVD).
+* ℹ️ *Note sur les fichiers `.mp4` et `.avi`* : L'application n'extrait pas les pistes internes de ces conteneurs ; ils doivent être accompagnés d'un fichier `.srt` externe portant le même nom.
+
+### 📦 Structure du flux :
 ```
 [ Vidéo (MKV/MP4/AVI) + Sous-titres ] 
                   ⬇️  (add_dub)
@@ -39,8 +48,8 @@ Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le 
 
 ## 🚀 Démarrage Rapide (Version Portable)
 
-1. **[Télécharger add_dub (Dernière version)](https://github.com/Jobijoba2000/add_dub/releases/latest)** et dézippez l'archive où vous le souhaitez.
-2. Placez vos vidéos dans le dossier **`input/`** (avec un fichier `.srt` ou avec sous-titres intégrés).
+1. **[Télécharger add_dub pour Windows 10/11 (Dernière version)](https://github.com/Jobijoba2000/add_dub/releases/latest)** et dézippez l'archive où vous le souhaitez.
+2. Placez vos vidéos dans le dossier **`input/`** (avec un fichier `.srt` ou un fichier `.mkv` avec sous-titres intégrés).
 3. Double-cliquez sur **`add_dub.exe`**.
 4. Suivez l'assistant interactif (choix de la piste audio, des sous-titres, de la voix et de la langue).
 5. Récupérez votre vidéo doublée dans le dossier **`output/`** !

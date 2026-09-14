@@ -580,7 +580,7 @@
     <main class="content">
 
         <h1>Documentation de add_dub</h1>
-        <p>Bienvenue dans la documentation officielle de <strong>add_dub</strong>, l'outil autonome de vocalisation de sous-titres en voix-off et de traduction automatisée pour Windows.</p>
+        <p>Bienvenue dans la documentation officielle de <strong>add_dub</strong>, l'outil autonome de vocalisation de sous-titres en voix-off et de traduction automatisée pour <strong>Windows 10 et Windows 11</strong> (64 bits).</p>
 
         <!-- Section 1 : Présentation -->
         <h2 id="presentation">📌 Présentation de l'Outil</h2>
@@ -602,13 +602,13 @@
         <ul>
             <li><strong>On conserve l'émotion et la voix originale en fond</strong>, simplement atténuée lorsque la voix-off lit le sous-titre.</li>
             <li><strong>100% stable et sans hallucination</strong> : comme il se base sur le texte exact des sous-titres, il n'invente jamais de mots.</li>
-            <li><strong>100% CPU & Ultra-rapide :</strong> Tourne sur n'importe quel PC sans carte graphique dédiée.</li>
+            <li><strong>100% CPU & Ultra-rapide :</strong> Tourne sur n'importe quel PC sous <strong>Windows 10 ou 11</strong> sans carte graphique dédiée.</li>
         </ul>
 
         <!-- Section 2 : Démarrage Rapide -->
         <h2 id="demarrage-rapide">🚀 Démarrage Rapide</h2>
         <p>La version officielle de add_dub est distribuée sous forme d'une <strong>application portable
-                autonome</strong> (aucun pré-requis, aucun besoin d'installer Python ou FFmpeg sur votre machine).</p>
+                autonome pour Windows 10/11 64-bit</strong> (aucun pré-requis, aucun besoin d'installer Python ou FFmpeg sur votre machine).</p>
 
         <a href="https://github.com/Jobijoba2000/add_dub/releases/latest" class="btn-download" target="_blank" rel="noopener noreferrer">
             <div class="btn-download-icon">
@@ -617,7 +617,7 @@
                 </svg>
             </div>
             <div class="btn-download-text">
-                <strong>Télécharger</strong>
+                <strong>Télécharger pour Windows 10/11</strong>
                 <span>add_dub_v1.0.0_win64.zip</span>
             </div>
         </a>
@@ -639,11 +639,22 @@
         <!-- Section 3 : Pour Aller Plus Loin -->
         <h2 id="aller-plus-loin">💡 Pour Aller Plus Loin</h2>
 
-        <h3 id="pipeline">⚙️ Fonctionnement du pipeline (Entrée, Traitement & Sortie)</h3>
+        <h3 id="pipeline">⚙️ Fonctionnement du pipeline & Formats pris en charge</h3>
         <p>Lors du traitement, add_dub exécute automatiquement une chaîne de 5 étapes :</p>
         <ul>
-            <li><strong>Entrée :</strong> Fichier vidéo source (<code>.mkv</code>, <code>.mp4</code>...) + sous-titres (intégrés ou fichier <code>.srt</code>).</li>
-            <li><strong>1. Extraction :</strong> Récupération de l'audio et des sous-titres (avec OCR automatique si nécessaire).</li>
+            <li><strong>Formats de sous-titres acceptés :</strong>
+                <ul>
+                    <li><strong>Fichiers externes (sidecar) :</strong> <code>.srt</code> (placé à côté de la vidéo ou dans <code>srt/</code>).</li>
+                    <li><strong>Pistes intégrées aux conteneurs MKV (<code>.mkv</code>) :</strong>
+                        <ul>
+                            <li><em>Texte (conversion directe) :</em> <strong>SRT</strong>, <strong>ASS / SSA</strong>, <strong>WebVTT</strong>.</li>
+                            <li><em>Images (conversion OCR) :</em> <strong>PGS</strong> (Blu-ray), <strong>VobSub</strong> (DVD).</li>
+                        </ul>
+                    </li>
+                    <li><em>Note conteneurs MP4 / AVI :</em> Les fichiers <code>.mp4</code> et <code>.avi</code> nécessitent un fichier <code>.srt</code> externe homonyme à côté de la vidéo.</li>
+                </ul>
+            </li>
+            <li><strong>1. Extraction :</strong> Récupération de l'audio et des sous-titres (avec OCR automatique pour PGS/VobSub si nécessaire).</li>
             <li><strong>2. Traduction IA (optionnelle) :</strong> Traduction automatique du texte vers votre langue cible.</li>
             <li><strong>3. Synthèse vocale (TTS) :</strong> Génération de la voix-off synchronisée à la milliseconde.</li>
             <li><strong>4. Atténuation sonore (Audio Ducking) :</strong> Baisse automatique du fond sonore sous les paroles.</li>
@@ -659,7 +670,7 @@
 
         <div class="callout callout-info">
             <div class="callout-title">👁️ Support OCR & Traduction IA intégrés</div>
-            <p><strong>Sous-titres d'images (Blu-ray & DVD) :</strong> Si vos sous-titres ne sont pas au format texte (SRT / ASS) mais au format image (<strong>PGS</strong> sur Blu-ray ou <strong>VobSub / SUB-IDX</strong> sur DVD), add_dub lance automatiquement une reconnaissance optique de caractères (OCR) en arrière-plan pour les convertir en texte.</p>
+            <p><strong>Sous-titres d'images (Blu-ray & DVD) :</strong> Si vos sous-titres dans un conteneur MKV ne sont pas au format texte (SRT / ASS / WebVTT) mais au format image (<strong>PGS</strong> sur Blu-ray ou <strong>VobSub / SUB-IDX</strong> sur DVD), add_dub lance automatiquement une reconnaissance optique de caractères (OCR via Subtitle Edit & Tesseract 5) en arrière-plan pour les convertir en texte.</p>
             <p style="margin-bottom: 0;"><strong>Traduction locale (CTranslate2) :</strong> Si vous activez la traduction, celle-ci s'exécute 100% hors-ligne sur votre processeur via le moteur <strong>CTranslate2</strong>, sans nécessiter aucune clé API payante ni connexion Internet.</p>
         </div>
 
