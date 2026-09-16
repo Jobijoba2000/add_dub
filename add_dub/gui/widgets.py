@@ -268,11 +268,16 @@ class VoicePicker(QWidget):
 
     def populate(self, error):
         self.language.blockSignals(True)
-        languages = sorted({v.get('lang', '').replace('_', '-').split('-')[0] for v in self.voices})
+        languages = sorted({v.get('lang', '').replace('_', '-').split('-')[0] for v in self.voices}, key=str.casefold)
         for code in languages:
             locale = QLocale(code)
-            label = locale.nativeLanguageName() or code or 'Langue inconnue'
-            self.language.addItem(f'{label.capitalize()} ({code})', code)
+            english = QLocale.languageToString(locale.language()).lower()
+            native = locale.nativeLanguageName() or code or 'Langue inconnue'
+            # Qt associe « en » aux États-Unis et renvoie « American English ».
+            # Le pays est choisi séparément dans la liste des régions.
+            if code == 'en':
+                native = 'English'
+            self.language.addItem(f'{code} - {english} - {native}', code)
         desired = next((v for v in self.voices if v['id'] == self.desired), None)
         code = desired['lang'].replace('_', '-').split('-')[0] if desired else self.preferred_language.split('-')[0]
         choose(self.language, code)
@@ -292,11 +297,14 @@ class VoicePicker(QWidget):
         code = self.language.currentData()
         self.region.blockSignals(True)
         self.region.clear()
-        locales = sorted({v.get('lang', '') for v in self.voices if v.get('lang', '').replace('_', '-').split('-')[0] == code})
+        locales = sorted({v.get('lang', '') for v in self.voices if v.get('lang', '').replace('_', '-').split('-')[0] == code},
+                         key=lambda value: value.replace('_', '-').casefold())
         for locale_code in locales:
             locale = QLocale(locale_code)
-            name = locale.nativeTerritoryName() if '-' in locale_code or '_' in locale_code else 'Variante unique'
-            self.region.addItem(f'{name or locale_code} ({locale_code})', locale_code)
+            has_region = '-' in locale_code or '_' in locale_code
+            english = QLocale.territoryToString(locale.territory()) if has_region else 'Single variant'
+            native = locale.nativeTerritoryName() if has_region else 'Variante unique'
+            self.region.addItem(f'{locale_code.replace("_", "-")} - {english} - {native or locale_code}', locale_code)
         desired = next((v for v in self.voices if v['id'] == self.desired), None)
         if desired:
             choose(self.region, desired['lang'])
@@ -450,14 +458,15 @@ class SettingsEditor(QTabWidget):
                 continue  # La plage d’essai est gérée hors des réglages de production.
             if choices:
                 widget = combo([(x.upper(), x) for x in choices], label)
-            elif key in ('audio_bitrate', 'offset_ms', 'offset_video_ms', 'limit_duration_sec'):
+            elif key == 'audio_bitrate':
+                widget = combo([(str(rate), str(rate)) for rate in
+                                (8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128,
+                                 160, 192, 224, 256, 320, 384, 448, 512, 640, 768, 1024, 1536)], label)
+            elif key in ('offset_ms', 'offset_video_ms', 'limit_duration_sec'):
                 widget = QSpinBox()
                 widget.setRange(-3600000 if key.startswith('offset') else 0, 3600000)
                 if key == 'limit_duration_sec':
                     widget.setSpecialValueText('Vidéo entière')
-                if key == 'audio_bitrate':
-                    widget.setMinimum(8)
-                    widget.setMaximum(1536)
             else:
                 widget = QDoubleSpinBox()
                 widget.setDecimals(1)
@@ -472,20 +481,15 @@ class SettingsEditor(QTabWidget):
                 widget.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
                 widget.setStyleSheet('min-height: 30px; padding: 0 8px; border: 1px solid #858585; border-radius: 0;')
                 row = QWidget()
-                row.setMaximumWidth(260)
                 layout = QHBoxLayout(row)
                 layout.setContentsMargins(0, 0, 0, 0)
                 layout.setSpacing(6)
-                for text, action, name in (('+', widget.stepUp, 'Augmenter'), ('-', widget.stepDown, 'Diminuer')):
-                    button = QPushButton(text)
-                    button.setAutoDefault(False)
-                    button.setAccessibleName(f'{name} : {label}')
-                    button.setToolTip(f'{name} : {label}')
-                    button.setAutoRepeat(True)
-                    button.setStyleSheet('min-height: 30px; max-width: 30px; min-width: 30px; padding: 0;')
-                    button.clicked.connect(action)
-                    layout.addWidget(button)
                 layout.addWidget(widget, 1)
+                bounds = f'{widget.minimum():g} à {widget.maximum():g}'
+                unit = ' ms' if key.startswith('offset') else ' dB' if key == 'ducking_db' else ''
+                hint = QLabel(f'({bounds}{unit})')
+                widget.setAccessibleDescription(f'Valeurs autorisées : {bounds}{unit}')
+                layout.addWidget(hint)
                 advanced.addRow(label.split(' ;')[0], row)
             else:
                 advanced.addRow(label.split(' ;')[0], widget)
@@ -523,6 +527,9 @@ class SettingsEditor(QTabWidget):
         self.translate_from.setText(values['translate_from'])
         for key, widget in self.fields.items():
             if isinstance(widget, QComboBox):
+                # Conserver aussi les débits personnalisés des configurations existantes.
+                if key == 'audio_bitrate' and widget.findData(values[key]) < 0:
+                    widget.addItem(str(values[key]), values[key])
                 choose(widget, values[key])
             else:
                 value = float(values[key] or 0)
