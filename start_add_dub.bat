@@ -9,6 +9,10 @@ set "PY_EXE=%ROOT%tools\python\python.exe"
 set "FF_EXE=%ROOT%tools\ffmpeg\bin\ffmpeg.exe"
 for %%D in (input output tmp) do if not exist "%ROOT%%%D" mkdir "%ROOT%%%D"
 
+rem Prerequis natif avant Python et les bibliotheques qui en dependent.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\prepare_vcredist.ps1"
+if errorlevel 1 goto fail
+
 rem Python est prepare avec PowerShell : aucun Python systeme necessaire.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%scripts\prepare_python.ps1"
 if errorlevel 1 goto fail
@@ -72,6 +76,9 @@ if exist "%ROOT%requirements.txt" (
 ) else (
     echo [INFO] requirements.txt missing - step skipped.
 )
+
+python "%ROOT%scripts\check_ctranslate2.py"
+if errorlevel 1 goto fail
 
 rem --- Boucle d'execution -----------------------------------------------------
 :loop

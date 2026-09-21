@@ -18,7 +18,7 @@ Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le 
   * **Edge TTS** : Voix neuronales ultra-réalistes haute fidélité (connecté).
   * **OneCore (Windows)** : Rapide, 100% hors-ligne avec les voix de votre système.
   * **gTTS** : Simple et léger.
-* 📦 **100% Portable** : Aucune installation complexe, fonctionne directement après extraction.
+* 📦 **Distribution portable** : Les outils sont embarqués ; Microsoft Visual C++ Redistributable x64 doit être présent sur Windows.
 * 💻 **100% CPU** : Ultra-rapide sur n'importe quel PC, sans carte graphique dédiée.
 * ⚡ **Traitement par lot (Batch)** : Traitez des saisons entières ou des dossiers récursivement.
 
@@ -55,6 +55,8 @@ Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le 
 5. Récupérez votre vidéo doublée dans le dossier **`output/`** !
 
 ---
+
+Si une erreur de chargement de CTranslate2/DLL apparaît, installez ou réparez [Microsoft Visual C++ Redistributable x64](https://aka.ms/vc14/vc_redist.x64.exe), puis relancez l'application. Redémarrez Windows si l'installeur le demande.
 
 ## ⚡ Mode Batch & Ligne de Commande (CLI)
 
@@ -108,6 +110,10 @@ git clone https://github.com/Jobijoba2000/add_dub.git
 cd add_dub
 start_add_dub.bat
 ```
+Le lanceur vérifie d'abord **Microsoft Visual C++ Redistributable x64** avec `scripts/prepare_vcredist.ps1`. S'il est absent ou incomplet, il télécharge l'installeur officiel, vérifie sa signature Microsoft et l'exécute automatiquement. Acceptez la demande administrateur Windows : la préparation reprend ensuite toute seule. Si un redémarrage est requis, le lanceur s'arrête avec une instruction explicite ; relancez-le après redémarrage. Un refus d'autorisation ou un échec de téléchargement affiche également le lien d'installation manuelle. Cette automatisation concerne le lanceur depuis les sources, pas directement l'EXE portable.
+
+Après installation des dépendances, un test vérifie que CTranslate2 se charge réellement. Une erreur de DLL indique la piste Visual C++ et conserve le détail technique, sans supposer que toutes les erreurs CTranslate2 ont cette cause.
+
 *Le script `start_add_dub.bat` prépare Python avec `scripts/prepare_python.ps1`, puis lance `scripts/prepare_tools.py` pour télécharger séparément FFmpeg, MKVToolNix, Subtitle Edit, Tesseract et mpv dans `tools/`. Les archives sont vérifiées par SHA-256 et conservées dans `.cache/`. Il crée ensuite l'environnement virtuel et installe les dépendances. Les modèles OCR restent téléchargés à la demande par add_dub. Subtitle Edit nécessite .NET Framework 4.8 sur Windows.*
 
 ---
