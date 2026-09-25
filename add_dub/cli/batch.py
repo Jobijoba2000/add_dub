@@ -150,7 +150,7 @@ def _build_services(args):
 
     def _auto_sub_choice(input_video_path: str) -> Optional[Tuple[str, Optional[int]]]:
         try:
-            if find_sidecar_srt(input_video_path) or _srt_in_srt_dir_for_video(input_video_path):
+            if find_sidecar_srt(input_video_path):
                 return ("srt", None)
         except Exception:
             pass
@@ -161,12 +161,14 @@ def _build_services(args):
         if mode == "stream":
             return ("stream", args.sub_index)
         if mode == "srt":
-            sidecar = find_sidecar_srt(input_video_path)
-            if sidecar:
-                return ("srt", sidecar)
+            # Priorité 1 : srt/
             in_srt = _srt_in_srt_dir_for_video(input_video_path)
             if in_srt:
                 return ("srt", in_srt)
+            # Priorité 2 : sidecar
+            sidecar = find_sidecar_srt(input_video_path)
+            if sidecar:
+                return ("srt", sidecar)
             return ("srt", None)
         if mode == "mkv":
             try:

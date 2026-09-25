@@ -11,6 +11,7 @@ from add_dub.core.subtitles import parse_srt_file
 from add_dub.core.validation import validate_options
 from add_dub.io import fs
 from add_dub.workers import tts_worker
+from add_dub.logger import log_time, log_call
 
 STALL_SECONDS = 240
 
@@ -74,6 +75,8 @@ def assemble_segments(cues, results, output_wav, total_ms, offset_ms=0):
         Path(buffer_path).unlink(missing_ok=True)
 
 
+@log_time
+@log_call()
 def generate_dub_audio(srt_file, output_wav, opts, *, duration_limit_sec=None,
                        target_total_duration_ms=None, ui=None):
     validate_options(opts)

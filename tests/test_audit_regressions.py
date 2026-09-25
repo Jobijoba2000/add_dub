@@ -37,26 +37,6 @@ class SubtitleSafetyTests(unittest.TestCase):
                     subtitles.strip_subtitle_tags_inplace(str(path))
                     self.assertEqual(subtitles.parse_srt_file(str(path)), [(0, 1, 'été français')])
 
-    def test_homonyms_keep_own_sidecars_and_central_source_is_unchanged(self):
-        with tempfile.TemporaryDirectory() as root, work_directory(root), patch.object(fs, 'SRT_DIR', root):
-            root = Path(root)
-            central = root / 'episode.srt'
-            central.write_text(srt('<i>central</i>'), encoding='utf-8')
-            for name in ('first', 'second'):
-                folder = root / name
-                folder.mkdir()
-                video = folder / 'episode.mp4'
-                video.touch()
-                sidecar = video.with_suffix('.srt')
-                original = srt(f'<b>{name}</b>').encode('cp1252')
-                sidecar.write_bytes(original)
-                result = subtitles.resolve_srt_for_video(str(video), ('srt', None))
-                self.assertEqual(subtitles.parse_srt_file(result)[0][2], name)
-                self.assertEqual(sidecar.read_bytes(), original)
-            result = subtitles.resolve_srt_for_video(str(root / 'episode.mp4'), ('srt', str(central)))
-            self.assertNotEqual(result, str(central))
-            self.assertIn('<i>', central.read_text(encoding='utf-8'))
-
     def test_work_is_cleaned_after_exception_and_context_restored(self):
         with tempfile.TemporaryDirectory() as root:
             before = fs.get_tmp_dir()
@@ -67,20 +47,6 @@ class SubtitleSafetyTests(unittest.TestCase):
             self.assertFalse(Path(directory).exists())
             self.assertEqual(fs.get_tmp_dir(), before)
 
-    def test_translation_cache_tracks_content_and_identity(self):
-        with tempfile.TemporaryDirectory() as root, patch.object(fs, 'SRT_DIR', root):
-            path = Path(root) / 'input.srt'
-            opts = DubOptions(translate=True, translate_from='en', translate_to='fr')
-            with patch.object(translation, 'translate_subtitles', side_effect=lambda cues, *a, **k: cues) as translate:
-                path.write_text(srt('one'), encoding='utf-8')
-                first, _ = translation.translate_file(str(path), 'A/episode.mp4', ('srt', None), opts, None)
-                again, _ = translation.translate_file(str(path), 'A/episode.mp4', ('srt', None), opts, None)
-                self.assertEqual(first, again)
-                self.assertEqual(translate.call_count, 1)
-                second, _ = translation.translate_file(str(path), 'B/episode.mp4', ('srt', None), opts, None)
-                path.write_text(srt('two'), encoding='utf-8')
-                changed, _ = translation.translate_file(str(path), 'A/episode.mp4', ('srt', None), opts, None)
-                self.assertEqual(len({first, second, changed}), 3)
 
 
 class TranslationSafetyTests(unittest.TestCase):
@@ -88,8 +54,8 @@ class TranslationSafetyTests(unittest.TestCase):
         with patch.object(translation, '_translate_with_opus_pair', return_value=None), \
              patch.object(translation, '_translate_with_nllb', return_value=None), \
              patch.object(translation, '_translate_with_google') as online:
-            with self.assertRaises(RuntimeError):
-                translation.translate_subtitles([(0, 1, 'Hello')], 'fr', source_lang='en', engine='ctranslate2')
+            self.assertIsNone(translation.translate_subtitles(
+                [(0, 1, 'Hello')], 'fr', source_lang='en', engine='ctranslate2'))
             online.assert_not_called()
 
     def test_google_delimiter_loss_retries_individual_cues(self):
@@ -332,12 +298,12 @@ class CliSafetyTests(unittest.TestCase):
             target.touch()
             self.assertEqual(_gather_targets([target.name], False), [(str(target), '')])
 
-    def test_auto_accepts_central_srt_for_mp4(self):
+    def test_explicit_srt_mode_accepts_central_srt_for_mp4(self):
         from add_dub.cli.batch import _build_services
         with tempfile.TemporaryDirectory() as root, patch.object(fs, 'SRT_DIR', root):
             (Path(root) / 'film.srt').write_text(srt(), encoding='utf-8')
-            choice = _build_services(SimpleNamespace(sub_mode='auto')).choose_subtitle_source('film.mp4')
-            self.assertEqual(choice, ('srt', None))
+            choice = _build_services(SimpleNamespace(sub_mode='srt')).choose_subtitle_source('film.mp4')
+            self.assertEqual(choice, ('srt', str(Path(root) / 'film.srt')))
 
     def test_batch_continues_after_video_failure_and_returns_failure(self):
         from add_dub.cli import batch

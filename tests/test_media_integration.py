@@ -59,12 +59,14 @@ class MediaIntegrationTests(unittest.TestCase):
         return subprocess.check_output(['ffmpeg', '-v', 'error', '-nostdin', '-i', str(path),
                                         '-map', f'0:a:{track}', '-f', 's16le', '-c:a', 'pcm_s16le', '-'], timeout=30)
 
-    def test_original_multichannel_audio_is_bit_exact(self):
+    def test_original_audio_is_reencoded_to_stereo_and_mix_gain_is_preserved(self):
         output = self.mux('preserved.mkv')
         streams = probe_media(output)['streams']
         audio = [stream for stream in streams if stream['codec_type'] == 'audio']
-        self.assertEqual([stream['channels'] for stream in audio], [2, 6])
-        self.assertEqual(self.decode(output, 1), self.decode(self.video, 0))
+        self.assertEqual([stream['channels'] for stream in audio], [2, 2])
+        expected = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', str(self.original),
+                                            '-ac', '2', '-f', 's16le', '-'], timeout=30)
+        self.assertEqual(self.decode(output, 1), expected)
         # Silence TTS must not halve the background's gain.
         mixed = np.frombuffer(self.decode(output, 0), dtype='<i2')
         self.assertGreater(np.median(np.abs(mixed[10000:-10000])), 950)
@@ -73,7 +75,12 @@ class MediaIntegrationTests(unittest.TestCase):
         for codec in ('ac3', 'aac', 'mp3', 'libopus', 'opus', 'flac', 'libvorbis', 'vorbis', 'pcm_s16le'):
             with self.subTest(codec=codec):
                 output = self.mux(f'codec-{codec}.mkv', DubOptions(audio_ffmpeg_index=1, audio_codec=codec))
-                self.assertGreater(float(probe_media(output)['format']['duration']), 1.9)
+                info = probe_media(output)
+                self.assertGreater(float(info['format']['duration']), 1.9)
+                audio = [stream for stream in info['streams'] if stream['codec_type'] == 'audio']
+                expected = {'libopus': 'opus', 'libvorbis': 'vorbis'}.get(codec, codec)
+                self.assertEqual([stream['codec_name'] for stream in audio], [expected, expected])
+                self.assertEqual([stream['channels'] for stream in audio], [2, 2])
 
     def test_duration_limit_applies_to_video_too(self):
         output = self.mux('excerpt.mkv', duration_sec=1)
@@ -97,7 +104,10 @@ class MediaIntegrationTests(unittest.TestCase):
                             choose_subtitle_source=lambda _: ('srt', str(self.srt)), ui=Mock())
         options = DubOptions(audio_ffmpeg_index=1, sub_choice=('srt', str(self.srt)),
                              audio_codec='pcm_s16le', voice_id='fr', batch_mode=True)
-        with patch.object(fs, 'TMP_DIR', str(work)), patch('add_dub.core.pipeline.list_available_voices', return_value=[]):
+        central = self.root / 'central'
+        central.mkdir(exist_ok=True)
+        with patch.object(fs, 'TMP_DIR', str(work)), patch.object(fs, 'SRT_DIR', str(central)), \
+             patch('add_dub.core.pipeline.list_available_voices', return_value=[]):
             result = process_one_video(input_video_path=str(self.video), input_video_name=self.video.name,
                                        output_dir_path=str(self.root / 'pipeline'), opts=options, svcs=services)
             self.assertTrue(Path(result).is_file())

@@ -26,7 +26,7 @@ def main():
         directory = Path(directory)
         srt = directory / 'dialogues.srt'
         srt.write_text('1\n00:00:01,000 --> 00:00:02,500\nBonjour.\n\n2\n00:00:03,000 --> 00:00:04,500\nAu revoir.\n', encoding='utf-8')
-        video = directory / 'essai.mkv'
+        video = directory / (directory.name + '.mkv')
         subprocess.run([str(ROOT / 'tools/ffmpeg/bin/ffmpeg.exe'), '-v', 'error', '-y',
                         '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=25:duration=8',
                         '-f', 'lavfi', '-i', 'sine=frequency=440:duration=8', '-i', str(srt),
@@ -82,6 +82,7 @@ def main():
         finally:
             dialog.close()
             app.processEvents()
+            (Path(fs.SRT_DIR) / video.with_suffix('.srt').name).unlink(missing_ok=True)
 
 
 if __name__ == '__main__':

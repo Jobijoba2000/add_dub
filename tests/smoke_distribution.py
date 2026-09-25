@@ -1,4 +1,5 @@
 """Vérification de la distribution compilée avec ses outils portables."""
+from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
@@ -10,10 +11,12 @@ dist = root / 'dist' / 'add_dub'
 exe = dist / 'add_dub.exe'
 ffmpeg = dist / 'tools' / 'ffmpeg' / 'bin' / 'ffmpeg.exe'
 ffprobe = ffmpeg.with_name('ffprobe.exe')
-with tempfile.TemporaryDirectory(prefix='adddub-distribution-') as directory:
+with ExitStack() as cleanup, tempfile.TemporaryDirectory(prefix='adddub-distribution-') as directory:
     work = Path(directory)
-    source = work / 'source.mkv'
-    (work / 'source.srt').write_text('1\n00:00:00,100 --> 00:00:01,800\nBonjour tout le monde.\n', encoding='utf-8')
+    source = work / (work.name + '.mkv')
+    persistent_srt = dist / 'srt' / source.with_suffix('.srt').name
+    cleanup.callback(persistent_srt.unlink, missing_ok=True)
+    source.with_suffix('.srt').write_text('1\n00:00:00,100 --> 00:00:01,800\nBonjour tout le monde.\n', encoding='utf-8')
     options = work / 'options.conf'
     options.write_text('', encoding='utf-8')
     env = dict(os.environ, ADD_DUB_OPTIONS=str(options))
@@ -30,10 +33,13 @@ with tempfile.TemporaryDirectory(prefix='adddub-distribution-') as directory:
     assert len(outputs) == 1, outputs
     data = json.loads(subprocess.check_output([str(ffprobe), '-v', 'error', '-show_streams',
                       '-show_format', '-of', 'json', str(outputs[0])], env=env, timeout=30))
-    assert sum(s['codec_type'] == 'audio' for s in data['streams']) == 2, data
+    audio = [s for s in data['streams'] if s['codec_type'] == 'audio']
+    assert len(audio) == 2 and all(s['channels'] == 2 for s in audio), data
+    assert all(s['codec_name'] == 'pcm_s16le' for s in audio), data
+    assert persistent_srt.is_file(), persistent_srt
     assert any(s['codec_type'] == 'subtitle' for s in data['streams']), data
     assert float(data['format']['duration']) > 1.9, data
     before = outputs[0].read_bytes()
     subprocess.run(command + ['--skip-existing'], cwd=work, env=env, check=True, timeout=30)
     assert outputs[0].read_bytes() == before
-    print('OK distribution : aide, outils embarqués, OneCore hors ligne, workers spawn, muxage, sortie et skip-existing.')
+    print('OK distribution : aide, outils embarqués, OneCore hors ligne, workers spawn, muxage stéréo, SRT persistant, sortie et skip-existing.')

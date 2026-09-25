@@ -45,10 +45,7 @@ class ConsoleUI:
             return default
 
     def progress(self, percent: float) -> None:
-        # Simple console progress, maybe just print or overwrite line
         from add_dub.progress import emit
         emit('progress', value=percent)
-        # For now, let's match the translation worker behavior if possible,
-        # or just print if it's a significant step.
-        # The translation worker uses \r to overwrite.
-        print(f"Progress: {percent:.1f}%", end="\r", flush=True)
+        # Terminer la ligne avant la durée imprimée par @log_time.
+        print(f"\rProgress: {percent:.1f}%", end="\n" if percent >= 100 else "", flush=True)

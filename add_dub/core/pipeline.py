@@ -61,20 +61,6 @@ def _process_one_video(
 
     base, ext = os.path.splitext(os.path.basename(input_video_path))
 
-    from add_dub.adapters.ffmpeg import validate_media
-    dub_code = _dub_code_from_voice(opts.voice_id)
-    final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}].mkv", output_dir_path)
-    if os.path.exists(final_video) and not opts.overwrite:
-        if opts.skip_existing:
-            validate_media(final_video)
-            emit('existing_output', path=final_video)
-            svcs.ui.message(f"[SKIP] Fichier déjà existant : {os.path.basename(final_video)}")
-            return final_video
-        if opts.batch_mode or not svcs.ui.ask_yes_no(
-                f"Remplacer la sortie existante {final_video} ?", default=False):
-            raise FileExistsError(f'Sortie existante : {final_video}. Utilisez --overwrite ou --skip-existing.')
-        opts = replace(opts, overwrite=True)
-
     svcs.ui.message(t("pipeline_process", name=input_video_name))
 
     # 1) Piste audio source
@@ -133,26 +119,160 @@ def _process_one_video(
         import add_dub.io.fs as preview_fs
         start, end = json.loads(os.environ['ADD_DUB_PREVIEW_RANGE'])
         # Les traductions de l’essai restent elles aussi dans le répertoire isolé.
+        preview_fs.SRT_DIR = preview_fs.get_tmp_dir()
         input_video_path, srt_path, audio_idx = prepare_excerpt(
             input_video_path, srt_path, audio_idx, start, end, preview_fs.get_tmp_dir(),
             progress_cb=lambda value: emit('preview_extract', value=value))
         limit_duration_sec = None
 
-    if limit_duration_sec is not None:
-        from add_dub.core.translation import write_srt_file
-        clipped = join_tmp('limited.srt')
-        write_srt_file(parse_srt_file(srt_path, limit_duration_sec), clipped)
-        srt_path = clipped
-
+    # --- TRADUCTION (si demandée) ---
     if opts.translate and opts.translate_to:
         stage('translation')
-        from add_dub.core.translation import translate_file
-        srt_path, translated = translate_file(
-            srt_path, input_video_path, sub_choice, opts, svcs.ui)
-        if translated:
-            opts = replace(opts, subtitle_language=language_code(opts.translate_to))
+        from add_dub.core.translation import translate_subtitles, write_srt_file
+        from add_dub.core.subtitles import parse_srt_file as _parse_srt_simple
+        from add_dub.io.fs import join_srt
+
+        svcs.ui.message(t("pipeline_translating", lang=opts.translate_to))
+
+        # Check for existing translated SRT
+        import re as _re
+        base_srt = os.path.basename(srt_path)
+        clean_base_srt = _re.sub(r'\.[a-z]{2,3}\.srt$', '.srt', base_srt, flags=_re.IGNORECASE)
+        new_srt_path = join_srt(f"{clean_base_srt}.{opts.translate_to}.srt")
+
+        reuse_existing = False
+        should_reuse = bool(getattr(opts, "reuse_translated_subs", True)) and not getattr(opts, "overwrite", False)
+
+        if should_reuse and os.path.exists(new_srt_path):
+            if not opts.batch_mode and getattr(opts, "ask_reuse_subs", False):
+                if svcs.ui.ask_yes_no(t("pipeline_trans_reuse"), default=True):
+                    reuse_existing = True
+            else:
+                reuse_existing = True
+
+            if reuse_existing:
+                emit('skip', name='translation')
+                svcs.ui.message(t("pipeline_trans_found", path=new_srt_path))
+                svcs.ui.message(t("pipeline_trans_reusing"))
+                srt_path = new_srt_path
+                opts = replace(opts, subtitle_language=language_code(opts.translate_to))
         else:
-            emit('skip', name='translation')
+            # Si on ne réutilise pas : on supprime l'ancien fichier traduit existant pour forcer une nouvelle traduction
+            if os.path.exists(new_srt_path):
+                try:
+                    os.remove(new_srt_path)
+                except Exception:
+                    pass
+
+        if not reuse_existing:
+            try:
+                # On lit le SRT source
+                subs_source = _parse_srt_simple(srt_path)
+                if subs_source:
+                    # Determine source language
+                    # Priority: 1. User specified (opts.translate_from)
+                    #           2. Filename guess (Sub(Fre))
+                    #           3. None (Auto-detect)
+
+                    source_lang = opts.translate_from
+                    if source_lang and source_lang.lower() == "auto":
+                        source_lang = None
+
+                    if not source_lang:
+                        # 1. Guess from filename
+                        lower_name = input_video_name.lower()
+                        if "sub(fre)" in lower_name or "sub(fr)" in lower_name:
+                            source_lang = "fr"
+                        elif "sub(eng)" in lower_name or "sub(en)" in lower_name:
+                            source_lang = "en"
+
+                        # 2. Detect from content (langdetect)
+                        if not source_lang:
+                            try:
+                                from langdetect import detect
+                                sample_text = " ".join([s[2] for s in subs_source[:50]])
+                                detected = detect(sample_text)
+                                if detected:
+                                    source_lang = detected
+                                    svcs.ui.message(f" [Auto-Detect] Language detected: {source_lang}")
+                            except Exception as e:
+                                svcs.ui.error(f" [Auto-Detect] Failed: {e}")
+
+                    src = (source_lang or "fr").strip().lower()[:2]
+                    tgt = (opts.translate_to or "fr").strip().lower()[:2]
+
+                    # Vérification source == cible
+                    skip_trans = False
+                    if src == tgt:
+                        if opts.batch_mode:
+                            svcs.ui.message(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
+                            skip_trans = True
+                        else:
+                            svcs.ui.message(t("pipeline_trans_same_lang_warn", src=src, tgt=tgt))
+                            if svcs.ui.ask_yes_no(t("pipeline_trans_same_lang_ask"), default=False):
+                                from add_dub.helpers.console import ask_string
+                                while True:
+                                    new_tgt = ask_string(t("cli_ask_translate_lang", default=tgt), default=tgt).strip().lower()
+                                    if len(new_tgt) == 2 and new_tgt.isalpha():
+                                        tgt = new_tgt
+                                        break
+                                    svcs.ui.message(t("cli_lang_code_invalid"))
+
+                                while True:
+                                    new_src = ask_string(t("cli_ask_translate_from", default=src), default=src).strip().lower()
+                                    if new_src in ("auto", "none", ""):
+                                        source_lang = None
+                                        break
+                                    if len(new_src) == 2 and new_src.isalpha():
+                                        src = new_src
+                                        source_lang = new_src
+                                        break
+                                    svcs.ui.message(t("cli_lang_source_invalid"))
+
+                                opts = replace(opts, translate_to=tgt, translate_from=source_lang)
+                                if src == tgt:
+                                    svcs.ui.message(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
+                                    skip_trans = True
+                            else:
+                                svcs.ui.message(t("pipeline_trans_same_lang_skip", src=src, tgt=tgt))
+                                skip_trans = True
+
+                    if not skip_trans:
+                        while True:
+                            new_srt_path = join_srt(f"{base_srt}.{tgt}.srt")
+                            subs_translated = translate_subtitles(subs_source, tgt, source_lang=source_lang, ui=svcs.ui, engine=getattr(opts, "translation_engine", "google"))
+                            if subs_translated is not None:
+
+                                write_srt_file(subs_translated, new_srt_path)
+                                srt_path = new_srt_path
+                                opts = replace(opts, subtitle_language=language_code(tgt))
+                                svcs.ui.message(t("pipeline_trans_done", path=srt_path))
+                                break
+                            else:
+                                svcs.ui.error(t("pipeline_trans_model_not_found", src=src, tgt=tgt))
+                                if not opts.batch_mode and svcs.ui.ask_yes_no(t("pipeline_trans_retry_ask"), default=False):
+                                    from add_dub.helpers.console import ask_string
+                                    while True:
+                                        new_tgt = ask_string(t("cli_ask_translate_lang", default=tgt), default=tgt).strip().lower()
+                                        if len(new_tgt) == 2 and new_tgt.isalpha():
+                                            tgt = new_tgt
+                                            break
+                                        svcs.ui.message(t("cli_lang_code_invalid"))
+                                    opts = replace(opts, translate_to=tgt)
+                                    continue
+                                else:
+                                    svcs.ui.message(t("pipeline_trans_fallback_orig"))
+                                    break
+                else:
+                    svcs.ui.error(t("pipeline_trans_err", err="Empty source SRT"))
+                if subs_source and skip_trans:
+                    emit('skip', name='translation')
+            except Exception as e:
+                svcs.ui.error(t("pipeline_trans_err", err=e))
+                # On continue avec le SRT d'origine en cas d'erreur
+                pass
+    # --------------------------------
+    # --------------------------------
 
     # 5) Libellé langue d'origine
     opts = replace(opts, audio_ffmpeg_index=audio_idx)
@@ -278,12 +398,40 @@ def _process_one_video(
 def process_one_video(**kwargs):
     """Un dossier de travail par vidéo, nettoyé aussi en cas d'échec."""
     from add_dub.io.work import work_directory, OFFLINE, is_offline
+    from add_dub.io import fs
+    from add_dub.core import translation
     from add_dub.core.validation import validate_options
     validate_options(kwargs['opts'])
+    # Les confirmations et les sorties ignorées ne font pas partie du traitement chronométré.
+    opts = kwargs['opts']
+    svcs = kwargs['svcs']
+    input_video_path = kwargs['input_video_path']
+    output_dir_path = kwargs.get('output_dir_path')
+    test_prefix = kwargs.get('test_prefix', '')
+    base = os.path.splitext(os.path.basename(input_video_path))[0]
+    from add_dub.adapters.ffmpeg import validate_media
+    dub_code = _dub_code_from_voice(opts.voice_id)
+    final_video = join_output(f"{test_prefix}{base} [dub-{dub_code}].mkv", output_dir_path)
+    if os.path.exists(final_video) and not opts.overwrite:
+        if opts.skip_existing:
+            validate_media(final_video)
+            emit('existing_output', path=final_video)
+            svcs.ui.message(f"[SKIP] Fichier déjà existant : {os.path.basename(final_video)}")
+            return final_video
+        if opts.batch_mode or not svcs.ui.ask_yes_no(
+                f"Remplacer la sortie existante {final_video} ?", default=False):
+            raise FileExistsError(f'Sortie existante : {final_video}. Utilisez --overwrite ou --skip-existing.')
+        opts = replace(opts, overwrite=True)
+
+    kwargs['opts'] = opts
     with work_directory() as directory:
         kwargs['opts'] = replace(kwargs['opts'], work_dir=directory, offline=kwargs['opts'].offline or is_offline())
         token = OFFLINE.set(kwargs['opts'].offline)
+        translation_token = translation.OFFLINE.set(kwargs['opts'].offline)
+        original_srt_dir = fs.SRT_DIR
         try:
             return _process_one_video(**kwargs)
         finally:
+            fs.SRT_DIR = original_srt_dir
+            translation.OFFLINE.reset(translation_token)
             OFFLINE.reset(token)

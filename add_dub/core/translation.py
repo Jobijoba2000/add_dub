@@ -596,8 +596,8 @@ def translate_subtitles(
             translated_texts = _translate_with_nllb(texts, src, tgt, ui=ui)
 
 
-    if translated_texts is None or len(translated_texts) != len(subtitles):
-        raise RuntimeError('La traduction a échoué ou est incomplète ; aucun doublage publié.')
+    if translated_texts is not None and len(translated_texts) != len(subtitles):
+        raise RuntimeError('La traduction est incomplète.')
     new_subs = []
     if translated_texts is not None:
         for i, (start, end, _) in enumerate(subtitles):
@@ -626,60 +626,3 @@ def write_srt_file(subtitles: List[Tuple[float, float, str]], output_path: str):
             f.write(f"{i}\n")
             f.write(f"{format_timestamp(start)} --> {format_timestamp(end)}\n")
             f.write(f"{text}\n\n")
-
-
-def translate_file(srt_path, video_path, selection, opts, ui):
-    """Cache lié au contenu, à la sélection, au moteur et aux langues."""
-    import hashlib
-    import json
-    import tempfile
-    from pathlib import Path
-    from add_dub.core.subtitles import parse_srt_file
-    from add_dub.io import fs
-    from add_dub.io.work import publish
-    cues = parse_srt_file(srt_path)
-    if not cues:
-        raise ValueError('Sous-titres source vides.')
-    source = opts.translate_from
-    if not source or source.lower() == 'auto':
-        from langdetect import detect, DetectorFactory
-        DetectorFactory.seed = 0
-        source = detect(' '.join(cue[2] for cue in cues[:50]))
-    source, target = source.lower()[:2], opts.translate_to.lower()[:2]
-    if source == target:
-        return srt_path, False
-    if opts.offline and opts.translation_engine != 'ctranslate2':
-        raise ValueError('Le mode hors ligne interdit Google Traduction.')
-    identity = {'version': 2, 'video': os.path.normcase(os.path.realpath(video_path)),
-                'selection': selection, 'source': source, 'target': target,
-                'engine': opts.translation_engine, 'cues': cues}
-    from add_dub.adapters.models import revisions
-    identity['models'] = revisions()
-    key = hashlib.sha256(json.dumps(identity, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
-    cache = Path(fs.SRT_DIR) / '.translations'
-    if os.getenv('ADD_DUB_PREVIEW_RANGE'):
-        cache = Path(fs.get_tmp_dir()) / '.translations'
-    cache.mkdir(parents=True, exist_ok=True)
-    destination = cache / f'{key}.{target}.srt'
-    if destination.exists() and opts.reuse_translated_subs and not opts.overwrite:
-        cached = parse_srt_file(str(destination))
-        if len(cached) == len(cues) and all(abs(a[0]-b[0]) < .002 and abs(a[1]-b[1]) < .002 for a,b in zip(cached,cues)):
-            from add_dub.progress import emit
-            emit('skip', name='translation')
-            return str(destination), True
-    token = OFFLINE.set(opts.offline)
-    try:
-        translated = translate_subtitles(cues, target, source_lang=source, ui=ui,
-                                         engine=opts.translation_engine)
-    finally:
-        OFFLINE.reset(token)
-    if translated is None or len(translated) != len(cues):
-        raise RuntimeError('Traduction incomplète.')
-    fd, temporary = tempfile.mkstemp(suffix='.srt', dir=cache)
-    os.close(fd)
-    try:
-        write_srt_file(translated, temporary)
-        publish(temporary, destination, overwrite=True)
-    finally:
-        Path(temporary).unlink(missing_ok=True)
-    return str(destination), True

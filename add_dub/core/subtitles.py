@@ -7,7 +7,6 @@ import time
 import shutil
 import subprocess
 import tempfile
-import uuid
 from pathlib import Path
 
 import add_dub.io.fs as io_fs  # ← module, pas des valeurs copiées
@@ -53,7 +52,7 @@ def _copy_into_srt_dir(src_srt_path: str, video_fullpath: str) -> str:
     Ne crée jamais rien dans le répertoire source.
     """
     base = os.path.splitext(os.path.basename(video_fullpath))[0] + ".srt"
-    dst = io_fs.join_tmp(f'{uuid.uuid4().hex}-{base}')
+    dst = io_fs.join_srt(base)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
 
     # Si la source est déjà dans srt/ avec le bon nom, on garde tel quel.
@@ -125,8 +124,7 @@ def parse_srt_file(srt_file: str, duration_limit_sec: int | None = None):
             if duration_limit_sec is not None and end > duration_limit_sec:
                 end = float(duration_limit_sec)
             text = " ".join(lines[2:]).strip()
-            if end > start and text:
-                subtitles.append((start, end, text))
+            subtitles.append((start, end, text))
     return subtitles
 
 
@@ -187,7 +185,7 @@ def extract_first_subtitle_to_srt_into_input(
     codec_id = (t_sel.get("properties", {}).get("codec_id") or "").lower()
 
     base = os.path.splitext(os.path.basename(video_fullpath))[0]
-    target_srt = io_fs.join_tmp(uuid.uuid4().hex + '-' + base + '.srt')
+    target_srt = io_fs.join_srt(base + ".srt")
     os.makedirs(os.path.dirname(target_srt), exist_ok=True)
 
     # Pistes texte -> conversion directe en SRT via ffmpeg
@@ -242,7 +240,7 @@ def extract_first_subtitle_to_srt_into_input(
         else: log.error(t("sub_mkvextract_not_found"))
         return None
 
-    tmp_dir = tempfile.mkdtemp(prefix="subs_", dir=io_fs.get_tmp_dir())
+    tmp_dir = tempfile.mkdtemp(prefix="subs_")
     try:
         ext = ".sup" if "pgs" in codec_id or "hdmv/pgs" in codec_id else ".sub"
         base_noext = os.path.join(tmp_dir, base)
@@ -304,7 +302,7 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Opt
     kind, value = sub_choice_global
 
     if kind == "stream":
-        destination = io_fs.join_tmp(uuid.uuid4().hex + '.srt')
+        destination = io_fs.join_srt(os.path.splitext(os.path.basename(video_fullpath))[0] + ".srt")
         try:
             subprocess.run(
                 ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", video_fullpath,
@@ -337,22 +335,17 @@ def resolve_srt_for_video(video_fullpath: str, sub_choice_global: tuple, ui: Opt
     # CAS 2 - Choix SRT (depuis srt/ ou sidecar)
     # Si un chemin spécifique a été passé, on vérifie qu'il correspond bien à cette vidéo.
     if kind == "srt" and value:
-        if os.path.isfile(value):
+        video_base = os.path.splitext(os.path.basename(video_fullpath))[0].lower()
+        srt_base = os.path.splitext(os.path.basename(value))[0].lower()
+        if os.path.exists(value) and (video_base in srt_base or srt_base in video_base):
             destination = _copy_into_srt_dir(value, video_fullpath)
             strip_subtitle_tags_inplace(destination)
             return destination
-        raise FileNotFoundError(f'Sous-titres sélectionnés absents : {value}')
-    sidecar = find_sidecar_srt(video_fullpath)
-    if sidecar:
-        destination = _copy_into_srt_dir(sidecar, video_fullpath)
-        strip_subtitle_tags_inplace(destination)
-        return destination
     # 2.1) srt/<base>.srt déjà présent → on l'utilise tel quel
     srt_in_srt = _srt_in_srt_dir_for_video(video_fullpath)
     if srt_in_srt:
-        destination = _copy_into_srt_dir(srt_in_srt, video_fullpath)
-        strip_subtitle_tags_inplace(destination)
-        return destination
+        strip_subtitle_tags_inplace(srt_in_srt)
+        return srt_in_srt
 
     # 2.2) Sidecar .srt à côté de la vidéo → on le copie dans srt/ et on l'utilise
     sidecar = find_sidecar_srt(video_fullpath)

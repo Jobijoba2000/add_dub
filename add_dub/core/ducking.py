@@ -1,6 +1,7 @@
 """Ducking PCM par blocs : mémoire indépendante de la durée du film."""
 import wave
 import numpy as np
+from add_dub.logger import log_time, log_call
 
 def _merge_close_intervals(subtitles, offset_ms, fade_ms, min_gap_ms=200):
     """
@@ -41,6 +42,8 @@ def _merge_close_intervals(subtitles, offset_ms, fade_ms, min_gap_ms=200):
     return merged
 
 
+@log_time
+@log_call(exclude="subtitles")
 def lower_audio_during_subtitles(audio_file, subtitles, output_wav, reduction_db=-5.0,
                                  fade_duration=100, offset_ms=0):
     gain = 10 ** (-abs(reduction_db) / 20)

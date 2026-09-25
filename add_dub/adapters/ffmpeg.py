@@ -210,7 +210,7 @@ def _dub_in_one_pass(
         # 1: BG wav, 2: TTS wav, 3: original wav
         "-i", bg_wav,
         "-i", tts_wav,
-        "-i", video_fullpath,
+        "-i", original_wav,
 
         # 4: sous-titres (avec offset ST)
         "-itsoffset", str(offset_s), "-i", subtitle_srt_path,
@@ -221,16 +221,15 @@ def _dub_in_one_pass(
         # Mapping sorties
         "-map", "0:v:0",
         "-map", "[a_mix]",   # audio 0 (dub)
-        "-map", f"3:{opts.audio_ffmpeg_index}" if opts.audio_ffmpeg_index is not None else "3:a:0",     # audio 1 (original)
+        "-map", "3:a:0",     # audio 1 (original réencodé depuis le WAV)
         "-map", "4:0",       # sous-titres
 
     ] + copy_video + [
         # Audio: même codec/paramètres pour TOUTES les pistes audio
         # (audio_codec_args est appliqué globalement à -c:a)
         *mix_codec_args(opts),
-        "-c:a:1", "copy",
         # Force stéréo pour la piste audio 1 (original encodé), la 0 sort déjà en stéréo du mix
-
+        "-ac:a:1", "2",
 
         # Codec des sous-titres
         "-c:s:0", opts.sub_codec,
@@ -263,7 +262,7 @@ def _dub_in_one_pass(
 def mix_codec_args(opts):
     from add_dub.core.codecs import final_audio_codec_args
     args = final_audio_codec_args(opts.audio_codec, f'{int(opts.audio_bitrate)}k')
-    return [arg.replace('-c:a', '-c:a:0').replace('-b:a', '-b:a:0') for arg in args]
+    return args
 
 
 def dub_in_one_pass(**kwargs):
