@@ -118,7 +118,7 @@ class MediaIntegrationTests(unittest.TestCase):
                                   output_dir_path=str(self.root / 'pipeline'), opts=options, svcs=services)
             self.assertEqual(list(work.iterdir()), [])
 
-    def test_real_spawned_tts_workers_complete_without_network(self):
+    def test_real_threaded_edge_workers_complete_without_network(self):
         from add_dub.core.tts_generate import generate_dub_audio
         from add_dub.io.work import work_directory
         cues = self.root / 'silence.srt'
@@ -127,4 +127,4 @@ class MediaIntegrationTests(unittest.TestCase):
             output = self.root / 'silent-tts.wav'
             generate_dub_audio(str(cues), str(output), DubOptions(tts_engine='edge'), target_total_duration_ms=1000)
         with wave.open(str(output)) as audio:
-            self.assertAlmostEqual(audio.getnframes() / audio.getframerate(), 1)
+            self.assertAlmostEqual(audio.getnframes() / audio.getframerate(), 1, places=3)

@@ -39,9 +39,10 @@ class ConsoleTimingTests(unittest.TestCase):
             output = io.StringIO()
             with patch('sys.stdout', output), patch.object(logger, 'is_console_enabled', return_value=True), \
                  patch.object(logger.time, 'perf_counter', side_effect=[0, 2, 2, 3]), \
-                 patch.object(tts_generate, 'synthesize_jobs', return_value=[(0, str(segment), 0, 100)]):
+                 patch.object(tts_generate, 'tts_worker', return_value=(0, str(segment), 0, 100)), \
+                 patch.object(tts_generate, 'ProcessPoolExecutor', tts_generate.ThreadPoolExecutor):
                 tts_generate.generate_dub_audio(str(source), str(root / 'tts.wav'), DubOptions(), ui=ConsoleUI())
-                ducking.lower_audio_during_subtitles(segment, [(0, .1, 'Bonjour')], root / 'duck.wav')
+                ducking.lower_audio_during_subtitles(root / 'tts.wav', [(0, .1, 'Bonjour')], root / 'duck.wav')
             self.assertTrue(output.getvalue().endswith('Progress: 100.0%\n2.000 s\n1.000 s\n'))
 
     def test_total_starts_after_overwrite_confirmation(self):

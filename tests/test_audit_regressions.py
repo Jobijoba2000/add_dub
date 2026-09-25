@@ -110,22 +110,6 @@ class NetworkContractTests(unittest.TestCase):
 
 
 class AudioReliabilityTests(unittest.TestCase):
-    def test_overlapping_cues_sum_deterministically_and_clip(self):
-        from add_dub.core.tts_generate import assemble_segments
-        with tempfile.TemporaryDirectory() as root, work_directory(root):
-            root = Path(root)
-            wav(root / 'a.wav', 20000)
-            wav(root / 'b.wav', 20000)
-            cues = [(0, 1, 'a'), (.5, 1.5, 'b')]
-            results = [(0, str(root / 'a.wav'), 0, 1000), (1, str(root / 'b.wav'), 500, 1500)]
-            assemble_segments(cues, results, root / 'out.wav', 2000)
-            with wave.open(str(root / 'out.wav')) as stream:
-                values = np.frombuffer(stream.readframes(stream.getnframes()), dtype='<i2')
-            self.assertTrue(np.all(values[:4000] == 20000))
-            self.assertTrue(np.all(values[4000:8000] == 32767))
-            self.assertTrue(np.all(values[8000:12000] == 20000))
-            self.assertTrue(np.all(values[12000:] == 0))
-
     def test_ducking_across_block_boundary_preserves_outside_samples(self):
         from add_dub.core.ducking import lower_audio_during_subtitles
         with tempfile.TemporaryDirectory() as root:
@@ -138,18 +122,6 @@ class AudioReliabilityTests(unittest.TestCase):
             self.assertTrue(np.all(values[:64000] == 10000))
             self.assertTrue(np.all(values[64000:72000] == 5012))
             self.assertTrue(np.all(values[72000:] == 10000))
-
-    def test_timeout_terminates_pool_without_replaying_jobs(self):
-        from add_dub.core.tts_generate import synthesize_jobs
-        pool = Mock()
-        pool.imap_unordered.return_value.next.side_effect = multiprocessing.TimeoutError
-        with patch('add_dub.core.tts_generate.multiprocessing.get_context') as context:
-            context.return_value.Pool.return_value = pool
-            with self.assertRaises(TimeoutError):
-                synthesize_jobs([('job',)])
-        pool.imap_unordered.assert_called_once()
-        pool.terminate.assert_called_once()
-        pool.join.assert_called_once()
 
     def test_edge_failure_is_not_silence(self):
         from add_dub.core.tts_edge import synthesize_tts_for_subtitle

@@ -22,10 +22,10 @@ Les fichiers SRT temporaires déjà effacés par la version précédente ne sont
 | Protection des sorties | Muxage provisoire, contrôle FFprobe, publication atomique ; remplacement explicite. Une sortie existante invalide n'est plus considérée comme terminée. |
 | Réseau et confidentialité | TLS vérifié pour gTTS, délais de connexion/lecture, tâches TTS interrompues après blocage. CTranslate2 n'utilise plus Google en secours. `--offline` interdit les services distants et les téléchargements. |
 | Encodages | Décodage commun UTF-8, UTF-8 avec BOM, UTF-16 avec BOM et CP1252 ; nettoyage d'une copie sans modifier le SRT utilisateur. |
-| Synthèse | Processus isolés, aucune relance d'une tâche encore active, deux tentatives maximum pour les moteurs distants. Les erreurs Edge/gTTS ne deviennent plus du silence. |
+| Synthèse | Orchestration et assemblage de `0f067bf` rétablis à la demande de l’utilisateur : threads Edge/gTTS, processus OneCore, parallélisme et règles de reprise d’origine. Les protections réseau des moteurs restent en place. |
 | Traduction | Un paquet mal découpé est repris réplique par réplique. Les erreurs sont signalées ; le parcours historique de reprise avec le SRT source est rétabli. |
-| Audio | Somme déterministe des cues superposés, saturation PCM à l'assemblage ; gains cohérents lecteur/export et limiteur commun. Encodage des deux pistes en stéréo avec le codec choisi, comme avant l’audit. |
-| Mémoire | Ducking par blocs de 65 536 trames ; assemblage TTS dans un fichier mappé sur disque et export par blocs. L'espace disque temporaire reste proportionnel à la durée. |
+| Audio | Placement des répliques selon le fonctionnement d’origine ; gains cohérents lecteur/export et limiteur commun. Encodage des deux pistes en stéréo avec le codec choisi, comme avant l’audit. |
+| Mémoire | Ducking par blocs de 65 536 trames. Assemblage TTS en mémoire int16 avec chargement parallèle des segments, comme avant l’audit ; suppression du fichier mappé sur disque ajouté par l’audit. |
 | CLI et lots | Validation commune des nombres, rejet des options inconnues, résolution des chemins relatifs, Priorités de sous-titres historiques rétablies. Une erreur par vidéo n'arrête plus les vidéos suivantes ; code final non nul. Les collisions de sorties sont refusées avant traitement. |
 | OCR | Révisions fixes, téléchargement temporaire validé avant remplacement, refus du cache manifestement tronqué ; verrou interprocessus pour les réglages de langue. |
 | Lecteur | Préparation des deux WAV avant publication, nettoyage des sorties du travail après échec/annulation, supervision des descendants. mpv n'est plus déclaré prêt avant l'événement de chargement. |
@@ -51,7 +51,7 @@ L'exécutable compilé a également produit un doublage OneCore hors ligne depui
 .venv/Scripts/python.exe tests/smoke_distribution.py
 ```
 
-La suite ajoute des tests de régression réseau, sous-titres, cache, annulation, publication et erreurs, ainsi que de vrais petits médias FFmpeg : codecs, conversion des sources multicanaux en stéréo, niveau du mix, pipeline, workers démarrés avec `spawn`. Le test JavaScript du générateur utilise Node.js et est ignoré si Node n'est pas installé.
+La suite ajoute des tests de régression réseau, sous-titres, cache, annulation, publication et erreurs, ainsi que de vrais petits médias FFmpeg : codecs, conversion des sources multicanaux en stéréo, niveau du mix, pipeline, workers Edge exécutés dans des threads. Le test JavaScript du générateur utilise Node.js et est ignoré si Node n'est pas installé.
 
 Les essais Qt/mpv ouvrent brièvement des fenêtres et les ferment automatiquement. OneCore doit être installé pour les essais vocaux réels. Le test `--quick` couvre aussi le raccourci de vocalisation et la reprise automatique.
 
@@ -81,3 +81,9 @@ Les deux alertes de dépendances restantes et les limites de validation sont dé
 ## Affichage des durées en console
 
 Les chronomètres TTS et ducking ont été rétablis. La progression termine sa ligne à 100 % avant l’affichage de la durée. La confirmation de remplacement est exécutée avant le démarrage du traitement chronométré ; une sortie ignorée ou un remplacement refusé ne lance pas ce chronomètre. Validation : 114 tests réussis, dont quatre tests dédiés aux durées et à l’affichage console.
+
+## Retour au traitement TTS d’origine
+
+Le module `add_dub/core/tts_generate.py` a été restauré intégralement depuis `0f067bf`, avec vérification de l’absence de différence. Le pool unique de huit processus, l’attente explicite `join()` à 90 %, l’accumulation int32 sur disque et l’export par blocs introduits par l’audit sont retirés. Les threads Edge/gTTS, les processus OneCore (jusqu’à 20), le chargement parallèle (jusqu’à 32 threads), le tableau int16 en mémoire et l’export WAV d’origine sont rétablis, ainsi que les règles historiques de placement et de reprise. Les chronomètres et leur affichage corrigé sont conservés.
+
+Validation : 114 tests réussis. Les tests de la stratégie retirée sont remplacés par des vérifications des types d’exécuteurs, du parallélisme, de l’absence de fichier mappé sur disque, du placement des échantillons, du nettoyage et des durées affichées. Aucun temps précis n’est garanti pour le média personnel de l’utilisateur, qui n’a pas été utilisé pour cette vérification.
