@@ -55,26 +55,25 @@ if not exist "%ROOT%.venv\Scripts\python.exe" (
 call "%ROOT%.venv\Scripts\activate.bat"
 
 rem --- Dependances ------------------------------------------------------------
-if exist "%ROOT%requirements.txt" (
+if exist "%ROOT%requirements.lock.txt" (
     set "HASH_FILE=%ROOT%.venv\.req_hash"
     set "CURR_HASH="
-    for /f "tokens=*" %%H in ('python -c "import hashlib; print(hashlib.sha256(open('requirements.txt', 'rb').read()).hexdigest())"') do set "CURR_HASH=%%H"
+    for /f "tokens=*" %%H in ('python -c "import hashlib; print(hashlib.sha256(open('requirements.lock.txt', 'rb').read()).hexdigest())"') do set "CURR_HASH=%%H"
     if not defined CURR_HASH goto fail
 
     set "LAST_HASH="
     if exist "!HASH_FILE!" set /p LAST_HASH=<"!HASH_FILE!"
 
     if "!CURR_HASH!" NEQ "!LAST_HASH!" (
-        echo [STEP] Installing / updating dependencies from requirements.txt...
-        python -m pip install --disable-pip-version-check --no-input --upgrade pip || goto fail
-        python -m pip install --disable-pip-version-check --no-input -r "%ROOT%requirements.txt" || goto fail
+        echo [STEP] Installing / updating dependencies from requirements.lock.txt...
+        python -m pip install --disable-pip-version-check --no-input --require-hashes -r "%ROOT%requirements.lock.txt" || goto fail
         > "!HASH_FILE!" echo !CURR_HASH!
         echo [OK] Dependencies up to date.
     ) else (
         echo [INFO] Dependencies already up to date - skipping check.
     )
 ) else (
-    echo [INFO] requirements.txt missing - step skipped.
+    echo [INFO] requirements.lock.txt missing - step skipped.
 )
 
 python "%ROOT%scripts\check_ctranslate2.py"

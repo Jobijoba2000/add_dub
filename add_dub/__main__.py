@@ -36,10 +36,13 @@ def main(argv=None) -> int:
         os.environ.setdefault("ADD_DUB_OPTIONS", os.path.join(os.path.dirname(sys.executable), "options.conf"))
 
     args, _unknown = parse_args(argv)
+    if args.offline:
+        os.environ['ADD_DUB_OFFLINE'] = '1'
 
     if getattr(args, 'player_generate', None):
         from add_dub.player.core.generation import main as generate_main
-        return generate_main(args.player_generate)
+        from add_dub.cli.batch_lifecycle import run
+        return run(lambda parsed: generate_main(parsed.player_generate), args, argv)
 
     if getattr(args, 'player', False):
         from add_dub.player.gui.run import main as player_main

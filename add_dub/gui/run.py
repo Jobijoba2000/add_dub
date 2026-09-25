@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import subprocess
 import tempfile
 import uuid
 from pathlib import Path
@@ -34,7 +35,15 @@ def partition_existing(pending):
             except OSError:
                 directories[key] = set()
         expected = os.path.normcase(f'{Path(video.path).stem} [dub-{languages[voice]}].mkv')
-        (skipped if expected in directories[key] else remaining).append(entry)
+        valid = False
+        if expected in directories[key]:
+            from add_dub.adapters.ffmpeg import validate_media
+            try:
+                validate_media(directory / expected)
+                valid = True
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+                pass
+        (skipped if valid else remaining).append(entry)
     return remaining, skipped
 
 
@@ -53,10 +62,12 @@ class VideoRunFiles:
             if self.partial.exists():
                 raise RuntimeError('Mixage incomplet : la sortie ne sera pas publiée.')
             return  # Sortie existante ignorée ou vérification seule.
-        destination = Path(json.loads(manifest.read_text(encoding='utf-8'))['destination']).resolve()
+        result = json.loads(manifest.read_text(encoding='utf-8'))
+        destination = Path(result['destination']).resolve()
         if destination.parent != self.output_dir or destination.suffix.lower() != '.mkv':
             raise RuntimeError('Destination inattendue pour la vidéo terminée.')
-        os.replace(self.partial, destination)
+        from add_dub.io.work import publish
+        publish(self.partial, destination, overwrite=result.get('overwrite', False))
 
     def cleanup(self):
         if self.work.parent != self.root or not self.work.name.startswith('gui-video-'):

@@ -29,12 +29,16 @@ if exist "licenses" (
     robocopy "licenses" "dist\add_dub\licenses" /E /NFL /NDL /NJH /NJS >nul
     if errorlevel 8 exit /b 1
 )
-for %%F in (options.example.conf README.md AUDIT.md LICENSE) do (
+for %%F in (options.example.conf README.md AUDIT.md LICENSE requirements.lock.txt models.lock.json) do (
     if exist "%%F" (
         copy /y "%%F" "dist\add_dub\" >nul
         if errorlevel 1 exit /b 1
     )
 )
+robocopy "docs" "dist\add_dub\docs" *.md /NFL /NDL /NJH /NJS >nul
+if errorlevel 8 exit /b 1
+.venv\Scripts\python.exe scripts\distribution_inventory.py dist\add_dub
+if errorlevel 1 exit /b 1
 echo =========================================
 echo   Compilation terminee dans dist\add_dub
  echo   Console : add_dub.exe

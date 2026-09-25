@@ -4,6 +4,7 @@ import re
 import subprocess
 import shutil
 import threading
+from filelock import FileLock
 from contextlib import contextmanager
 from add_dub.io.fs import ROOT
 
@@ -43,7 +44,7 @@ def _subtitle_edit_language(settings_file: str, language: str):
     if not settings_file or not os.path.isfile(settings_file) or not language:
         yield
         return
-    with _SETTINGS_LOCK:
+    with _SETTINGS_LOCK, FileLock(settings_file + ".lock", timeout=120):
         with open(settings_file, "r", encoding="utf-8") as stream:
             text = stream.read()
         updated, count = re.subn(
@@ -70,16 +71,13 @@ def ensure_tesseract_lang(lang_code: str) -> str:
         return tess_code
 
     target_file = os.path.join(tessdata_dir, f"{tess_code}.traineddata")
-    if not os.path.exists(target_file):
-        from add_dub.logger import logger as log
-        log.info(f"Téléchargement du modèle OCR Tesseract pour la langue '{tess_code}' ({tess_code}.traineddata)...")
-        url = f"https://github.com/tesseract-ocr/tessdata/raw/main/{tess_code}.traineddata"
-        try:
-            import urllib.request
-            urllib.request.urlretrieve(url, target_file)
-            log.info(f"Modèle OCR Tesseract '{tess_code}.traineddata' téléchargé avec succès.")
-        except Exception as e:
-            log.warning(f"Échec du téléchargement du modèle OCR {tess_code} : {e}")
+    from add_dub.adapters.downloads import resource
+    from add_dub.adapters.models import revisions
+    from add_dub.io.work import is_offline
+    if not re.fullmatch(r'[a-z_]+', tess_code):
+        raise ValueError('Code de langue OCR invalide.')
+    resource(f"https://github.com/tesseract-ocr/tessdata/raw/{revisions()['ocr_tessdata']}/{tess_code}.traineddata",
+             target_file, offline=is_offline())
 
     return tess_code
 
@@ -96,16 +94,19 @@ def ensure_ocr_fix_list(lang_code: str) -> None:
         return
 
     target_file = os.path.join(dict_dir, f"{tess_code}_OCRFixReplaceList.xml")
-    if not os.path.exists(target_file):
-        from add_dub.logger import logger as log
-        log.info(f"Téléchargement du dictionnaire de correction OCR ({tess_code}_OCRFixReplaceList.xml)...")
-        url = f"https://raw.githubusercontent.com/SubtitleEdit/subtitleedit/main/Dictionaries/{tess_code}_OCRFixReplaceList.xml"
-        try:
-            import urllib.request
-            urllib.request.urlretrieve(url, target_file)
-            log.info(f"Dictionnaire OCR '{tess_code}_OCRFixReplaceList.xml' téléchargé avec succès.")
-        except Exception as e:
-            log.warning(f"Échec du téléchargement du dictionnaire OCR {tess_code} : {e}")
+    from add_dub.adapters.downloads import resource
+    from add_dub.adapters.models import revisions
+    from add_dub.io.work import is_offline
+    if not re.fullmatch(r'[a-z_]+', tess_code):
+        raise ValueError('Code de langue OCR invalide.')
+    # Dictionnaire facultatif ; l'absence n'empêche pas la reconnaissance.
+    try:
+        resource(f"https://raw.githubusercontent.com/SubtitleEdit/subtitleedit/{revisions()['ocr_dictionary']}/Dictionaries/{tess_code}_OCRFixReplaceList.xml",
+                 target_file, offline=is_offline())
+    except Exception as exc:
+        from add_dub.logger import logger
+        logger.warning('Dictionnaire OCR indisponible : %s', exc)
+
 
 def subtitle_edit_ocr(ocr_input, output_path, lang="fr", cwd=None):
     """
@@ -136,7 +137,12 @@ def subtitle_edit_ocr(ocr_input, output_path, lang="fr", cwd=None):
     # Son Settings.xml est ajusté avant son lancement et lu à son démarrage.
     with _subtitle_edit_language(settings_file, tess_lang):
         process = subprocess.Popen(cmd, cwd=cwd)
-    return_code = process.wait()
+        try:
+            return_code = process.wait(timeout=600)
+        except BaseException:
+            process.kill()
+            process.wait()
+            raise
     if return_code:
         raise subprocess.CalledProcessError(return_code, cmd)
     return os.path.exists(output_path) and os.path.getsize(output_path) > 0

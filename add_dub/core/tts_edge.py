@@ -25,6 +25,9 @@ DEFAULT_EDGE_VOICE = "fr-FR-HenriNeural"
 
 
 def _require_edge_tts():
+    from add_dub.io.work import is_offline
+    if is_offline():
+        raise RuntimeError("Edge est indisponible en mode hors ligne.")
     if edge_tts is None:
         raise RuntimeError("edge-tts n'est pas installé (pip install edge-tts).")
 
@@ -163,7 +166,7 @@ def _speed_change_with_ffmpeg(segment: AudioSegment, factor: float) -> AudioSegm
         return segment
     filt = ",".join(filters)
 
-    with tempfile.TemporaryDirectory(dir=io_fs.TMP_DIR) as td:
+    with tempfile.TemporaryDirectory(dir=io_fs.get_tmp_dir()) as td:
         inp = os.path.join(td, "in.wav")
         out = os.path.join(td, "out.wav")
         segment.export(inp, format="wav")
@@ -214,10 +217,10 @@ def _synthesize(text: str, voice_shortname: str) -> AudioSegment:
     Détecte si MP3 ou WAV et charge avec le bon 'format'.
     Écrit d'abord en fichier dans TMP_DIR pour éviter cache:pipe:0 en CWD.
     """
-    data = asyncio.run(_edge_synthesize_bytes_async(text, voice_shortname))
+    data = asyncio.run(asyncio.wait_for(_edge_synthesize_bytes_async(text, voice_shortname), timeout=90))
     fmt = _sniff_audio_format(data)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{fmt}", dir=io_fs.TMP_DIR) as f:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{fmt}", dir=io_fs.get_tmp_dir()) as f:
         tmp_path = f.name
         f.write(data)
 
@@ -275,12 +278,7 @@ def synthesize_tts_for_subtitle(
 
     shortname = voice_id if is_valid_voice_id(voice_id) else DEFAULT_EDGE_VOICE
 
-    # Étape 1 - synthèse (protégée)
-    try:
-        seg = _synthesize(text, shortname)
-    except Exception:
-        # Sécurité : si Edge échoue (ex. NoAudioReceived), renvoyer du silence
-        return AudioSegment.silent(duration=max(0, int(target_duration_ms)))
+    seg = _synthesize(text, shortname)
 
     # Étape 2 - vitesse minimale pilotée (post-traitement)
     try:
@@ -310,7 +308,7 @@ def synthesize_tts_for_subtitle(
         if max_rate < 1.0:
             max_rate = 1.0  # sécurité: pas de plafond < 1 pour accélérer
         
-        factor = min(needed_factor, max_rate)
+        factor = min(needed_factor, max_rate / base_rate)
 
         try:
             sped = _speed_change_with_ffmpeg(seg, factor)

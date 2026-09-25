@@ -415,7 +415,29 @@ class Application(CaptionWindow):
         except ValueError as exc:
             QMessageBox.warning(self, 'Liste à vérifier', str(exc))
             return
-        self.pending, skipped = partition_existing(self.pending)
+        if any('--skip-existing' in command for _, _, command in self.pending):
+            self.running = True
+            self.stop_requested = False
+            self.preflight_id = getattr(self, 'preflight_id', 0) + 1
+            generation = self.preflight_id
+            pending = list(self.pending)
+            self.status.setText('Vérification des sorties existantes…')
+            self.refresh()
+            def ready(result, error):
+                if not self.running or self.stop_requested or self.preflight_id != generation:
+                    return
+                self.running = False
+                if error:
+                    self.status.setText(f'Vérification impossible : {error}')
+                    self.refresh()
+                    return
+                self.begin_processing(*result)
+            self.tasks.run(self, lambda: partition_existing(pending), ready)
+        else:
+            self.begin_processing(self.pending, [])
+
+    def begin_processing(self, pending, skipped):
+        self.pending = pending
         for index, video, _ in skipped:
             self.jobs[index].completed.add(video.path)
         for job in self.jobs:

@@ -451,6 +451,9 @@ class SettingsEditor(QTabWidget):
         trans.addRow('Moteur', self.translation_engine)
         trans.addRow('Langue cible (fr, en…)', self.translate_to)
         trans.addRow('Langue source', self.translate_from)
+        privacy = QLabel('CTranslate2 garde le texte sur cet ordinateur ; les modèles peuvent être téléchargés. Google reçoit le texte des sous-titres. Un échec interrompt la vidéo.')
+        privacy.setWordWrap(True)
+        trans.addRow(privacy)
         advanced = page_form(self, 'Audio et temps')
         self.fields = {}
         for key, label, choices in FIELDS[7:]:

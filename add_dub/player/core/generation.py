@@ -51,7 +51,8 @@ def main(request_path):
         if duration_ms <= 0:
             raise ValueError('La durée de cette vidéo est indisponible.')
         settings = validated(request['settings'])
-        opts = DubOptions(tts_engine=settings['engine'], voice_id=settings['voice'],
+        from add_dub.io.work import is_offline
+        opts = DubOptions(offline=is_offline(), tts_engine=settings['engine'], voice_id=settings['voice'],
                           dubbed_language=settings['language'], dubbed_locale=settings['region'],
                           min_rate_tts=settings['min_rate_tts'], max_rate_tts=settings['max_rate_tts'],
                           db_reduct=settings['ducking_db'])
@@ -59,7 +60,6 @@ def main(request_path):
         temporary_wav = Path(fs.TMP_DIR) / 'dub.wav'
         generate_dub_audio(str(srt), str(temporary_wav), opts,
                            target_total_duration_ms=duration_ms, ui=ProgressUI())
-        os.replace(temporary_wav, request['output'])
         emit('complete', name='tts')
         emit('stage', name='audio', text='Extraction audio')
         original_wav = Path(fs.TMP_DIR) / 'original.wav'
@@ -68,9 +68,20 @@ def main(request_path):
         emit('complete', name='audio')
         cues = parse_srt_file(str(srt))
         emit('stage', name='ducking', text='Ducking audio')
-        lower_audio_during_subtitles(str(original_wav), cues, request['original_output'],
+        lower_audio_during_subtitles(str(original_wav), cues, str(Path(fs.TMP_DIR) / 'ducked.wav'),
                                      reduction_db=opts.db_reduct, fade_duration=0, offset_ms=0)
         emit('complete', name='ducking')
+        from add_dub.io.work import publish
+        published = []
+        try:
+            for source, destination in [(temporary_wav, request['output']),
+                                         (Path(fs.TMP_DIR) / 'ducked.wav', request['original_output'])]:
+                publish(source, destination)
+                published.append(Path(destination))
+        except BaseException:
+            for destination in published:
+                destination.unlink(missing_ok=True)
+            raise
         emit('result', path=request['output'], original_path=request['original_output'])
         return 0
     except Exception as exc:

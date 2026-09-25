@@ -61,6 +61,7 @@ class GenerationDialog(QDialog):
         request = dict(request)
         request['output'] = str(WAV_DIR / (Path(request['video']).stem + '_' + uuid.uuid4().hex[:12] + '.wav'))
         request['original_output'] = str(WAV_DIR / (Path(request['video']).stem + '_original_ducked_' + uuid.uuid4().hex[:12] + '.wav'))
+        self.owned_outputs = [Path(request['output']), Path(request['original_output'])]
         self.request_path = self.work / 'request.json'
         self.request_path.write_text(json.dumps(request, ensure_ascii=False), encoding='utf-8')
         self.process = QProcess(self)
@@ -143,6 +144,7 @@ class GenerationDialog(QDialog):
         # Only remove this job's directory under this project's tmp.
         if self.work.resolve().parent == WORK_ROOT.resolve():
             shutil.rmtree(self.work, ignore_errors=True)
+        self.cleanup_failed_outputs()
         self.button.setText('Fermer')
         self.button.setEnabled(True)
 
@@ -197,6 +199,7 @@ class GenerationDialog(QDialog):
         self.label.setText('Génération annulée. La vidéo reste en pause.')
         if self.work.resolve().parent == WORK_ROOT.resolve():
             shutil.rmtree(self.work, ignore_errors=True)
+        self.cleanup_failed_outputs()
         self.button.setText('Fermer')
         self.button.setEnabled(True)
 
@@ -205,3 +208,8 @@ class GenerationDialog(QDialog):
             return
         self.choice = choice
         self.accept()
+
+    def cleanup_failed_outputs(self):
+        for path in getattr(self, 'owned_outputs', []):
+            if path.resolve().parent == WAV_DIR.resolve():
+                path.unlink(missing_ok=True)

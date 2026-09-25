@@ -344,6 +344,7 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
     if opts_local is None:
         return 1
 
+    any_error = False
     for input_video_name in selected:
         try:
             video_opts = replace(opts_local)
@@ -358,11 +359,14 @@ def run_interactive(selected: list[str], svcs: Services) -> int:
             )
             if outp:
                 log.info(f"{input_video_name} → {outp}")
+            else:
+                any_error = True
         except Exception as e:
+            any_error = True
             print(t("cli_error", msg=f"{input_video_name} → {e}"))
 
     print(t("cli_done"))
-    return 0
+    return 1 if any_error else 0
 
 
 def ask_language_if_needed() -> None:

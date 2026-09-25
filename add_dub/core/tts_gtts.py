@@ -120,7 +120,7 @@ def _speed_change_with_ffmpeg(segment: AudioSegment, factor: float) -> AudioSegm
         return segment
     filt = ",".join(filters)
 
-    with tempfile.TemporaryDirectory(dir=io_fs.TMP_DIR) as td:
+    with tempfile.TemporaryDirectory(dir=io_fs.get_tmp_dir()) as td:
         inp = os.path.join(td, "in.wav")
         out = os.path.join(td, "out.wav")
         segment.export(inp, format="wav")
@@ -203,7 +203,8 @@ def _gtts_synthesize_bytes(text: str, lang: str, tld: str) -> bytes:
     _require_gtts()
     buf = io.BytesIO()
     # slow=False = débit normal
-    tts = gTTS(text=text, lang=lang, tld=tld, slow=False)
+    from add_dub.adapters.http import google_speech
+    tts = google_speech(text=text, lang=lang, tld=tld, slow=False)
     tts.write_to_fp(buf)
     return buf.getvalue()
 
@@ -215,7 +216,7 @@ def _synthesize(text: str, lang: str, tld: str) -> AudioSegment:
     """
     data = _gtts_synthesize_bytes(text, lang, tld)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3", dir=io_fs.TMP_DIR) as f:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3", dir=io_fs.get_tmp_dir()) as f:
         tmp_path = f.name
         f.write(data)
 
@@ -239,7 +240,7 @@ def synthesize_tts_for_subtitle(
     """
     Implémentation gTTS calquée sur tts_edge :
     1) Court-circuit SILENCE si texte vide/ellipses/ponctuation uniquement.
-    2) Synthèse protégée (toute erreur → segment muet).
+    2) Les erreurs de synthèse remontent au superviseur.
     3) Si opts.min_rate_tts != 1.0 → post-traitement atempo (vitesse minimale globale).
     4) Ajustement à target_duration_ms :
        - si trop long → accélération supplémentaire, bornée par opts.max_rate_tts
@@ -253,11 +254,7 @@ def synthesize_tts_for_subtitle(
 
     # 2) Synthèse protégée
     lang, tld = _resolve_gtts_lang_tld(voice_id, opts)
-    try:
-        seg = _synthesize(text, lang, tld)
-    except Exception:
-        # Réseau, quota, texte non supporté, etc. → silence propre
-        return AudioSegment.silent(duration=tgt)
+    seg = _synthesize(text, lang, tld)
 
     # 3) Vitesse minimale pilotée (post-traitement)
     try:
@@ -286,7 +283,7 @@ def synthesize_tts_for_subtitle(
         if max_rate < 1.0:
             max_rate = 1.0  # sécurité: pas de plafond < 1 pour accélérer
 
-        factor = min(needed_factor, max_rate)
+        factor = min(needed_factor, max_rate / base_rate)
 
         try:
             sped = _speed_change_with_ffmpeg(seg, factor)

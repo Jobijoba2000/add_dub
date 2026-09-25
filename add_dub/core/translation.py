@@ -16,6 +16,9 @@ except ImportError:
     ctranslate2 = None
     sentencepiece = None
 
+from contextvars import ContextVar
+OFFLINE = ContextVar('translation_offline', default=False)
+
 _OPUS_CACHE: Dict[str, Tuple[Any, Any, Any]] = {}
 _NLLB_CACHE = None
 
@@ -227,6 +230,10 @@ def _get_opus_translator_and_tokenizer(
                 (f"manancode/opus-mt-{pair}-ctranslate2", os.path.join(cache_base, f"manancode-opus-mt-{pair}")),
             ])
 
+    from add_dub.adapters.models import revisions
+    locked = revisions()
+    candidate_repos = [(repo, os.path.join(directory, locked[repo]) if repo in locked else directory)
+                       for repo, directory in candidate_repos]
     # Passe 1 : Recherche en local (100% silencieuse)
     for repo_id, model_dir in candidate_repos:
         model_bin = os.path.join(model_dir, "model.bin")
@@ -243,6 +250,9 @@ def _get_opus_translator_and_tokenizer(
             except Exception:
                 pass
 
+    if OFFLINE.get():
+        return None
+
     # Passe 2 : Téléchargement depuis Hugging Face (silencieux pendant les essais)
     for repo_id, model_dir in candidate_repos:
         model_bin = os.path.join(model_dir, "model.bin")
@@ -250,7 +260,8 @@ def _get_opus_translator_and_tokenizer(
         tgt_spm = os.path.join(model_dir, "target.spm")
 
         try:
-            snapshot_download(repo_id=repo_id, local_dir=model_dir)
+            from add_dub.adapters.models import snapshot
+            snapshot(repo_id, model_dir)
             if os.path.exists(model_bin) and os.path.exists(src_spm) and os.path.exists(tgt_spm):
                 translator = ctranslate2.Translator(model_dir, device="cpu", compute_type="int8", intra_threads=4)
                 sp_src = sentencepiece.SentencePieceProcessor(model_file=src_spm)
@@ -259,11 +270,6 @@ def _get_opus_translator_and_tokenizer(
                 _OPUS_CACHE[key] = (translator, sp_src, sp_tgt, repo_id)
                 return _OPUS_CACHE[key]
         except Exception:
-            try:
-                import shutil
-                shutil.rmtree(model_dir, ignore_errors=True)
-            except Exception:
-                pass
             continue
 
     return None
@@ -296,12 +302,15 @@ def _translate_with_opus_pair(texts: List[str], src: str, tgt: str, ui: Optional
             for j, r in enumerate(results):
                 if r.hypotheses:
                     decoded = sp_tgt.decode(r.hypotheses[0]).strip()
-                    translated.append(decoded if decoded else batch[j])
+
+                    if not decoded:
+                        raise ValueError('Traduction Opus vide')
+                    translated.append(decoded)
                 else:
-                    translated.append(batch[j])
+                    raise ValueError('Hypothèse Opus manquante')
         except Exception as e:
             log.error(f"Erreur Opus-MT batch : {e}")
-            translated.extend(batch)
+            raise RuntimeError(f"Échec du paquet Opus {i // batch_size + 1}") from e
 
         done = min(i + batch_size, total)
         pct = (done / total) * 100
@@ -338,10 +347,14 @@ def _get_nllb_translator_and_tokenizer(ui: Optional[UIInterface] = None):
         return _NLLB_CACHE
 
     cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "add_dub", "ct2_models", "nllb-200-600M-int8")
+    from add_dub.adapters.models import revisions
+    cache_dir = os.path.join(cache_dir, revisions()['osa911/nllb-200-distilled-600M-ct2-int8'])
     model_bin = os.path.join(cache_dir, "model.bin")
     spm_model = os.path.join(cache_dir, "sentencepiece.bpe.model")
 
     if not (os.path.exists(model_bin) and os.path.exists(spm_model)):
+        if OFFLINE.get():
+            return None
         log.info("Téléchargement du modèle universel NLLB-200 (600M int8)...")
         try:
             from huggingface_hub import snapshot_download
@@ -349,7 +362,8 @@ def _get_nllb_translator_and_tokenizer(ui: Optional[UIInterface] = None):
             log.warning("Module 'huggingface_hub' manquant. Impossible de télécharger le modèle NLLB-200.")
             return None
         repo_id = "osa911/nllb-200-distilled-600M-ct2-int8"
-        snapshot_download(repo_id=repo_id, local_dir=cache_dir)
+        from add_dub.adapters.models import snapshot
+        snapshot(repo_id, cache_dir)
 
 
     translator = ctranslate2.Translator(cache_dir, device="cpu", compute_type="int8", intra_threads=4)
@@ -405,15 +419,14 @@ def _translate_with_nllb(texts: List[str], src_lang: str, tgt_lang: str, ui: Opt
                     clean_hyp = [tok for tok in hyp if tok not in (tgt_nllb, src_nllb, "</s>", "<s>", "<unk>")]
                     decoded = sp_model.decode(clean_hyp).strip()
 
-                    if len(original_text.split()) == 1 and len(decoded.split()) >= 4:
-                        translated_texts.append(original_text)
-                    else:
-                        translated_texts.append(decoded if decoded else original_text)
+                    if not decoded:
+                        raise ValueError('Traduction NLLB vide')
+                    translated_texts.append(decoded)
                 else:
-                    translated_texts.append(original_text)
+                    raise ValueError('Hypothèse NLLB manquante')
         except Exception as e:
             log.error(f"Erreur NLLB batch : {e}")
-            translated_texts.extend(batch)
+            raise RuntimeError(f"Échec du paquet NLLB {i // batch_size + 1}") from e
 
         done = min(i + batch_size, total)
         pct = (done / total) * 100
@@ -437,13 +450,14 @@ def _translate_with_google(
     En cas d'échec (ex: rate limit HTTP 429 ou problème réseau), lève une exception
     afin de déclencher la bascule automatique sur CTranslate2.
     """
-    from deep_translator import GoogleTranslator
+    from add_dub.adapters.http import google_translator as GoogleTranslator
 
     if not texts:
         return []
 
     log.info(t("pipeline_trans_using_engine", lang=tgt_lang, engine="Google Traduction"))
     start_t = time.time()
+    deadline = time.monotonic() + 900
 
     translator = GoogleTranslator(source=src_lang, target=tgt_lang)
     delimiter = "\n###\n"
@@ -475,6 +489,8 @@ def _translate_with_google(
     translated_texts: List[str] = []
 
     for b_idx, batch in enumerate(batches):
+        if time.monotonic() > deadline:
+            raise TimeoutError('Budget de traduction Google dépassé (15 minutes).')
         chunk_str = delimiter.join(batch)
         try:
             res_str = translator.translate(chunk_str)
@@ -487,12 +503,13 @@ def _translate_with_google(
 
             if len(parts) == len(batch):
                 translated_texts.extend(parts)
-            elif len(parts) > 0:
-                if len(parts) < len(batch):
-                    parts.extend(batch[len(parts):])
-                translated_texts.extend(parts[:len(batch)])
             else:
-                translated_texts.extend(batch)
+                # Un séparateur perdu ou inventé ne doit jamais déplacer une réplique.
+                for original in batch:
+                    translated = translator.translate(original)
+                    if not translated or not translated.strip():
+                        raise ValueError('Réponse individuelle vide de Google Traduction')
+                    translated_texts.append(translated.strip())
 
         except Exception as e:
             err_str = str(e)
@@ -516,8 +533,8 @@ def _translate_with_google(
 
 
 def translate_subtitles(
-    subtitles: List[Tuple[float, float, str]], 
-    target_lang: str, 
+    subtitles: List[Tuple[float, float, str]],
+    target_lang: str,
     source_lang: Optional[str] = None,
     ui: Optional[UIInterface] = None,
     engine: str = "google"
@@ -578,13 +595,9 @@ def translate_subtitles(
         if translated_texts is None:
             translated_texts = _translate_with_nllb(texts, src, tgt, ui=ui)
 
-        if translated_texts is None:
-            try:
-                log.warning("Échec des modèles CTranslate2, bascule de secours sur Google Traduction...")
-                translated_texts = _translate_with_google(texts, src, tgt, ui=ui)
-            except Exception as e:
-                log.warning(f"Échec du secours Google Traduction : {e}")
 
+    if translated_texts is None or len(translated_texts) != len(subtitles):
+        raise RuntimeError('La traduction a échoué ou est incomplète ; aucun doublage publié.')
     new_subs = []
     if translated_texts is not None:
         for i, (start, end, _) in enumerate(subtitles):
@@ -603,10 +616,9 @@ def translate_subtitles(
 
 def write_srt_file(subtitles: List[Tuple[float, float, str]], output_path: str):
     def format_timestamp(seconds: float) -> str:
-        hours = int(seconds // 3600)
-        minutes = int((seconds % 3600) // 60)
-        secs = int(seconds % 60)
-        millis = int((seconds - int(seconds)) * 1000)
+        total, millis = divmod(round(seconds * 1000), 1000)
+        hours, remainder = divmod(total, 3600)
+        minutes, secs = divmod(remainder, 60)
         return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
     with open(output_path, "w", encoding="utf-8") as f:
@@ -614,3 +626,60 @@ def write_srt_file(subtitles: List[Tuple[float, float, str]], output_path: str):
             f.write(f"{i}\n")
             f.write(f"{format_timestamp(start)} --> {format_timestamp(end)}\n")
             f.write(f"{text}\n\n")
+
+
+def translate_file(srt_path, video_path, selection, opts, ui):
+    """Cache lié au contenu, à la sélection, au moteur et aux langues."""
+    import hashlib
+    import json
+    import tempfile
+    from pathlib import Path
+    from add_dub.core.subtitles import parse_srt_file
+    from add_dub.io import fs
+    from add_dub.io.work import publish
+    cues = parse_srt_file(srt_path)
+    if not cues:
+        raise ValueError('Sous-titres source vides.')
+    source = opts.translate_from
+    if not source or source.lower() == 'auto':
+        from langdetect import detect, DetectorFactory
+        DetectorFactory.seed = 0
+        source = detect(' '.join(cue[2] for cue in cues[:50]))
+    source, target = source.lower()[:2], opts.translate_to.lower()[:2]
+    if source == target:
+        return srt_path, False
+    if opts.offline and opts.translation_engine != 'ctranslate2':
+        raise ValueError('Le mode hors ligne interdit Google Traduction.')
+    identity = {'version': 2, 'video': os.path.normcase(os.path.realpath(video_path)),
+                'selection': selection, 'source': source, 'target': target,
+                'engine': opts.translation_engine, 'cues': cues}
+    from add_dub.adapters.models import revisions
+    identity['models'] = revisions()
+    key = hashlib.sha256(json.dumps(identity, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    cache = Path(fs.SRT_DIR) / '.translations'
+    if os.getenv('ADD_DUB_PREVIEW_RANGE'):
+        cache = Path(fs.get_tmp_dir()) / '.translations'
+    cache.mkdir(parents=True, exist_ok=True)
+    destination = cache / f'{key}.{target}.srt'
+    if destination.exists() and opts.reuse_translated_subs and not opts.overwrite:
+        cached = parse_srt_file(str(destination))
+        if len(cached) == len(cues) and all(abs(a[0]-b[0]) < .002 and abs(a[1]-b[1]) < .002 for a,b in zip(cached,cues)):
+            from add_dub.progress import emit
+            emit('skip', name='translation')
+            return str(destination), True
+    token = OFFLINE.set(opts.offline)
+    try:
+        translated = translate_subtitles(cues, target, source_lang=source, ui=ui,
+                                         engine=opts.translation_engine)
+    finally:
+        OFFLINE.reset(token)
+    if translated is None or len(translated) != len(cues):
+        raise RuntimeError('Traduction incomplète.')
+    fd, temporary = tempfile.mkstemp(suffix='.srt', dir=cache)
+    os.close(fd)
+    try:
+        write_srt_file(translated, temporary)
+        publish(temporary, destination, overwrite=True)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+    return str(destination), True

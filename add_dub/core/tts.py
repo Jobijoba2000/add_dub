@@ -177,7 +177,7 @@ def _onecore_synthesize_segment(
     attempts = 0
     for _ in range(10):
         attempts += 1
-        data    = asyncio.run(_onecore_synthesize_bytes_async(text, v, r))
+        data    = asyncio.run(asyncio.wait_for(_onecore_synthesize_bytes_async(text, v, r), timeout=90))
         bio     = io.BytesIO(data)
         segment = AudioSegment.from_file(bio, format="wav")
         if len(segment) <= t or r >= h:

@@ -23,7 +23,7 @@ def export_commands(job):
         if not job.common.values.get('voice'):
             raise ValueError('Choisissez une voix.')
         flags = dict.fromkeys(BOOLS, False)
-        flags.update(translate=job.common.translate, recursive=job.recursive,
+        flags.update(translate=job.common.translate, offline=job.common.offline, recursive=job.recursive,
                      preserve_tree=job.preserve_tree, skip_existing=job.resume,
                      overwrite=not job.resume, dry_run=job.dry_run)
         return [launcher_command(batch_command(job.common.values, flags, job.sources, job.output))]

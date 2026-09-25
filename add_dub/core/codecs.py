@@ -36,9 +36,13 @@ def final_audio_codec_args(audio_codec_final: str, audio_bitrate: str | None) ->
         args = ["-c:a", "flac"]
     elif codec == "pcm_s16le":
         args = ["-c:a", "pcm_s16le"]
+    elif codec in {"opus", "libopus"}:
+        args = ["-c:a", "libopus"]
+    elif codec in {"vorbis", "libvorbis"}:
+        args = ["-c:a", "libvorbis"]
     else:
-        args = ["-c:a", "aac"]
+        raise ValueError(f'Codec audio non pris en charge : {audio_codec_final}')
 
-    if audio_bitrate and codec in lossy:
+    if audio_bitrate and codec in lossy | {"libopus", "libvorbis"}:
         args += ["-b:a", audio_bitrate]
     return args

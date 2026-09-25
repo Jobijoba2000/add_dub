@@ -66,7 +66,11 @@ def _gather_targets(paths: Optional[List[str]], recursive: bool, preserve_tree: 
     for p in paths:
         if not p:
             continue
-        p = os.path.abspath(p.strip('"'))  # tolère les guillemets passés dans le .bat
+        raw = p.strip('"')
+        p = os.path.abspath(raw)
+        if not os.path.exists(p):
+            p = os.path.abspath(os.path.join(io_fs.INPUT_DIR, raw))
+        #  # tolère les guillemets passés dans le .bat
 
         # Fichier vidéo direct
         if os.path.isfile(p) and p.lower().endswith(exts):
@@ -137,7 +141,7 @@ def _build_services(args):
     def _choose_audio_track(input_video_path: str) -> int:
         tracks = get_track_info(input_video_path) or []
         if not tracks:
-            return 0
+            raise ValueError(f"Aucune piste audio : {input_video_path}")
         idx = tracks[0].get("index", 0)
         try:
             return int(idx)
@@ -146,7 +150,7 @@ def _build_services(args):
 
     def _auto_sub_choice(input_video_path: str) -> Optional[Tuple[str, Optional[int]]]:
         try:
-            if find_sidecar_srt(input_video_path):
+            if find_sidecar_srt(input_video_path) or _srt_in_srt_dir_for_video(input_video_path):
                 return ("srt", None)
         except Exception:
             pass
@@ -157,14 +161,12 @@ def _build_services(args):
         if mode == "stream":
             return ("stream", args.sub_index)
         if mode == "srt":
-            # Priorité 1 : srt/
-            in_srt = _srt_in_srt_dir_for_video(input_video_path)
-            if in_srt:
-                return ("srt", in_srt)
-            # Priorité 2 : sidecar
             sidecar = find_sidecar_srt(input_video_path)
             if sidecar:
                 return ("srt", sidecar)
+            in_srt = _srt_in_srt_dir_for_video(input_video_path)
+            if in_srt:
+                return ("srt", in_srt)
             return ("srt", None)
         if mode == "mkv":
             try:
@@ -229,6 +231,7 @@ def _make_options(args) -> DubOptions:
         translate_from=args.translate_from,
         translation_engine=args.translation_engine,
         batch_mode=True,
+        offline=getattr(args, "offline", False),
         overwrite=args.overwrite,
         skip_existing=getattr(args, "skip_existing", False),
     )
@@ -247,6 +250,14 @@ def main(args) -> int:
     svcs = _build_services(args)
     opts = _make_options(args)
 
+    destinations = set()
+    for path, rel_dir in targets:
+        destination = os.path.normcase(os.path.abspath(os.path.join(
+            args.output_dir or io_fs.OUTPUT_DIR, rel_dir, os.path.splitext(os.path.basename(path))[0])))
+        if destination in destinations:
+            svcs.ui.error('Deux vidéos visent la même sortie. Utilisez --preserve-tree ou des lots séparés.')
+            return 2
+        destinations.add(destination)
     any_error = False
     for path, rel_dir in targets:
         print(t("cli_batch_start", path=path))
@@ -257,31 +268,35 @@ def main(args) -> int:
         else:
             out_dir = args.output_dir or None
 
-        if args.dry_run:
-            sub_choice = svcs.choose_subtitle_source(path)
+        try:
+            if args.dry_run:
+                sub_choice = svcs.choose_subtitle_source(path)
+                aud_idx = opts.audio_ffmpeg_index if opts.audio_ffmpeg_index is not None else svcs.choose_audio_track(path)
+                print(t("cli_sub_choice", choice=sub_choice))
+                print(t("cli_audio_index", index=aud_idx))
+                print(t("cli_tts_engine", engine=opts.tts_engine))
+                print(t("cli_voice", voice=opts.voice_id))
+                print(t("cli_codec", codec=opts.audio_codec, bitrate=opts.audio_bitrate))
+                print(t("cli_mix", bg_mix=opts.bg_mix, tts_mix=opts.tts_mix, ducking_db=opts.db_reduct))
+                print(t("cli_rates", min=opts.min_rate_tts, max=opts.max_rate_tts))
+                print(t("cli_offsets", offset=opts.offset_ms, offset_video=opts.offset_video_ms))
+                continue
+
             aud_idx = opts.audio_ffmpeg_index if opts.audio_ffmpeg_index is not None else svcs.choose_audio_track(path)
-            print(t("cli_sub_choice", choice=sub_choice))
-            print(t("cli_audio_index", index=aud_idx))
-            print(t("cli_tts_engine", engine=opts.tts_engine))
-            print(t("cli_voice", voice=opts.voice_id))
-            print(t("cli_codec", codec=opts.audio_codec, bitrate=opts.audio_bitrate))
-            print(t("cli_mix", bg_mix=opts.bg_mix, tts_mix=opts.tts_mix, ducking_db=opts.db_reduct))
-            print(t("cli_rates", min=opts.min_rate_tts, max=opts.max_rate_tts))
-            print(t("cli_offsets", offset=opts.offset_ms, offset_video=opts.offset_video_ms))
+            sub_ch = svcs.choose_subtitle_source(path)
+            run_opts = replace(opts, audio_ffmpeg_index=aud_idx, sub_choice=sub_ch)
+            out = process_one_video(
+                input_video_path=path,
+                input_video_name=os.path.basename(path),
+                output_dir_path=out_dir,
+                opts=run_opts,
+                svcs=svcs,
+                limit_duration_sec=args.limit_duration_sec,
+            )
+        except Exception as exc:
+            svcs.ui.error(f'{path} : {exc}')
+            any_error = True
             continue
-
-        aud_idx = opts.audio_ffmpeg_index if opts.audio_ffmpeg_index is not None else svcs.choose_audio_track(path)
-        sub_ch = svcs.choose_subtitle_source(path)
-        run_opts = replace(opts, audio_ffmpeg_index=aud_idx, sub_choice=sub_ch)
-
-        out = process_one_video(
-            input_video_path=path,
-            input_video_name=os.path.basename(path),
-            output_dir_path=out_dir,
-            opts=run_opts,
-            svcs=svcs,
-            limit_duration_sec=args.limit_duration_sec,
-        )
         if not out:
             any_error = True
 

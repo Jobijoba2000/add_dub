@@ -303,7 +303,7 @@ class PreviewPane(QWidget):
             self.directory = Path(tempfile.mkdtemp(prefix='gui-preview-', dir=fs.TMP_DIR)).resolve()
             settings.values['limit_duration_sec'] = ''
             flags = dict.fromkeys(BOOLS, False)
-            flags.update(translate=settings.translate, overwrite=True)
+            flags.update(translate=settings.translate, offline=settings.offline, overwrite=True)
             command = batch_command(settings.values, flags, [self.video.path], str(self.directory))
             env = QProcessEnvironment.systemEnvironment()
             for key, value in {'ADD_DUB_GUI_WORK_TMP': str(self.directory),

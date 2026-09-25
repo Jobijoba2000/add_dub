@@ -27,8 +27,13 @@ class RunFilesTests(unittest.TestCase):
                 window = Application(parse_args(['--gui'])[0])
             window.jobs = [job]
             try:
-                with patch('add_dub.core.pipeline._dub_code_from_voice', return_value='fr') as language, patch.object(window, 'next_file'):
+                with patch('add_dub.adapters.ffmpeg.validate_media'), patch('add_dub.core.pipeline._dub_code_from_voice', return_value='fr') as language, patch.object(window, 'next_file'):
                     window.start()
+                    import time
+                    deadline = time.monotonic() + 5
+                    while len(window.pending) != 58 and time.monotonic() < deadline:
+                        app.processEvents()
+                        time.sleep(.01)
                 language.assert_called_once_with('fr')
                 self.assertEqual(len(window.pending), 58)
                 self.assertEqual(len(job.completed), 42)
@@ -41,8 +46,13 @@ class RunFilesTests(unittest.TestCase):
                 window.request_stop()
                 self.assertEqual(window.progress.value(), 0)
                 self.assertEqual(len(job.completed), 42)
-                with patch('add_dub.core.pipeline._dub_code_from_voice', return_value='fr'), patch.object(window, 'next_file'):
+                with patch('add_dub.adapters.ffmpeg.validate_media'), patch('add_dub.core.pipeline._dub_code_from_voice', return_value='fr'), patch.object(window, 'next_file'):
                     window.start()
+                    import time
+                    deadline = time.monotonic() + 5
+                    while len(window.pending) != 58 and time.monotonic() < deadline:
+                        app.processEvents()
+                        time.sleep(.01)
                 self.assertEqual(len(window.pending), 58)
                 self.assertEqual(window.progress.value(), 0)
             finally:

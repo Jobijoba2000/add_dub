@@ -181,4 +181,10 @@ Après préparation de l’environnement avec `start_add_dub.bat`, lancez `compi
 
 Le cadre architectural et les limites repérées sont détaillés dans [AUDIT.md](AUDIT.md).
 
+Les corrections de fiabilité, les nouveaux tests et le parcours de vérification manuelle sont décrits dans [docs/audit-corrections.md](docs/audit-corrections.md). Les sorties sont publiées après validation du muxage ; la console et le batch exigent un remplacement explicite lorsqu'une sortie existe. `--skip-existing` vérifie la structure du média avant de l'ignorer. La piste audio originale sélectionnée est copiée sans réencodage ; la vidéo AVI reste transcodée en H.264.
+
+CTranslate2 conserve le texte local et ne bascule plus vers Google. Ses modèles peuvent être téléchargés au premier usage. Pour interdire aussi ces téléchargements : `--batch --offline --tts-engine onecore --translation-engine ctranslate2`. Un modèle manquant ou un échec de traduction interrompt la vidéo concernée. Google et les moteurs vocaux connectés transmettent le texte aux services sélectionnés.
+
+Le lanceur installe les versions et archives vérifiées de `requirements.lock.txt` (Windows x64, Python 3.12). La compilation inclut `models.lock.json` et un inventaire `THIRD_PARTY.json`. Les alertes de dépendances non résolues sont exposées dans [docs/security-review.md](docs/security-review.md).
+
 La fenêtre utilise PySide6/Qt et reste compatible avec l’agrandissement Windows et la Loupe. La dépendance est installée dans la venv du projet, créée avec le Python de `tools`.

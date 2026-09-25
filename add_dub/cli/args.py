@@ -75,7 +75,16 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_mix.add_argument("--max-rate-tts", type=float, metavar="RATE", default=fused["max_rate_tts"], help=t("help_max_rate_tts"))
     g_mix.add_argument("--limit-duration-sec", type=int, metavar="SEC", default=None, help=t("help_limit_duration"))
 
-    args, unknown = parser.parse_known_args(argv)
+    parser.add_argument('--offline', action='store_true', help='Aucun service distant ni téléchargement de modèle')
+    args = parser.parse_args(argv)
+    unknown = []
+    from add_dub.core.validation import validate_numbers
+    try:
+        validate_numbers(vars(args))
+        if args.offline and (args.tts_engine != 'onecore' or (args.translate and args.translation_engine == 'google')):
+            raise ValueError('--offline exige OneCore et une traduction locale.')
+    except ValueError as exc:
+        parser.error(str(exc))
 
     # Normalisation de --sub en sub_mode + sub_index
     raw = (getattr(args, "sub", "auto") or "auto").strip().lower()
@@ -88,8 +97,7 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     elif raw in ("auto", "srt", "mkv"):
         sub_mode = raw
     else:
-        sub_mode = "auto"
-        sub_index = 0
+        parser.error("Sous-titres : utilisez auto, srt, mkv:index ou stream:index")
 
     args.sub_mode = sub_mode
     args.sub_index = sub_index

@@ -43,6 +43,7 @@ class Player:
             function.restype, function.argtypes = result, args
         self.handle = self.lib.mpv_create()
         self.error = None
+        self.loaded = False
         if not self.handle:
             raise RuntimeError('Création du lecteur mpv impossible.')
         try:
@@ -96,6 +97,9 @@ class Player:
                 continue
             if event.id == 6:  # MPV_EVENT_START_FILE
                 self.error = None
+                self.loaded = False
+            elif event.id == 8:  # MPV_EVENT_FILE_LOADED
+                self.loaded = True
             elif event.id == 7 and event.data:  # MPV_EVENT_END_FILE
                 end = c.cast(event.data, c.POINTER(EndFile)).contents
                 if end.reason == 4:
@@ -103,6 +107,7 @@ class Player:
 
     def play(self, path):
         self.error = None
+        self.loaded = False
         self._set('lavfi-complex', '')
         self._set('pause', 'no')
         self._set('sid', 'auto')
@@ -128,6 +133,8 @@ class Player:
         self._drain_events()
         if self.error:
             return 7
+        if not self.loaded:
+            return 0
         if self._get('idle-active') == 'yes':
             return 0
         if self._get('eof-reached') == 'yes':
@@ -144,7 +151,11 @@ class Player:
         return round(float(self._get('duration', '0')) * 1000)
 
     def set_position(self, fraction):
+        self._drain_events()
+        if not self.loaded or self._get('seekable') != 'yes':
+            return False
         self._command('seek', max(0, min(100, fraction * 100)), 'absolute-percent+exact')
+        return True
 
     def get_position(self):
         total = self.get_length()
@@ -221,7 +232,7 @@ class Player:
             raise RuntimeError('Les deux WAV préparés n’ont pas été ajoutés à mpv.')
         original_id, tts_id = tracks[-2]['id'], tracks[-1]['id']
         self._set('lavfi-complex',
-                  f"[aid{original_id}] [aid{tts_id}] amix=inputs=2:duration=longest:normalize=0:weights='{float(bg_mix):.6f} {float(tts_mix):.6f}' [ao]")
+                  f"[aid{original_id}] [aid{tts_id}] amix=inputs=2:duration=longest:normalize=0:weights='{float(bg_mix):.6f} {float(tts_mix):.6f}',alimiter=limit=0.95:level=0:latency=1 [ao]")
         return True
 
     def select_subtitle_track(self, track_id):

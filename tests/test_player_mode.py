@@ -18,6 +18,8 @@ class PlayerModeTests(unittest.TestCase):
             self.assertEqual(player.call_args.args[0].input, ['film.mkv'])
 
     def test_worker_dispatch(self):
-        with patch('add_dub.player.core.generation.main', return_value=7) as worker:
+        with patch('add_dub.player.core.generation.main', return_value=7) as worker, \
+             patch('add_dub.cli.batch_lifecycle.run', side_effect=lambda fn, args, argv: fn(args)) as supervise:
             self.assertEqual(main(['--player-generate', 'request.json']), 7)
             worker.assert_called_once_with('request.json')
+            supervise.assert_called_once()

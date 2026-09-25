@@ -565,7 +565,7 @@
       }
 
       const sub = document.getElementById('sel-sub').value;
-      if (sub && sub !== 'auto') {
+      if (sub) {
         cmd += ` --sub ${sub}`;
       }
 
@@ -575,50 +575,52 @@
         if (transTo) cmd += ` --translate-to ${transTo}`;
         const transFrom = document.getElementById('sel-trans-from').value;
         if (transFrom) cmd += ` --translate-from ${transFrom}`;
+      } else {
+        cmd += ' --no-translate';
       }
 
       const ducking = document.getElementById('input-ducking').value;
-      if (ducking && ducking !== '5.0') {
+      if (ducking) {
         cmd += ` --ducking-db ${ducking}`;
       }
 
       const bgMix = document.getElementById('input-bg-mix').value;
-      if (bgMix && bgMix !== '1.0') {
+      if (bgMix) {
         cmd += ` --bg-mix ${bgMix}`;
       }
 
       const ttsMix = document.getElementById('input-tts-mix').value;
-      if (ttsMix && ttsMix !== '1.0') {
+      if (ttsMix) {
         cmd += ` --tts-mix ${ttsMix}`;
       }
 
       const offAudio = document.getElementById('input-offset-audio').value;
-      if (offAudio && offAudio !== '0') {
+      if (offAudio) {
         cmd += ` --offset-ms ${offAudio}`;
       }
 
       const offVideo = document.getElementById('input-offset-video').value;
-      if (offVideo && offVideo !== '0') {
+      if (offVideo) {
         cmd += ` --offset-video-ms ${offVideo}`;
       }
 
       const minRate = document.getElementById('input-min-rate').value;
-      if (minRate && minRate !== '1.2') {
+      if (minRate) {
         cmd += ` --min-rate-tts ${minRate}`;
       }
 
       const maxRate = document.getElementById('input-max-rate').value;
-      if (maxRate && maxRate !== '1.8') {
+      if (maxRate) {
         cmd += ` --max-rate-tts ${maxRate}`;
       }
 
       const codec = document.getElementById('sel-audio-codec').value;
-      if (codec && codec !== 'ac3') {
+      if (codec) {
         cmd += ` --audio-codec ${codec}`;
       }
 
       const bitrate = document.getElementById('sel-audio-bitrate').value;
-      if (bitrate && bitrate !== '256') {
+      if (bitrate) {
         cmd += ` --audio-bitrate ${bitrate}`;
       }
 

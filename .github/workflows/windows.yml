@@ -1,0 +1,66 @@
+name: Windows validation
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare portable runtime and tools
+        shell: pwsh
+        run: |
+          ./scripts/prepare_python.ps1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./tools/python/python.exe scripts/prepare_tools.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./tools/python/python.exe -m venv .venv
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./.venv/Scripts/python.exe -m pip install --require-hashes -r requirements.lock.txt
+          exit $LASTEXITCODE
+      - name: Unit and real media tests
+        run: |
+          ./.venv/Scripts/python.exe -m pip check
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./.venv/Scripts/python.exe -m unittest discover -s tests -v
+          exit $LASTEXITCODE
+      - name: Compile portable application
+        if: matrix.os == 'windows-2022'
+        shell: cmd
+        run: compil.bat
+      - name: Check packaged entry point
+        if: matrix.os == 'windows-2022'
+        run: |
+          ./dist/add_dub/add_dub.exe --help
+          exit $LASTEXITCODE
+      - name: Save inventory
+        if: matrix.os == 'windows-2022'
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-inventory
+          path: dist/add_dub/THIRD_PARTY.json
+  dependencies:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install pip-audit==2.10.1
+      - name: Report dependency advisories (see docs/security-review.md)
+        continue-on-error: true
+        run: python -m pip_audit --disable-pip --no-deps -r requirements.lock.txt -f json -o dependency-audit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-advisories
+          path: dependency-audit.json

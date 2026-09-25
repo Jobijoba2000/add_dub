@@ -287,6 +287,8 @@ def resolve_voice_with_fallbacks(
         return voices[0]["id"]
 
     # 4) Fallback OneCore système
+    if eng != "onecore":
+        return None
     sysdef = _onecore_system_default()
     if sysdef:
         return sysdef

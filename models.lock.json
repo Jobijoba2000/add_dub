@@ -1,0 +1,7 @@
+{
+  "ocr_tessdata": "ced78752cc61322fb554c280d13360b35b8684e4",
+  "ocr_dictionary": "d0ce5a611aa81b6e9d5127d83619bb44bd9e53a3",
+  "michaelfeil/ct2fast-opus-mt-en-fr": "55bcef18761227161433d86b81bbbcd9d813b429",
+  "michaelfeil/ct2fast-opus-mt-fr-en": "cb3b2d680bf35591a508d8479e2c99c44e281ef3",
+  "osa911/nllb-200-distilled-600M-ct2-int8": "46858753dbaf8eb5e21bb6f0037c3b90851e090a"
+}

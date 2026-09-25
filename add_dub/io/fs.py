@@ -115,7 +115,12 @@ def join_output(path: str, output_dir=None) -> str:
 
 
 def join_tmp(path: str) -> str:
-    return os.path.join(TMP_DIR, path)
+    return os.path.join(get_tmp_dir(), path)
+
+
+def get_tmp_dir() -> str:
+    from .work import CURRENT
+    return CURRENT.get() or TMP_DIR
 
 
 def join_srt(filename: str) -> str:

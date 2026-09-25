@@ -12,7 +12,7 @@ sentencepiece==0.2.1
 langdetect==1.0.9
 ctranslate2==4.8.1
 deep-translator==1.11.4
-huggingface_hub>=0.20.0
+huggingface_hub==1.16.1
 pyinstaller==6.22.2
 PySide6-Essentials==6.8.2.1
 

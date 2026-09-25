@@ -32,7 +32,7 @@ FIELDS = (
 )
 INTS = {'audio_index', 'audio_bitrate', 'offset_ms', 'offset_video_ms', 'limit_duration_sec'}
 FLOATS = {'ducking_db', 'bg_mix', 'tts_mix', 'min_rate_tts', 'max_rate_tts'}
-BOOLS = ('translate', 'recursive', 'preserve_tree', 'overwrite', 'skip_existing', 'dry_run')
+BOOLS = ('translate', 'recursive', 'preserve_tree', 'overwrite', 'skip_existing', 'dry_run', 'offline')
 
 
 def batch_command(values, flags, paths, output):
@@ -56,6 +56,8 @@ def batch_command(values, flags, paths, output):
         except ValueError:
             label = next(label for key, label, _ in FIELDS if key == name)
             raise ValueError(f'Valeur numérique invalide : {label}') from None
+    from add_dub.core.validation import validate_numbers
+    validate_numbers({**numbers, **flags})
     for name in ('audio_bitrate', 'min_rate_tts', 'max_rate_tts', 'limit_duration_sec'):
         if name in numbers and numbers[name] <= 0:
             raise ValueError(f'{name} doit être strictement positif.')
@@ -81,7 +83,7 @@ def batch_command(values, flags, paths, output):
             command += ['--' + name.replace('_', '-'), raw]
     command += ['--translate' if flags['translate'] else '--no-translate']
     for name in BOOLS[1:]:
-        if flags[name]:
+        if flags.get(name, False):
             command.append('--' + name.replace('_', '-'))
     return command
 
@@ -124,11 +126,12 @@ class Settings:
     translate: bool = False
     audio: Track | None = None
     subtitle: Track | None = None
+    offline: bool = False
 
     @classmethod
     def from_args(cls, args):
         return cls({key: '' if getattr(args, key, None) is None else str(getattr(args, key))
-                    for key, _, _ in FIELDS}, args.translate)
+                    for key, _, _ in FIELDS}, args.translate, offline=getattr(args, "offline", False))
 
 
 def match_track(reference, tracks):
@@ -215,7 +218,7 @@ class Job:
                 raise ValueError('Deux vidéos portent le même nom dans la même sortie. Activez la conservation de l’arborescence ou créez des lots séparés.')
             outputs[collision_key] = video.path
             flags = dict.fromkeys(BOOLS, False)
-            flags.update(translate=settings.translate, skip_existing=self.resume,
+            flags.update(translate=settings.translate, offline=settings.offline, skip_existing=self.resume,
                          overwrite=not self.resume, dry_run=self.dry_run)
             result.append((video, batch_command(settings.values, flags, [video.path], output)))
         if not result:

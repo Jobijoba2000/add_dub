@@ -44,6 +44,8 @@ class DubOptions:
     skip_existing: bool = False                       # si True, saute les vidéos dont la sortie existe déjà (avant TTS)
     reuse_translated_subs: bool = True                # si True, réutilise le SRT traduit existant
     ask_reuse_subs: bool = True                       # si True, demande confirmation pour réutiliser
+    offline: bool = False                            # aucun téléchargement ni service distant
+    work_dir: Optional[str] = None                   # transmis aux workers de synthèse
 
 
 __all__ = ["DubOptions"]
