@@ -45,20 +45,17 @@ class ConsoleTimingTests(unittest.TestCase):
                 ducking.lower_audio_during_subtitles(root / 'tts.wav', [(0, .1, 'Bonjour')], root / 'duck.wav')
             self.assertTrue(output.getvalue().endswith('Progress: 100.0%\n2.000 s\n1.000 s\n'))
 
-    def test_total_starts_after_overwrite_confirmation(self):
+    def test_interactive_existing_output_does_not_prompt_or_force_translation_overwrite(self):
         with tempfile.TemporaryDirectory() as folder, patch.object(fs, 'TMP_DIR', folder):
             (Path(folder) / 'film [dub-fr].mkv').touch()
             clock = [0]
-            def answer(*args, **kwargs):
-                clock[0] += 120  # temps passé à réfléchir avant de répondre
-                return True
             @logger.log_time
             def process(**kwargs):
-                self.assertTrue(kwargs['opts'].overwrite)
+                self.assertFalse(kwargs['opts'].overwrite)
                 clock[0] += 3
                 return 'finished'
             ui = Mock()
-            ui.ask_yes_no.side_effect = answer
+            ui.ask_yes_no.side_effect = AssertionError("Aucune question de remplacement")
             output = io.StringIO()
             with patch.object(pipeline, '_dub_code_from_voice', return_value='fr'), \
                  patch.object(pipeline, '_process_one_video', side_effect=process), \
@@ -69,7 +66,7 @@ class ConsoleTimingTests(unittest.TestCase):
             self.assertEqual(result, 'finished')
             self.assertEqual(output.getvalue(), '3.000 s\n')
 
-    def test_refused_overwrite_does_not_start_timed_processing(self):
+    def test_batch_existing_output_still_requires_explicit_overwrite(self):
         with tempfile.TemporaryDirectory() as folder:
             (Path(folder) / 'film [dub-fr].mkv').touch()
             ui = Mock()
@@ -78,5 +75,6 @@ class ConsoleTimingTests(unittest.TestCase):
                  patch.object(pipeline, '_process_one_video') as process:
                 with self.assertRaises(FileExistsError):
                     pipeline.process_one_video(input_video_path='film.mkv', input_video_name='film.mkv',
-                        output_dir_path=folder, opts=DubOptions(), svcs=Mock(ui=ui))
+                        output_dir_path=folder, opts=DubOptions(batch_mode=True), svcs=Mock(ui=ui))
                 process.assert_not_called()
+                ui.ask_yes_no.assert_not_called()

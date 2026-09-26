@@ -19,7 +19,7 @@ Les fichiers SRT temporaires déjà effacés par la version précédente ne sont
 | Sujet de l'audit | Comportement corrigé |
 |---|---|
 | SRT et traductions | Règles historiques rétablies : SRT central persistant, priorité et noms antérieurs, réutilisation des traductions. Les autres fichiers de travail restent temporaires. |
-| Protection des sorties | Muxage provisoire, contrôle FFprobe, publication atomique ; remplacement explicite. Une sortie existante invalide n'est plus considérée comme terminée. |
+| Protection des sorties | Muxage provisoire, contrôle FFprobe, publication atomique ; remplacement automatique en interactif et explicite en batch. Une sortie existante invalide n'est plus considérée comme terminée. |
 | Réseau et confidentialité | TLS vérifié pour gTTS, délais de connexion/lecture, tâches TTS interrompues après blocage. CTranslate2 n'utilise plus Google en secours. `--offline` interdit les services distants et les téléchargements. |
 | Encodages | Décodage commun UTF-8, UTF-8 avec BOM, UTF-16 avec BOM et CP1252 ; nettoyage d'une copie sans modifier le SRT utilisateur. |
 | Synthèse | Orchestration et assemblage de `0f067bf` rétablis à la demande de l’utilisateur : threads Edge/gTTS, processus OneCore, parallélisme et règles de reprise d’origine. Les protections réseau des moteurs restent en place. |
@@ -62,7 +62,7 @@ Après rétablissement : **110 tests réussis**, dont les parcours persistants S
 1. **GUI et aperçu** : lancer `start_add_dub.bat --gui`, ajouter un petit MKV, tester l'aperçu, pause, navigation, volumes et sous-titres, puis produire le doublage.
 2. **Sources intactes** : vérifier qu'un SRT CP1252 avec accents est bien lu et que le fichier d'origine n'a pas changé.
 3. **Réutilisation SRT** : traiter une piste intégrée, puis rouvrir la vidéo et sélectionner le SRT conservé. Vérifier que l’extraction ou l’OCR n’est pas relancé.
-4. **Remplacement** : relancer une sortie existante sans remplacement, puis avec remplacement. Interrompre le second traitement ; la précédente sortie doit rester lisible.
+4. **Remplacement** : en interactif, relancer une sortie existante : aucune question de remplacement ne doit apparaître. En batch, utiliser `--overwrite`. Interrompre le traitement avant publication ; la précédente sortie doit rester lisible.
 5. **Traduction** : essayer Google puis CTranslate2. Sans modèle disponible, `--offline --tts-engine onecore --translation-engine ctranslate2` doit signaler l'absence du modèle sans envoyer le texte à Google.
 6. **Lecteur** : lancer `--player`, sélectionner une piste, vocaliser, puis vérifier « Rejouer », « Continuer », le raccourci et l'annulation.
 7. **Lot avec erreur** : mélanger une vidéo invalide et une vidéo valide ; vérifier que la seconde est traitée et que le lot signale un échec global.
@@ -80,7 +80,7 @@ Les deux alertes de dépendances restantes et les limites de validation sont dé
 
 ## Affichage des durées en console
 
-Les chronomètres TTS et ducking ont été rétablis. La progression termine sa ligne à 100 % avant l’affichage de la durée. La confirmation de remplacement est exécutée avant le démarrage du traitement chronométré ; une sortie ignorée ou un remplacement refusé ne lance pas ce chronomètre. Validation : 114 tests réussis, dont quatre tests dédiés aux durées et à l’affichage console.
+Les chronomètres TTS et ducking ont été rétablis. La progression termine sa ligne à 100 % avant l’affichage de la durée. La question de remplacement a été supprimée du mode interactif. Le remplacement est automatique, sans désactiver la réutilisation des traductions. Une sortie ignorée ne lance pas le chronomètre. Validation : 114 tests réussis, dont quatre tests dédiés aux durées et à l’affichage console.
 
 ## Retour au traitement TTS d’origine
 

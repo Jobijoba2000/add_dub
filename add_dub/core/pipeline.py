@@ -338,6 +338,9 @@ def _process_one_video(
     # La GUI ne publie le MKV qu’après la sortie réussie du processus.
     # Un arrêt pendant le mixage ne touche ainsi aucune sortie précédente.
     mux_output = os.environ.get('ADD_DUB_GUI_PARTIAL_OUTPUT') or final_video
+    # En interactif, remplacer la vidéo comme auparavant, sans forcer
+    # la régénération des traductions réutilisables.
+    mux_opts = replace(opts, overwrite=opts.overwrite or not opts.batch_mode)
     dub_in_one_pass(
         video_fullpath=input_video_path,
         bg_wav=ducked_wav,
@@ -345,7 +348,7 @@ def _process_one_video(
         original_wav=orig_wav,
         subtitle_srt_path=srt_path,
         output_video_path=mux_output,
-        opts=opts,
+        opts=mux_opts,
         progress_cb=svcs.ui.progress,
         duration_sec=limit_duration_sec,
     )
@@ -391,7 +394,7 @@ def _process_one_video(
 
     if os.environ.get('ADD_DUB_GUI_PARTIAL_OUTPUT'):
         with open(os.path.join(os.environ['ADD_DUB_GUI_WORK_TMP'], 'result.json'), 'w', encoding='utf-8') as manifest:
-            json.dump({'destination': final_video, 'overwrite': opts.overwrite}, manifest)
+            json.dump({'destination': final_video, 'overwrite': mux_opts.overwrite}, manifest)
     return final_video
 
 
@@ -402,7 +405,7 @@ def process_one_video(**kwargs):
     from add_dub.core import translation
     from add_dub.core.validation import validate_options
     validate_options(kwargs['opts'])
-    # Les confirmations et les sorties ignorées ne font pas partie du traitement chronométré.
+    # Les sorties ignorées ne font pas partie du traitement chronométré.
     opts = kwargs['opts']
     svcs = kwargs['svcs']
     input_video_path = kwargs['input_video_path']
@@ -418,10 +421,8 @@ def process_one_video(**kwargs):
             emit('existing_output', path=final_video)
             svcs.ui.message(f"[SKIP] Fichier déjà existant : {os.path.basename(final_video)}")
             return final_video
-        if opts.batch_mode or not svcs.ui.ask_yes_no(
-                f"Remplacer la sortie existante {final_video} ?", default=False):
+        if opts.batch_mode:
             raise FileExistsError(f'Sortie existante : {final_video}. Utilisez --overwrite ou --skip-existing.')
-        opts = replace(opts, overwrite=True)
 
     kwargs['opts'] = opts
     with work_directory() as directory:

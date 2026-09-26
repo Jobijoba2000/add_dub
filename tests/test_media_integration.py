@@ -117,6 +117,13 @@ class MediaIntegrationTests(unittest.TestCase):
                 process_one_video(input_video_path=str(self.video), input_video_name=self.video.name,
                                   output_dir_path=str(self.root / 'pipeline'), opts=options, svcs=services)
             self.assertEqual(list(work.iterdir()), [])
+            services.ui.ask_yes_no.side_effect = AssertionError('Pas de confirmation en interactif')
+            rerun = process_one_video(input_video_path=str(self.video), input_video_name=self.video.name,
+                                     output_dir_path=str(self.root / 'pipeline'),
+                                     opts=replace(options, batch_mode=False), svcs=services)
+            self.assertEqual(rerun, result)
+            self.assertGreater(float(probe_media(rerun)['format']['duration']), 1.9)
+            services.ui.ask_yes_no.assert_not_called()
 
     def test_real_threaded_edge_workers_complete_without_network(self):
         from add_dub.core.tts_generate import generate_dub_audio
