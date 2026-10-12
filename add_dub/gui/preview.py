@@ -348,7 +348,7 @@ class PreviewPane(QWidget):
                         self.progress_extract.setText(f"Extraction de l’extrait : {float(event.get('value', 0)):.1f} %")
                         continue
                     self.tracker.update(event)
-                    self.progress_process.setText(f'Traitement du doublage : {self.tracker.percent:.1f} %')
+                    self.progress_process.setText(self.tracker.text)
                 except (ValueError, KeyError):
                     pass
 

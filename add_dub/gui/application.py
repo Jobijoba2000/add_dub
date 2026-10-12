@@ -25,7 +25,7 @@ from add_dub.io import fs
 from add_dub.gui.model import FIELDS, BOOLS, batch_command, Job, Settings
 from add_dub.gui.widgets import Async, SmoothTreeWidget, SpacedMenu, QueueTabBar
 from add_dub.gui.run import VideoRunFiles, partition_existing
-from add_dub.progress import PREFIX, VideoProgress, aggregate, remaining_seconds
+from add_dub.progress import PREFIX, LABELS, VideoProgress, aggregate, remaining_seconds
 from add_dub.gui.dialog import ConfigureDialog, yellow_folder_icon
 from add_dub.gui.theme import apply_theme, playback_icon, video_file_icon, settings_icon, icons8_icon
 
@@ -98,8 +98,8 @@ class Application(CaptionWindow):
         self.settings_button = QToolButton()
         self.settings_button.setText('Paramètres')
         self.settings_button.setIcon(settings_icon())
-        self.settings_button.setToolTip('Options globales - à venir')
-        self.settings_button.setEnabled(False)
+        self.settings_button.setToolTip('Modifier les paramètres généraux dans options.conf')
+        self.settings_button.clicked.connect(self.open_settings)
         for button in (self.open_button, self.settings_button):
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
             button.setIconSize(QSize(48, 48))
@@ -188,6 +188,36 @@ class Application(CaptionWindow):
         self.refresh()
         if args.input:
             QTimer.singleShot(0, lambda: self.configure_sources(args.input))
+
+    def open_settings(self):
+        if self.running:
+            return
+        from add_dub.gui.general_settings import GeneralSettingsDialog
+        try:
+            dialog = GeneralSettingsDialog(self.tasks, self)
+        except (ValueError, OSError) as exc:
+            QMessageBox.warning(self, 'Paramètres indisponibles', str(exc))
+            return
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.reload_defaults()
+        dialog.deleteLater()
+
+    def reload_defaults(self):
+        from add_dub.config.effective import effective_values
+        from add_dub.i18n import init_language
+        from add_dub.logger import reload_config
+        values = effective_values()
+        for key, _, _ in FIELDS:
+            if key in values:
+                setattr(self.args, key, values[key])
+        self.args.translate = values['translate']
+        fs.set_base_dirs(values['input_dir'], values['output_dir'], values['tmp_dir'])
+        init_language()
+        try:
+            reload_config()
+        except (ValueError, OSError) as exc:
+            QMessageBox.warning(self, 'Paramètres enregistrés',
+                                f'Le fichier est enregistré, mais le journal ne peut pas être ouvert : {exc}')
 
     def add_files(self):
         paths, _ = QFileDialog.getOpenFileNames(self, 'Ajouter des vidéos', fs.INPUT_DIR, 'Vidéos (*.mkv *.mp4 *.avi *.mov)')
@@ -332,6 +362,7 @@ class Application(CaptionWindow):
         self.update_queue_info()
         self.update_playback_button()
         self.open_button.setEnabled(not self.running)
+        self.settings_button.setEnabled(not self.running)
 
     def switch_queue(self, index):
         self.queue_stack.setCurrentIndex(index)
@@ -362,7 +393,10 @@ class Application(CaptionWindow):
         if self.active_bar:
             value = self.video_progress.percent
             self.active_bar.setValue(round(value * 10))
-            self.active_bar.setFormat(f'{self.video_progress.label} · {value:.1f} %'.replace('.', ','))
+            self.active_bar.setFormat(self.video_progress.text)
+            self.active_bar.setToolTip('Pourcentage de l’étape en cours et avancement total estimé.\n' +
+                                      '\n'.join(f'{LABELS[name]} : {weight / sum(self.video_progress.weights.values()):.0%}'
+                                                for name, weight in self.video_progress.weights.items()))
             self.active_bar.setAccessibleName(self.active_bar.format())
 
     def update_totals(self):

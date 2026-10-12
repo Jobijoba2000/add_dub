@@ -4,11 +4,13 @@ import os
 import math
 
 PREFIX = '@@ADD_DUB_PROGRESS@@'
-WEIGHTS = {'subtitles': 1, 'ocr': 30, 'translation': 30,
-           'audio': 19, 'tts': 50, 'ducking': 10, 'mux': 20}
+# Parts relatives, pas une mesure du temps restant. Les étapes facultatives
+# sont ajoutées au plan uniquement lorsqu'elles seront réellement exécutées.
+WEIGHTS = {'subtitles': 5, 'ocr': 40, 'translation': 30,
+           'audio': 10, 'tts': 60, 'ducking': 5, 'mux': 20}
 LABELS = {'subtitles': 'Extraction des sous-titres', 'ocr': 'OCR',
           'translation': 'Traduction', 'audio': 'Extraction audio',
-          'tts': 'Génération vocale', 'ducking': 'Ducking', 'mux': 'Mixage final'}
+          'tts': 'Génération vocale', 'ducking': 'Atténuation audio', 'mux': 'Mixage final'}
 
 
 def emit(kind, **data):
@@ -32,17 +34,29 @@ class VideoProgress:
         self.done = set()
         self.percent = 0.0
         self.label = 'Préparation'
+        self.within = None
+
+    @property
+    def text(self):
+        detail = 'en cours' if self.within is None else f'{self.within:.0f} %'
+        return f'{self.label} : {detail} · Total ≈ {int(self.percent)} %'
 
     def update(self, event):
         kind = event.get('event')
         if kind == 'plan':
             self.plan(event.get('subtitles', False), event.get('translation', False))
+            if event.get('ocr'):
+                self.weights['ocr'] = WEIGHTS['ocr']
+        elif kind == 'include' and event.get('name') in WEIGHTS:
+            self.weights.setdefault(event['name'], WEIGHTS[event['name']])
         elif kind == 'skip' and event.get('name') in self.weights:
             name = event['name']
             self.weights.pop(name)
             self.done.discard(name)
             if self.current == name:
                 self.current = None
+                self.within = None
+            self._advance(self.within or 0)
         elif kind == 'stage' and event.get('name') in WEIGHTS:
             name = event['name']
             if self.current and name != self.current:
@@ -50,6 +64,7 @@ class VideoProgress:
             self.weights.setdefault(name, WEIGHTS[name])
             self.current = name
             self.label = LABELS[name]
+            self.within = None
             self._advance(0)
         elif kind == 'progress' and self.current:
             try:
@@ -57,7 +72,8 @@ class VideoProgress:
             except (ValueError, TypeError, KeyError):
                 return
             if math.isfinite(value):
-                self._advance(max(0, min(100, value)))
+                self.within = max(self.within or 0, max(0, min(100, value)))
+                self._advance(self.within)
 
     def _advance(self, within):
         total = sum(self.weights.values()) or 1

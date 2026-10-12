@@ -94,7 +94,8 @@ def load_options() -> Dict[str, OptEntry]:
                 current_section = line[1:-1].strip().lower()
                 continue
             # commentaires inline ; et #
-            line = line.split(";", 1)[0].split("#", 1)[0].strip()
+            from add_dub.config.editor import split_comment
+            line = split_comment(line)[0].strip()
             if not line:
                 continue
 

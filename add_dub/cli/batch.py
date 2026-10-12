@@ -214,7 +214,7 @@ def _make_options(args) -> DubOptions:
     return DubOptions(
         audio_ffmpeg_index=args.audio_index,
         sub_choice=None,  # résolu plus tard
-        orig_audio_lang=args.orig_audio_lang if hasattr(args, "orig_audio_lang") else "Original",
+        orig_audio_lang=getattr(args, "orig_audio_lang", fused["orig_audio_lang"]),
         db_reduct=args.ducking_db,
         offset_ms=args.offset_ms,
         bg_mix=args.bg_mix,
@@ -232,6 +232,8 @@ def _make_options(args) -> DubOptions:
         translate_to=args.translate_to,
         translate_from=args.translate_from,
         translation_engine=args.translation_engine,
+        reuse_translated_subs=fused["reuse_translated_subs"],
+        ask_reuse_subs=False,
         batch_mode=True,
         offline=getattr(args, "offline", False),
         overwrite=args.overwrite,

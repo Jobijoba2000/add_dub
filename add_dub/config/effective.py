@@ -62,6 +62,7 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
     max_rate_tts = float(_conf_value(opts, "max_rate_tts", getattr(cfg, "MAX_RATE_TTS", 1.8)))
     ask_test_before_cleanup = bool(_conf_value(opts, "ask_test_before_cleanup", getattr(cfg, "ASK_TEST_BEFORE_CLEANUP", False)))
     translate = bool(_conf_value(opts, "translate", getattr(cfg, "TRANSLATE", False)))
+    reuse_translated_subs = bool(_conf_value(opts, "reuse_translated_subs", getattr(cfg, "REUSE_TRANSLATED_SUBS", True)))
     translate_to = str(_conf_value(opts, "translate_to", getattr(cfg, "TRANSLATE_TO", "fr")))
     translate_from = _conf_value(opts, "translate_from", getattr(cfg, "TRANSLATE_FROM", None))
     if translate_from:
@@ -99,6 +100,7 @@ def effective_values(root: str | None = None) -> Dict[str, Any]:
         # --- NOUVEAU ---
         "ask_test_before_cleanup": ask_test_before_cleanup,
         "translate": translate,
+        "reuse_translated_subs": reuse_translated_subs,
         "translate_to": translate_to,
         "translate_from": translate_from,
         "translation_engine": translation_engine,

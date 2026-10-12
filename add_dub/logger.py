@@ -1,8 +1,8 @@
 # add_dub/logger.py
 # ------------------------------------------------------------
 # Logger central du projet :
-# - Lit la config console depuis options.conf via opts_loader
-# - Écrit TOUT (DEBUG/INFO/...) dans un fichier rotatif (3x~5Mo)
+# - Lit la config console et fichier depuis options.conf via opts_loader
+# - Écrit par défaut TOUT dans un fichier rotatif (3x~5Mo)
 # - Affiche les logs en console avec timestamp + niveau
 # - NE PASSE PAS les durées dans le fichier : @log_time imprime
 #   uniquement "X.XXX s" en console (sans timestamp/LEVEL)
@@ -14,6 +14,7 @@ import time
 import inspect
 import hashlib
 import logging
+import threading
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 from add_dub.config.opts_loader import load_options, OptEntry
@@ -26,16 +27,26 @@ from add_dub.config.opts_loader import load_options, OptEntry
 #   console_enable = true|false
 #   console_level  = DEBUG|INFO|WARNING|ERROR|CRITICAL
 # ------------------------------------------------------------
-def _read_console_config():
+def _read_logging_config():
     opts = load_options()
 
     def _val(key, default):
         v = opts.get(key)
         return v.value if isinstance(v, OptEntry) else default
 
-    enable = bool(_val("logging.console_enable", True))
-    level = str(_val("logging.console_level", "DEBUG")).upper()
-    return enable, level
+    return {
+        "console_enable": bool(_val("logging.console_enable", True)),
+        "console_level": str(_val("logging.console_level", "DEBUG")).upper(),
+        "file_enable": bool(_val("logging.file_enable", True)),
+        "file_level": str(_val("logging.file_level", "DEBUG")).upper(),
+        "file_name": str(_val("logging.file_name", "add_dub.log")),
+        "dir": str(_val("logging.dir", "logs")),
+    }
+
+
+def _read_console_config():
+    config = _read_logging_config()
+    return config["console_enable"], config["console_level"]
 
 
 # ------------------------------------------------------------
@@ -47,6 +58,8 @@ logger.setLevel(logging.DEBUG)  # on capte tout (le filtrage se fait par handler
 # Références de handlers (pour éviter les doublons si module ré-importé)
 _console_handler: logging.Handler | None = None
 _file_handler: RotatingFileHandler | None = None
+_silence_handler = logging.NullHandler()
+_config_lock = threading.RLock()
 
 
 # ------------------------------------------------------------
@@ -72,52 +85,89 @@ def _build_console_handler(console_level_name: str) -> logging.Handler:
     return h
 
 
-def _build_file_handler() -> RotatingFileHandler:
-    """
-    Fichier : logs/add_dub.log à la racine + rotation (2 archives)
-    Format verbeux (timestamp + niveau + logger:ligne + message)
-    """
+def _logging_base_dir() -> str:
     if getattr(sys, 'frozen', False):
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        # Racine du projet (dossier parent de add_dub/)
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    log_dir = os.path.join(base_dir, "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    file_path = os.path.join(log_dir, "add_dub.log")
 
+def _log_file_path(config) -> str:
+    name = config["file_name"].strip()
+    if not name or name in {".", ".."} or any(c in name for c in '/\\'):
+        raise ValueError("Le nom du journal doit être un nom de fichier sans dossier.")
+    directory = config["dir"].strip()
+    if not directory:
+        raise ValueError("Le dossier des journaux ne peut pas être vide.")
+    return os.path.abspath(os.path.join(_logging_base_dir(), directory, name))
+
+
+def _build_file_handler(file_path=None, level_name="DEBUG") -> RotatingFileHandler:
+    """Journal configurable avec rotation de deux archives de 5 Mo."""
+    if file_path is None:
+        file_path = os.path.join(_logging_base_dir(), "logs", "add_dub.log")
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
     h = RotatingFileHandler(
         file_path,
         maxBytes=5_000_000,   # ~5Mo
         backupCount=2,        # courant + .1 + .2 = 3 fichiers
         encoding="utf-8"
     )
-    h.setLevel(logging.DEBUG)  # on garde tout dans le fichier
+    h.setLevel(getattr(logging, level_name.upper(), logging.DEBUG))
     h.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(name)s:%(lineno)d - %(message)s'))
     return h
 
 
-def _ensure_handlers_initialized() -> None:
-    """
-    Création/attachement unique des handlers (fichier + console).
-    Relit options.conf pour savoir si la console est activée et à quel niveau.
+def reload_config() -> None:
+    """Applique options.conf sans perdre les anciens handlers en cas d'échec.
+
+    Le nouveau fichier est ouvert avant de détacher l'ancien. Un simple
+    changement de niveau conserve le même fichier ouvert.
     """
     global _console_handler, _file_handler
+    with _config_lock:
+        config = _read_logging_config()
+        new_file = None
+        new_console = None
+        try:
+            if config["file_enable"]:
+                path = _log_file_path(config)
+                if (_file_handler is not None
+                        and os.path.normcase(_file_handler.baseFilename) == os.path.normcase(path)):
+                    new_file = _file_handler
+                else:
+                    new_file = _build_file_handler(path, config["file_level"])
+            if config["console_enable"]:
+                new_console = _console_handler or _build_console_handler(config["console_level"])
+        except Exception:
+            if new_file is not None and new_file is not _file_handler:
+                new_file.close()
+            raise
 
-    # FICHIER (toujours actif)
-    if _file_handler is None:
-        _file_handler = _build_file_handler()
-        logger.addHandler(_file_handler)
+        for handler, level, default in (
+                (new_file, config["file_level"], logging.DEBUG),
+                (new_console, config["console_level"], logging.INFO)):
+            if handler is not None:
+                handler.setLevel(getattr(logging, level.upper(), default))
 
-    # CONSOLE (activable via options.conf)
-    enable_console, console_level = _read_console_config()
-    if enable_console and _console_handler is None:
-        _console_handler = _build_console_handler(console_level)
-        logger.addHandler(_console_handler)
-    if (not enable_console) and _console_handler is not None:
-        logger.removeHandler(_console_handler)
-        _console_handler = None
+        for old, new in ((_file_handler, new_file), (_console_handler, new_console)):
+            if old is new:
+                continue
+            if new is not None:
+                logger.addHandler(new)
+            if old is not None:
+                logger.removeHandler(old)
+                old.close()
+        _file_handler, _console_handler = new_file, new_console
+        # Sans handler, logging.lastResort réafficherait WARNING/ERROR en
+        # console, même lorsque l'utilisateur a désactivé tous les journaux.
+        if new_file is None and new_console is None:
+            logger.addHandler(_silence_handler)
+        else:
+            logger.removeHandler(_silence_handler)
+
+
+def _ensure_handlers_initialized() -> None:
+    reload_config()
 
 
 _ensure_handlers_initialized()
@@ -144,6 +194,7 @@ def set_console_enabled(enabled: bool) -> None:
         logger.addHandler(_console_handler)
     elif (not enabled) and _console_handler is not None:
         logger.removeHandler(_console_handler)
+        _console_handler.close()
         _console_handler = None
 
 

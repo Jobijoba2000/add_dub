@@ -4,9 +4,73 @@ import re
 import subprocess
 import shutil
 import threading
+import queue
+import time
 from filelock import FileLock
 from contextlib import contextmanager
 from add_dub.io.fs import ROOT
+
+
+def _run_ocr(cmd, cwd=None, timeout=600):
+    """Relaye les pourcentages réels, y compris les mises à jour sans newline.
+
+    SE 4.0.13 écrit « OCR : 42% » précédé de CR, avec AutoFlush.
+    Un lecteur séparé permet de conserver le timeout même sans sortie.
+    """
+    from add_dub.progress import emit
+    process = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT, bufsize=0,
+                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    messages = queue.Queue()
+
+    def read():
+        try:
+            while True:
+                chunk = process.stdout.read(1024)
+                if not chunk:
+                    break
+                messages.put(chunk)
+        finally:
+            messages.put(None)
+
+    reader = threading.Thread(target=read, daemon=True)
+    reader.start()
+    deadline = time.monotonic() + timeout
+    pending = b''
+    last = -1.0
+    try:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(cmd, timeout)
+            try:
+                chunk = messages.get(timeout=min(remaining, .1))
+            except queue.Empty:
+                continue
+            if chunk is None:
+                break
+            pending += chunk
+            # Le symbole % termine le compteur : pas besoin d'attendre le CR
+            # suivant, ni la fin du processus pour actualiser le GUI.
+            for match in re.finditer(rb'(\d+(?:[.,]\d+)?)\s*%', pending):
+                value = float(match[1].replace(b',', b'.'))
+                if last < value <= 100:
+                    emit('progress', value=value)
+                    last = value
+            if b'%' in pending:
+                pending = pending.rsplit(b'%', 1)[1]
+            pending = pending[-4096:]
+            print(chunk.decode('utf-8', errors='replace'), end='', flush=True)
+        code = process.wait(timeout=max(.001, deadline - time.monotonic()))
+        if code:
+            raise subprocess.CalledProcessError(code, cmd)
+    except BaseException:
+        process.kill()
+        process.wait()
+        raise
+    finally:
+        reader.join(timeout=1)
+        process.stdout.close()
 
 def _find_exe(candidates):
     for c in candidates:
@@ -136,16 +200,12 @@ def subtitle_edit_ocr(ocr_input, output_path, lang="fr", cwd=None):
     # Subtitle Edit 4.0.13 ne propose pas la langue Tesseract en argument CLI.
     # Son Settings.xml est ajusté avant son lancement et lu à son démarrage.
     with _subtitle_edit_language(settings_file, tess_lang):
-        process = subprocess.Popen(cmd, cwd=cwd)
-        try:
-            return_code = process.wait(timeout=600)
-        except BaseException:
-            process.kill()
-            process.wait()
-            raise
-    if return_code:
-        raise subprocess.CalledProcessError(return_code, cmd)
-    return os.path.exists(output_path) and os.path.getsize(output_path) > 0
+        _run_ocr(cmd, cwd=cwd)
+    success = os.path.exists(output_path) and os.path.getsize(output_path) > 0
+    if success:
+        from add_dub.progress import emit
+        emit('progress', value=100)
+    return success
 
 def vobsub2srt_ocr(base_noext, lang="fr", cwd=None):
     """
@@ -156,8 +216,10 @@ def vobsub2srt_ocr(base_noext, lang="fr", cwd=None):
     if not exe:
         return None
     cmd = [exe, "--lang", lang, base_noext]
-    subprocess.run(cmd, check=True, cwd=cwd)
+    _run_ocr(cmd, cwd=cwd)
     produced = base_noext + ".srt"
     if os.path.exists(produced) and os.path.getsize(produced) > 0:
+        from add_dub.progress import emit
+        emit('progress', value=100)
         return produced
     return None

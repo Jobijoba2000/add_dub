@@ -45,7 +45,7 @@ def _merge_close_intervals(subtitles, offset_ms, fade_ms, min_gap_ms=200):
 @log_time
 @log_call(exclude="subtitles")
 def lower_audio_during_subtitles(audio_file, subtitles, output_wav, reduction_db=-5.0,
-                                 fade_duration=100, offset_ms=0):
+                                 fade_duration=100, offset_ms=0, progress_cb=None):
     gain = 10 ** (-abs(reduction_db) / 20)
     with wave.open(str(audio_file), 'rb') as source, wave.open(str(output_wav), 'wb') as target:
         channels, width, rate, frames, _, _ = source.getparams()
@@ -57,10 +57,15 @@ def lower_audio_during_subtitles(audio_file, subtitles, output_wav, reduction_db
         fade = max(0, round(fade_duration * rate / 1000))
         dtype = {1: np.dtype('u1'), 2: np.dtype('<i2'), 4: np.dtype('<i4')}[width]
         first = 0
+        last_percent = -1
         for begin in range(0, frames, 65536):
             raw = source.readframes(min(65536, frames - begin))
             data = np.frombuffer(raw, dtype=dtype).reshape(-1, channels)
             end = begin + len(data)
+            percent = int(100 * begin / frames)
+            if progress_cb and percent != last_percent:
+                progress_cb(percent)
+                last_percent = percent
             envelope = np.ones(len(data), dtype=np.float64)
             while first < len(intervals) and intervals[first][1] <= begin:
                 first += 1
@@ -82,4 +87,6 @@ def lower_audio_during_subtitles(audio_file, subtitles, output_wav, reduction_db
             scaled = np.rint(centered * envelope[:, None]) + (128 if width == 1 else 0)
             limits = np.iinfo(dtype)
             target.writeframesraw(np.clip(scaled, limits.min, limits.max).astype(dtype).tobytes())
+    if progress_cb:
+        progress_cb(100)
     return output_wav

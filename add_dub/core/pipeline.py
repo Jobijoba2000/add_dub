@@ -325,6 +325,7 @@ def _process_one_video(
         output_wav=ducked_wav,
         reduction_db=opts.db_reduct,
         offset_ms=opts.offset_ms,
+        progress_cb=svcs.ui.progress,
     )
 
     # 10) Sortie finale

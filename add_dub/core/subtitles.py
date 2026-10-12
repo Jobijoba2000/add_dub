@@ -190,6 +190,9 @@ def extract_first_subtitle_to_srt_into_input(
 
     # Pistes texte -> conversion directe en SRT via ffmpeg
     is_text = codec_id.startswith("s_text/")
+    if not is_text:
+        from add_dub.progress import emit
+        emit('include', name='ocr')
     if is_text:
         try:
             cmd = [

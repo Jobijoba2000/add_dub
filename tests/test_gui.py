@@ -80,7 +80,7 @@ class ConfigurationWindowTests(unittest.TestCase):
             self.assertFalse(window.start_button.isEnabled())
             self.assertFalse(window.windowIcon().isNull())
             self.assertEqual(len(window.open_button.menu().actions()), 2)
-            self.assertFalse(window.settings_button.isEnabled())
+            self.assertTrue(window.settings_button.isEnabled())
             self.assertFalse(window.open_video_action.icon().isNull())
             self.assertFalse(window.open_folder_action.icon().isNull())
             video = SimpleNamespace(path='video.mkv')

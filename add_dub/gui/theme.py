@@ -183,10 +183,10 @@ def apply_theme(app):
         QProgressBar {
             border: 1px solid #858585; border-radius: 0;
             background-color: #191919; color: #ffffff;
-            min-height: 26px; text-align: center; padding: 2px;
+            min-height: 26px; text-align: center; padding: 0; margin: 0;
         }
         QProgressBar::chunk {
-            background-color: #176b35; border-radius: 0;
+            background-color: #176b35; border-radius: 0; margin: 0;
         }
         QLabel, QCheckBox, QRadioButton { background-color: transparent; }
         QLabel#heading { font-size: 28px; font-weight: bold; }
