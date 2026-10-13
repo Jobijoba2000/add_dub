@@ -1,4 +1,6 @@
+from add_dub.gui.translations import ui
 from pathlib import Path
+import sys
 from PySide6.QtCore import Qt, QTimer, QSize, QLocale
 from PySide6.QtGui import QShortcut, QKeySequence, QPainter, QColor, QIcon, QActionGroup
 from PySide6.QtWidgets import (QMainWindow, QWidget, QFrame, QVBoxLayout, QHBoxLayout,
@@ -26,6 +28,8 @@ class Window(QMainWindow):
         super().__init__()
         ensure_base_dirs()
         self.setWindowTitle(APP_NAME)
+        resources = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[3]
+        self.setWindowIcon(QIcon(str(resources / 'assets' / 'icons' / 'add_dub_player.ico')))
         self.resize(1000, 620)
         self.setMinimumSize(640, 360)
         self.setStyleSheet(STYLE)
@@ -53,32 +57,32 @@ class Window(QMainWindow):
         layout.setContentsMargins(12, 8, 12, 8)
         self.seek = QSlider(Qt.Orientation.Horizontal)
         self.seek.setRange(0, 10000)
-        self.seek.setAccessibleName('Position dans la vidéo')
+        self.seek.setAccessibleName(ui('Position dans la vidéo'))
         self.seek.sliderReleased.connect(lambda: self.playback.seek(self.seek.value()/10000))
         layout.addWidget(self.seek)
         row = QHBoxLayout()
-        self.open_button = self.button(QStyle.StandardPixmap.SP_DialogOpenButton, 'Ouvrir une vidéo · Ctrl+O', self.choose_video)
+        self.open_button = self.button(QStyle.StandardPixmap.SP_DialogOpenButton, ui('Ouvrir une vidéo · Ctrl+O'), self.choose_video)
         row.addWidget(self.open_button)
-        self.pause = self.button(QStyle.StandardPixmap.SP_MediaPlay, 'Lecture / pause · Espace', self.playback.toggle_pause)
+        self.pause = self.button(QStyle.StandardPixmap.SP_MediaPlay, ui('Lecture / pause · Espace'), self.playback.toggle_pause)
         row.addWidget(self.pause)
         self.position = QLabel('0:00 / 0:00')
         row.addWidget(self.position)
         row.addStretch()
-        self.mute = self.button(QStyle.StandardPixmap.SP_MediaVolume, 'Muet · M', self.toggle_mute)
+        self.mute = self.button(QStyle.StandardPixmap.SP_MediaVolume, ui('Muet · M'), self.toggle_mute)
         self.mute.setCheckable(True)
         row.addWidget(self.mute)
         self.volume = QSlider(Qt.Orientation.Horizontal)
         self.volume.setRange(0, 100)
         self.volume.setValue(DEFAULT_VOLUME)
         self.volume.setFixedWidth(100)
-        self.volume.setAccessibleName('Volume')
+        self.volume.setAccessibleName(ui('Volume'))
         self.volume.valueChanged.connect(self.player.set_volume)
         self.player.set_volume(DEFAULT_VOLUME)
         row.addWidget(self.volume)
-        row.addWidget(self.button(QStyle.StandardPixmap.SP_TitleBarMaxButton, 'Plein écran · F', self.fullscreen))
+        row.addWidget(self.button(QStyle.StandardPixmap.SP_TitleBarMaxButton, ui('Plein écran · F'), self.fullscreen))
         layout.addLayout(row)
 
-        self.hint = QLabel('Ouvrez une vidéo avec Ctrl+O ou le bouton dossier.', self.screen)
+        self.hint = QLabel(ui('Ouvrez une vidéo avec Ctrl+O ou le bouton dossier.'), self.screen)
         self.hint.setStyleSheet('color:#aab4c4; background:transparent;')
         self.hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.timer = QTimer(self)
@@ -113,14 +117,14 @@ class Window(QMainWindow):
         return button
 
     def choose_video(self):
-        path, _ = QFileDialog.getOpenFileName(self, 'Ouvrir une vidéo', '',
-                'Vidéos (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.wmv);;Tous les fichiers (*)')
+        path, _ = QFileDialog.getOpenFileName(self, ui('Ouvrir une vidéo'), '',
+                ui('Vidéos (*.mkv *.mp4 *.avi *.mov *.webm *.m4v *.wmv);;Tous les fichiers (*)'))
         if path:
             self.open_video(path)
 
     def open_video(self, path):
         if not Path(path).is_file():
-            QMessageBox.warning(self, APP_NAME, 'Ce fichier est introuvable.')
+            QMessageBox.warning(self, APP_NAME, ui('Ce fichier est introuvable.'))
             return
         try:
             self.playback.open(str(Path(path).resolve()))
@@ -133,7 +137,7 @@ class Window(QMainWindow):
     def refresh(self):
         state = self.player.get_state()
         if state == 7 and self.last_state != 7:
-            QMessageBox.warning(self, APP_NAME, 'Impossible de lire cette vidéo.')
+            QMessageBox.warning(self, APP_NAME, ui('Impossible de lire cette vidéo.'))
         self.last_state = state
         symbol = QStyle.StandardPixmap.SP_MediaPause if self.player.is_playing() else QStyle.StandardPixmap.SP_MediaPlay
         self.pause.setIcon(self.control_icon(symbol))
@@ -157,17 +161,20 @@ class Window(QMainWindow):
 
     def context_menu(self, point):
         menu = QMenu(self)
-        menu.addAction('Ouvrir une vidéo…', self.choose_video)
-        menu.addAction('Lecture / pause', self.playback.toggle_pause)
-        menu.addAction('Plein écran', self.fullscreen)
+        menu.addAction(ui('Ouvrir une vidéo…'), self.choose_video)
+        menu.addAction(ui('Lecture / pause'), self.playback.toggle_pause)
+        menu.addAction(ui('Plein écran'), self.fullscreen)
         menu.addSeparator()
-        self.add_track_menu(menu, 'Pistes audio', self.player.audio_tracks(),
+        self.add_track_menu(menu, ui('Pistes audio'), self.player.audio_tracks(),
                             self.player.current_audio_track(), self.player.select_audio_track)
-        self.add_track_menu(menu, 'Sous-titres', self.player.subtitle_track_descriptions(),
+        self.add_track_menu(menu, ui('Sous-titres'), self.player.subtitle_track_descriptions(),
                             self.player.current_subtitle_track(), self.player.select_subtitle_track)
         menu.addSeparator()
-        menu.addAction('Vocaliser les sous-titres', self.choose_voice).setEnabled(bool(self.playback.path))
-        menu.addAction('Vocaliser avec les réglages enregistrés · Ctrl+Maj+D', self.quick_vocalize).setEnabled(bool(self.playback.path))
+        menu.addAction(ui('Vocaliser les sous-titres'), self.choose_voice).setEnabled(bool(self.playback.path))
+        menu.addAction(ui('Vocaliser avec les réglages enregistrés · Ctrl+Maj+D'), self.quick_vocalize).setEnabled(bool(self.playback.path))
+        from add_dub.gui.about import show_about
+        menu.addSeparator()
+        menu.addAction(ui('À propos et licences…'), lambda: show_about(self))
         try:
             menu.exec(self.screen.mapToGlobal(point))
         finally:
@@ -176,14 +183,14 @@ class Window(QMainWindow):
     def add_track_menu(self, menu, title, tracks, current, select):
         submenu = menu.addMenu(title)
         if not any(track_id >= 0 for track_id, _ in tracks):
-            submenu.addAction('Aucune piste disponible').setEnabled(False)
+            submenu.addAction(ui('Aucune piste disponible')).setEnabled(False)
             return
         group = QActionGroup(submenu)
         group.setExclusive(True)
         if not any(track_id == -1 for track_id, _ in tracks):
-            tracks = [(-1, 'Désactivé')] + tracks
+            tracks = [(-1, ui('Désactivé'))] + tracks
         for track_id, name in tracks:
-            action = submenu.addAction('Désactivé' if track_id == -1 else name)
+            action = submenu.addAction(ui('Désactivé') if track_id == -1 else name)
             action.setCheckable(True)
             action.setChecked(track_id == current)
             group.addAction(action)
@@ -191,7 +198,7 @@ class Window(QMainWindow):
 
     def select_track(self, select, track_id):
         if not select(track_id):
-            QMessageBox.warning(self, APP_NAME, 'Impossible de sélectionner cette piste.')
+            QMessageBox.warning(self, APP_NAME, ui('Impossible de sélectionner cette piste.'))
 
     def choose_voice(self, quick=False):
         if not self.playback.path:
@@ -200,17 +207,17 @@ class Window(QMainWindow):
         tracks = self.player.embedded_subtitles()
         ordinal = next((i for i, track in enumerate(tracks) if track['id'] == selected), None)
         if selected < 0:
-            QMessageBox.information(self, APP_NAME, 'Sélectionnez d’abord une piste de sous-titres dans le menu.')
+            QMessageBox.information(self, APP_NAME, ui('Sélectionnez d’abord une piste de sous-titres dans le menu.'))
             return
         if ordinal is None:
-            QMessageBox.warning(self, APP_NAME, 'Cette piste externe n’est pas encore prise en charge pour la vocalisation.')
+            QMessageBox.warning(self, APP_NAME, ui('Cette piste externe n’est pas encore prise en charge pour la vocalisation.'))
             return
         settings = self.voice_settings or {'language': self.system_language}
         if quick:
             try:
                 settings = load_settings()
                 if not settings or not settings.get('voice'):
-                    raise ValueError('Choisissez une voix puis cliquez sur « Enregistrer les réglages » dans Vocaliser les sous-titres.')
+                    raise ValueError(ui('Choisissez une voix puis cliquez sur « Enregistrer les réglages » dans Vocaliser les sous-titres.'))
             except (OSError, ValueError, TypeError) as exc:
                 QMessageBox.warning(self, APP_NAME, str(exc))
                 return

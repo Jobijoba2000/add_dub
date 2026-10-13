@@ -1,4 +1,5 @@
 """Thème Qt sombre validé avec la Loupe Windows."""
+from add_dub.gui.translations import ui
 from pathlib import Path
 import sys
 from PySide6.QtCore import Qt, QPointF
@@ -6,9 +7,9 @@ from PySide6.QtGui import QColor, QFont, QPalette, QPainter, QPen, QBrush, QPain
 from PySide6.QtWidgets import QStyleFactory, QProxyStyle, QStyle
 
 
-def icons8_icon(name):
+def ui_icon(name):
     root = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[2]
-    asset_root = root / 'docs' / 'icons8'
+    asset_root = root / 'assets' / 'icons' / 'papirus'
     path = asset_root / f'{name}.png'
     if not path.is_file():
         path = asset_root / f'{name}.svg'
@@ -46,7 +47,7 @@ def playback_icon(stopped):
 
 def video_file_icon():
     """Pictogramme de pellicule lisible même sans association vidéo Windows."""
-    icon = icons8_icon('video')
+    icon = ui_icon('video')
     if not icon.isNull():
         return icon
     pixmap = QPixmap(64, 64)
@@ -66,7 +67,7 @@ def video_file_icon():
 
 
 def settings_icon():
-    icon = icons8_icon('settings')
+    icon = ui_icon('settings')
     if not icon.isNull():
         return icon
     pixmap = QPixmap(64, 64)
@@ -141,7 +142,7 @@ class WindowsCheckboxStyle(QProxyStyle):
 def apply_theme(app):
     app.setFont(QFont("Segoe UI", 10))
     styles = QStyleFactory.keys()
-    base_name = next((style for style in styles if style.lower() == 'windows11'), 'Fusion')
+    base_name = next((style for style in styles if style.lower() == 'windows11'), ui('Fusion'))
     app.setStyle(WindowsCheckboxStyle(QStyleFactory.create(base_name)))
     app.styleHints().setColorScheme(Qt.ColorScheme.Dark)
     palette = QPalette()

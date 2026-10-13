@@ -133,6 +133,7 @@ def generate_dub_audio(
     for idx, (start, end, text) in enumerate(subtitles):
         jobs.append((idx, int(start * 1000), int(end * 1000), text, opts.voice_id, opts))
 
+    engine = normalize_engine(opts.tts_engine)
     max_workers = min(20, max(1, cpu_count()))
     results: List[Optional[Tuple[str, int, int]]] = [None] * len(jobs)
     total = len(jobs)
@@ -144,7 +145,6 @@ def generate_dub_audio(
 
     FREEZE_TIMEOUT = 5
 
-    engine = normalize_engine(opts.tts_engine)
     if engine in ("edge", "gtts"):
         ex = ThreadPoolExecutor(max_workers=max_workers)
     else:

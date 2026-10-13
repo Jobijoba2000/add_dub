@@ -3,6 +3,7 @@
 Based on Microsoft's Custom Window Frame Using DWM example. No global Windows
 metrics are changed. Other platforms retain their usual Qt window frame.
 """
+from add_dub.gui.translations import ui
 import ctypes
 import sys
 from ctypes import wintypes
@@ -52,9 +53,9 @@ class CaptionWindow(QMainWindow):
         buttons.setContentsMargins(0, 0, 0, 0)
         buttons.setSpacing(0)
         for name, standard, action in (
-            ('Réduire', QStyle.StandardPixmap.SP_TitleBarMinButton, self.showMinimized),
-            ('Agrandir', QStyle.StandardPixmap.SP_TitleBarMaxButton, self.toggle_maximized),
-            ('Fermer', QStyle.StandardPixmap.SP_TitleBarCloseButton, self.close),
+            (ui('Réduire'), QStyle.StandardPixmap.SP_TitleBarMinButton, self.showMinimized),
+            (ui('Agrandir'), QStyle.StandardPixmap.SP_TitleBarMaxButton, self.toggle_maximized),
+            (ui('Fermer'), QStyle.StandardPixmap.SP_TitleBarCloseButton, self.close),
         ):
             button = QToolButton()
             button.setAccessibleName(name)
@@ -62,10 +63,10 @@ class CaptionWindow(QMainWindow):
             button.setFixedSize(46, self.caption_height)
             button.setIcon(self.caption_icon(standard))
             button.setStyleSheet('QToolButton {border: none; border-radius: 0; padding: 0; background: #202020;} '
-                                'QToolButton:hover {background: ' + ('#c42b1c' if name == 'Fermer' else '#404040') + ';}')
+                                'QToolButton:hover {background: ' + ('#c42b1c' if name == ui('Fermer') else '#404040') + ';}')
             button.clicked.connect(action)
             buttons.addWidget(button)
-            if name == 'Agrandir':
+            if name == ui('Agrandir'):
                 self.caption_maximize = button
         row.addWidget(self.caption_buttons)
         self.setMenuWidget(self.caption)
@@ -119,7 +120,7 @@ class CaptionWindow(QMainWindow):
         super().changeEvent(event)
         if event.type() == QEvent.Type.WindowStateChange and hasattr(self, 'caption_maximize'):
             restored = self.isMaximized()
-            name = 'Restaurer' if restored else 'Agrandir'
+            name = ui('Restaurer') if restored else ui('Agrandir')
             self.caption_maximize.setToolTip(name)
             self.caption_maximize.setAccessibleName(name)
             standard = QStyle.StandardPixmap.SP_TitleBarNormalButton if restored else QStyle.StandardPixmap.SP_TitleBarMaxButton

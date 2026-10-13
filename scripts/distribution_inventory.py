@@ -31,13 +31,24 @@ def main():
                          'license': dist.metadata.get('License-Expression') or dist.metadata.get('License'),
                          'notices': copied})
     binaries = []
+    native_notices = []
     for file in sorted((root / 'tools').rglob('*')):
-        if file.is_file() and file.suffix.lower() in ('.exe', '.dll'):
+        if file.is_file() and file.name.lower().startswith(('license', 'copying', 'notice')):
+            target = root / 'licenses' / 'native' / file.relative_to(root / 'tools')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(file, target)
+            native_notices.append(str(target.relative_to(root)))
+    # Qt, CTranslate2 and Python extensions also ship native
+    # binaries under _internal. Include the launchers themselves, too.
+    for file in sorted(root.rglob('*')):
+        if file.is_file() and file.suffix.lower() in ('.exe', '.dll', '.pyd'):
             with file.open('rb') as stream:
                 digest = hashlib.file_digest(stream, 'sha256').hexdigest()
             binaries.append({'path': str(file.relative_to(root)), 'sha256': digest})
     inventory = {'python_environment': packages, 'native_tools': binaries,
-                 'scope': 'Environnement de compilation Python et binaires tools livrés ; les licences restent à examiner.'}
+                 'native_notices': native_notices,
+                 'packages_without_notice_files': sorted(package['name'] for package in packages if not package['notices']),
+                 'scope': 'Paquets de l’environnement de compilation (pas une liste des seuls imports livrés) et tous les EXE/DLL/PYD distribués. Les notices présentes sont copiées ; les absences et droits de redistribution restent à examiner.'}
     (root / 'THIRD_PARTY.json').write_text(json.dumps(inventory, ensure_ascii=False, indent=2), encoding='utf-8')
     print(f'Inventaire : {len(packages)} paquets, {len(binaries)} binaires natifs.')
 

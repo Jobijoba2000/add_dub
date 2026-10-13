@@ -5,7 +5,8 @@ winrt-Windows.Foundation==3.2.1
 winrt-Windows.Foundation.Collections==3.2.1
 winrt-Windows.Storage.Streams==3.2.1
 winrt-Windows.Media.SpeechSynthesis==3.2.1
-edge-tts==7.2.8
+# Correction edge-tts #491, révision exacte.
+edge-tts @ https://codeload.github.com/jonata/edge-tts/zip/8a5844c3a1d33e4e8f2f3e14535542c0d75d4248#sha256=cb7085796ed74025abb00787583a86d9504f7638a05abd34dc9d774b173527a9
 gTTS==2.5.4
 tqdm==4.67.1
 sentencepiece==0.2.1

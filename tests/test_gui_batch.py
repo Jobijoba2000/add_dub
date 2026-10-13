@@ -1,4 +1,5 @@
 import unittest
+from add_dub.gui.translations import ui
 import os
 import subprocess
 import tempfile
@@ -80,10 +81,10 @@ class BatchCommandTests(unittest.TestCase):
                 from PySide6.QtCore import Qt
                 dialog.file_items[videos[2].path].setCheckState(0, Qt.CheckState.Unchecked)
                 self.assertEqual([dialog.editor.tabText(i) for i in range(dialog.editor.count())],
-                                 ['Pistes', 'Voix', 'Traduction', 'Audio et temps', 'Essai'])
+                                 [ui(text) for text in ('Pistes', 'Voix', 'Traduction', 'Audio et temps', 'Essai')])
                 dialog.show_batch()
                 self.assertTrue(dialog.batch_page.isVisible())
-                self.assertIn('2 vidéo(s)', dialog.batch_summary.text())
+                self.assertIn('2' + ui(' vidéo(s) cochée(s), toutes configurations comprises.'), dialog.batch_summary.text())
                 dialog.refresh_batch()
                 self.assertEqual(len(dialog.batch_command), 2)
                 self.assertEqual([c[c.index('--input') + 1] for c in dialog.batch_command],

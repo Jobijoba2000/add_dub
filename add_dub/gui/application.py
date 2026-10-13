@@ -1,5 +1,6 @@
 """Interface Qt accessible : configuration de lots et liste d'attente."""
 from __future__ import annotations
+from add_dub.gui.translations import ui, video_count
 from collections import deque
 import codecs
 import json
@@ -27,7 +28,7 @@ from add_dub.gui.widgets import Async, SmoothTreeWidget, SpacedMenu, QueueTabBar
 from add_dub.gui.run import VideoRunFiles, partition_existing
 from add_dub.progress import PREFIX, LABELS, VideoProgress, aggregate, remaining_seconds
 from add_dub.gui.dialog import ConfigureDialog, yellow_folder_icon
-from add_dub.gui.theme import apply_theme, playback_icon, video_file_icon, settings_icon, icons8_icon
+from add_dub.gui.theme import apply_theme, playback_icon, video_file_icon, settings_icon, ui_icon
 
 
 from add_dub.gui.titlebar import CaptionWindow
@@ -71,7 +72,7 @@ class Application(CaptionWindow):
         fs.ensure_base_dirs()
         self.setWindowTitle('add_dub')
         resource_root = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).resolve().parents[2]
-        self.setWindowIcon(QIcon(str(resource_root / 'docs' / 'add_dub.ico')))
+        self.setWindowIcon(QIcon(str(resource_root / 'assets' / 'icons' / 'add_dub.ico')))
         self.install_caption()
         self.resize(1100, 780)
         self.setMinimumSize(760, 540)
@@ -88,23 +89,32 @@ class Application(CaptionWindow):
         toolbar = QHBoxLayout()
         self.open_button = QToolButton()
         self.open_button.setObjectName('openSources')
-        self.open_button.setText('Ouvrir')
+        self.open_button.setText(ui('Ouvrir'))
         self.open_button.setIcon(yellow_folder_icon(True))
         self.open_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = SpacedMenu(self.open_button)
-        self.open_video_action = menu.addAction(video_file_icon(), 'Ouvrir des vidéos…', self.add_files)
-        self.open_folder_action = menu.addAction(yellow_folder_icon(False), 'Ouvrir un dossier…', self.add_folder)
+        self.open_video_action = menu.addAction(video_file_icon(), ui('Ouvrir des vidéos…'), self.add_files)
+        self.open_folder_action = menu.addAction(yellow_folder_icon(False), ui('Ouvrir un dossier…'), self.add_folder)
         self.open_button.setMenu(menu)
         self.settings_button = QToolButton()
-        self.settings_button.setText('Paramètres')
+        self.settings_button.setText(ui('Paramètres'))
         self.settings_button.setIcon(settings_icon())
-        self.settings_button.setToolTip('Modifier les paramètres généraux dans options.conf')
+        self.settings_button.setToolTip(ui('Modifier les paramètres généraux dans options.conf'))
         self.settings_button.clicked.connect(self.open_settings)
         for button in (self.open_button, self.settings_button):
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
             button.setIconSize(QSize(48, 48))
             button.setMinimumSize(115, 92)
             toolbar.addWidget(button)
+        from add_dub.gui.about import show_about
+        self.about_button = QToolButton()
+        self.about_button.setText(ui('À propos et licences'))
+        self.about_button.setIcon(ui_icon('info'))
+        self.about_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
+        self.about_button.setIconSize(QSize(48, 48))
+        self.about_button.setMinimumSize(115, 92)
+        self.about_button.clicked.connect(lambda: show_about(self))
+        toolbar.addWidget(self.about_button)
         self.start_button = QToolButton()
         self.start_button.setObjectName('playback')
         self.start_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
@@ -116,18 +126,18 @@ class Application(CaptionWindow):
         toolbar.addWidget(self.start_button)
         toolbar.addStretch()
         layout.addLayout(toolbar)
-        self.empty = QLabel('La liste d’attente est vide. Ajoutez des vidéos ou un dossier pour choisir les pistes et la voix.')
+        self.empty = QLabel(ui('La liste d’attente est vide. Ajoutez des vidéos ou un dossier pour choisir les pistes et la voix.'))
         self.empty.setWordWrap(True)
         self.info_panel = QWidget()
         info_layout = QHBoxLayout(self.info_panel)
         info_layout.setContentsMargins(0, 10, 0, 10)
         info_layout.setSpacing(12)
         info_icon = QLabel()
-        info_source = icons8_icon('info')
+        info_source = ui_icon('info')
         info_icon.setPixmap((info_source if not info_source.isNull()
                              else self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)).pixmap(36, 36))
         info_icon.setFixedSize(36, 36)
-        info_icon.setAccessibleName('Information')
+        info_icon.setAccessibleName(ui('Information'))
         info_layout.addWidget(info_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         info_layout.addWidget(self.empty, 1)
         self.info_panel.setMinimumHeight(64)
@@ -136,18 +146,18 @@ class Application(CaptionWindow):
         queue_layout.setSpacing(0)
         self.queue_tabs = QueueTabBar()
         self.queue_tabs.setObjectName('queueTabs')
-        self.queue_tabs.setAccessibleName('Vues de la file d’attente')
+        self.queue_tabs.setAccessibleName(ui('Vues de la file d’attente'))
         self.queue_tabs.setExpanding(False)
         self.queue_tabs.setDrawBase(False)
-        self.queue_tabs.addTab('En attente (0)')
-        self.queue_tabs.addTab('Terminé (0)')
+        self.queue_tabs.addTab(ui('En attente (0)'))
+        self.queue_tabs.addTab(ui('Terminé (0)'))
         queue_layout.addWidget(self.queue_tabs)
         self.queue_stack = QStackedWidget()
         self.queue = SmoothTreeWidget()
         self.finished_queue = SmoothTreeWidget()
-        for tree, name in ((self.queue, 'Vidéos en attente'),
-                           (self.finished_queue, 'Vidéos terminées')):
-            tree.setHeaderLabels(['Vidéo', 'Dossier de destination', 'Statut'])
+        for tree, name in ((self.queue, ui('Vidéos en attente')),
+                           (self.finished_queue, ui('Vidéos terminées'))):
+            tree.setHeaderLabels([ui('Vidéo'), ui('Dossier de destination'), ui('Statut')])
             tree.setObjectName('queueList')
             tree.setIconSize(QSize(28, 28))
             tree.setMouseTracking(True)
@@ -170,18 +180,18 @@ class Application(CaptionWindow):
             lambda col, old, size: self.queue.setColumnWidth(col, size))
         queue_layout.addWidget(self.queue_stack, 1)
         layout.addLayout(queue_layout, 1)
-        self.status = QLabel('Prêt.')
+        self.status = QLabel(ui('Prêt.'))
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
         self.progress = QProgressBar()
-        self.progress.setAccessibleName('Progression des fichiers de la liste d’attente')
+        self.progress.setAccessibleName(ui('Progression des fichiers de la liste d’attente'))
         self.progress.setRange(0, 1000)
         self.progress.setFormat('0,0 %')
         self.progress.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.progress.setValue(0)
         totals = QHBoxLayout()
         totals.addWidget(self.progress, 1)
-        self.time_label = QLabel('Écoulé : 00:00:00\nRestant estimé : -')
+        self.time_label = QLabel(ui('Écoulé : 00:00:00\nRestant estimé : -'))
         totals.addWidget(self.time_label)
         layout.addLayout(totals)
         self.log_lines = deque(maxlen=2500)
@@ -196,7 +206,7 @@ class Application(CaptionWindow):
         try:
             dialog = GeneralSettingsDialog(self.tasks, self)
         except (ValueError, OSError) as exc:
-            QMessageBox.warning(self, 'Paramètres indisponibles', str(exc))
+            QMessageBox.warning(self, ui('Paramètres indisponibles'), str(exc))
             return
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.reload_defaults()
@@ -216,16 +226,16 @@ class Application(CaptionWindow):
         try:
             reload_config()
         except (ValueError, OSError) as exc:
-            QMessageBox.warning(self, 'Paramètres enregistrés',
-                                f'Le fichier est enregistré, mais le journal ne peut pas être ouvert : {exc}')
+            QMessageBox.warning(self, ui('Paramètres enregistrés'),
+                                f'{ui('Le fichier est enregistré, mais le journal ne peut pas être ouvert : ')}{exc}')
 
     def add_files(self):
-        paths, _ = QFileDialog.getOpenFileNames(self, 'Ajouter des vidéos', fs.INPUT_DIR, 'Vidéos (*.mkv *.mp4 *.avi *.mov)')
+        paths, _ = QFileDialog.getOpenFileNames(self, ui('Ajouter des vidéos'), fs.INPUT_DIR, ui('Vidéos (*.mkv *.mp4 *.avi *.mov)'))
         if paths:
             self.configure_sources(paths)
 
     def add_folder(self):
-        path = QFileDialog.getExistingDirectory(self, 'Ajouter un dossier', fs.INPUT_DIR)
+        path = QFileDialog.getExistingDirectory(self, ui('Ajouter un dossier'), fs.INPUT_DIR)
         if path:
             self.configure_sources([path])
 
@@ -262,21 +272,21 @@ class Application(CaptionWindow):
 
     def make_queue_menu(self, key):
         menu = QMenu(self)
-        paths = menu.addAction('Afficher les noms seuls' if self.full_paths else 'Afficher les chemins complets')
+        paths = menu.addAction(ui('Afficher les noms seuls') if self.full_paths else ui('Afficher les chemins complets'))
         paths.triggered.connect(lambda: self.set_full_paths(not self.full_paths))
         menu.addSeparator()
-        stop = menu.addAction(self.stop_icon, 'Arrêter le traitement', self.request_stop)
+        stop = menu.addAction(self.stop_icon, ui('Arrêter le traitement'), self.request_stop)
         stop.setEnabled(self.running and not self.stop_requested)
         menu.addSeparator()
         for label, scope, enabled in (
-                ('Retirer ce fichier de la liste', key, key in self.rows),
-                ('Retirer les fichiers terminés de la liste', 'completed',
+                (ui('Retirer ce fichier de la liste'), key, key in self.rows),
+                (ui('Retirer les fichiers terminés de la liste'), 'completed',
                  any(v.path in j.completed for j in self.jobs for v in j.selected)),
-                ('Vider toute la file d’attente', 'all', bool(self.rows))):
+                (ui('Vider toute la file d’attente'), 'all', bool(self.rows))):
             action = menu.addAction(label)
             action.setEnabled(enabled and not self.running)
-            action.setToolTip('Arrêtez le traitement pour modifier la liste.' if self.running
-                              else 'Retire uniquement les entrées de la liste, sans effacer les fichiers.')
+            action.setToolTip(ui('Arrêtez le traitement pour modifier la liste.') if self.running
+                              else ui('Retire uniquement les entrées de la liste, sans effacer les fichiers.'))
             action.triggered.connect(lambda checked=False, scope=scope: self.remove_entries(scope))
         menu.setToolTipsVisible(True)
         return menu
@@ -284,7 +294,7 @@ class Application(CaptionWindow):
     def set_full_paths(self, enabled):
         self.full_paths = enabled
         for tree in (self.queue, self.finished_queue):
-            tree.headerItem().setText(0, 'Vidéo - chemin source' if enabled else 'Vidéo')
+            tree.headerItem().setText(0, ui('Vidéo - chemin source') if enabled else ui('Vidéo'))
         self.refresh()
 
     def remove_entries(self, scope):
@@ -319,7 +329,7 @@ class Application(CaptionWindow):
                 tree = item.treeWidget()
                 tree.takeTopLevelItem(tree.indexOfTopLevelItem(item))
         for key, (job, video) in desired.items():
-            state = 'Terminé' if video.path in job.completed else self.video_states.get(key, 'En attente')
+            state = ui('Terminé') if video.path in job.completed else self.video_states.get(key, ui('En attente'))
             tree = self.finished_queue if video.path in job.completed else self.queue
             item = self.rows.get(key)
             if item is None:
@@ -357,8 +367,8 @@ class Application(CaptionWindow):
                 self.update_video_bar()
         if active and active != old_key:
             self.queue.scrollToTop()
-        self.queue_tabs.setTabText(0, f'En attente ({self.queue.topLevelItemCount()})')
-        self.queue_tabs.setTabText(1, f'Terminé ({self.finished_queue.topLevelItemCount()})')
+        self.queue_tabs.setTabText(0, f'{ui('En attente (')}{self.queue.topLevelItemCount()})')
+        self.queue_tabs.setTabText(1, f'{ui('Terminé (')}{self.finished_queue.topLevelItemCount()})')
         self.update_queue_info()
         self.update_playback_button()
         self.open_button.setEnabled(not self.running)
@@ -370,23 +380,23 @@ class Application(CaptionWindow):
     def update_queue_info(self):
         remaining = sum(v.path not in j.completed for j in self.jobs for v in j.selected)
         completed = sum(v.path in j.completed for j in self.jobs for v in j.selected)
-        videos = f'{remaining} vidéo' + ('s' if remaining != 1 else '')
+        videos = video_count(remaining)
         if self.running and self.stop_requested:
-            message = 'Arrêt en cours : les fichiers provisoires sont en cours de nettoyage.'
+            message = ui('Arrêt en cours : les fichiers provisoires sont en cours de nettoyage.')
         elif self.running:
-            message = f'Traitement en cours : {videos} à terminer. Vous pouvez interrompre le traitement avec « Arrêter ».'
+            message = ui('Traitement en cours : {videos} à terminer. Vous pouvez interrompre le traitement avec « Arrêter ».').format(videos=videos)
         elif remaining:
             errors = any((i, v.path) in self.video_errors for i, j in enumerate(self.jobs)
                          for v in j.selected if v.path not in j.completed)
             if errors:
-                message = f'{videos} à traiter, dont des vidéos en erreur. Consultez leur statut, puis cliquez sur « Démarrer » pour réessayer.'
+                message = ui('{videos} à traiter, dont des vidéos en erreur. Consultez leur statut, puis cliquez sur « Démarrer » pour réessayer.').format(videos=videos)
             else:
-                message = f'{videos} en attente. Cliquez sur « Démarrer » pour lancer le traitement.'
+                message = ui('{videos} en attente. Cliquez sur « Démarrer » pour lancer le traitement.').format(videos=videos)
         elif completed:
-            count = f'{completed} vidéo' + ('s terminées' if completed != 1 else ' terminée')
-            message = f'Traitement terminé : {count}. Consultez l’onglet « Terminé » ou ajoutez de nouvelles vidéos avec « Ouvrir ».'
+            count = video_count(completed, completed=True)
+            message = ui('Traitement terminé : {videos}. Consultez l’onglet « Terminé » ou ajoutez de nouvelles vidéos avec « Ouvrir ».').format(videos=count)
         else:
-            message = 'La liste d’attente est vide. Utilisez « Ouvrir » pour ajouter des vidéos ou un dossier et choisir les pistes et la voix.'
+            message = ui('La liste d’attente est vide. Utilisez « Ouvrir » pour ajouter des vidéos ou un dossier et choisir les pistes et la voix.')
         self.empty.setText(message)
 
     def update_video_bar(self):
@@ -394,8 +404,8 @@ class Application(CaptionWindow):
             value = self.video_progress.percent
             self.active_bar.setValue(round(value * 10))
             self.active_bar.setFormat(self.video_progress.text)
-            self.active_bar.setToolTip('Pourcentage de l’étape en cours et avancement total estimé.\n' +
-                                      '\n'.join(f'{LABELS[name]} : {weight / sum(self.video_progress.weights.values()):.0%}'
+            self.active_bar.setToolTip(ui('Pourcentage de l’étape en cours et avancement total estimé.\n') +
+                                      '\n'.join(f'{ui(LABELS[name])} : {weight / sum(self.video_progress.weights.values()):.0%}'
                                                 for name, weight in self.video_progress.weights.items()))
             self.active_bar.setAccessibleName(self.active_bar.format())
 
@@ -411,18 +421,18 @@ class Application(CaptionWindow):
         remaining = remaining_seconds(self.durations, len(self.pending) - self.position,
                                       self.video_progress.percent if self.active_key else 0)
         estimate = duration(remaining) if remaining is not None and self.running else '-'
-        self.time_label.setText(f'Écoulé : {duration(self.elapsed)}\nRestant estimé : {estimate}')
+        self.time_label.setText(f'{ui('Écoulé : ')}{duration(self.elapsed)}{ui('\nRestant estimé : ')}{estimate}')
 
     def update_playback_button(self):
-        ready = any(j.status != 'Terminé' and any(v.path not in j.completed for v in j.selected)
+        ready = any(j.status != ui('Terminé') and any(v.path not in j.completed for v in j.selected)
                     for j in self.jobs)
         button = self.start_button
         button.setProperty('processing', self.running)
         button.setIcon(self.stop_icon if self.running else self.play_icon)
-        label = ('Arrêt…' if self.stop_requested else 'Arrêter') if self.running else 'Démarrer'
+        label = (ui('Arrêt…') if self.stop_requested else ui('Arrêter')) if self.running else ui('Démarrer')
         button.setText(label)
         button.setAccessibleName(label)
-        button.setToolTip('Interrompt la vidéo en cours et supprime ses fichiers provisoires.' if self.running else 'Traiter les vidéos sélectionnées restantes.')
+        button.setToolTip(ui('Interrompt la vidéo en cours et supprime ses fichiers provisoires.') if self.running else ui('Traiter les vidéos sélectionnées restantes.'))
         button.setEnabled(not self.stop_requested if self.running else ready)
         button.style().unpolish(button)
         button.style().polish(button)
@@ -441,13 +451,13 @@ class Application(CaptionWindow):
         self.pending = []
         try:
             for index, job in enumerate(self.jobs):
-                if (job.status != 'Terminé'
+                if (job.status != ui('Terminé')
                         and any(v.path not in job.completed for v in job.selected)):
                     for video, command in job.commands():
                         if video.path not in job.completed:
                             self.pending.append((index, video, command))
         except ValueError as exc:
-            QMessageBox.warning(self, 'Liste à vérifier', str(exc))
+            QMessageBox.warning(self, ui('Liste à vérifier'), str(exc))
             return
         if any('--skip-existing' in command for _, _, command in self.pending):
             self.running = True
@@ -455,14 +465,14 @@ class Application(CaptionWindow):
             self.preflight_id = getattr(self, 'preflight_id', 0) + 1
             generation = self.preflight_id
             pending = list(self.pending)
-            self.status.setText('Vérification des sorties existantes…')
+            self.status.setText(ui('Vérification des sorties existantes…'))
             self.refresh()
             def ready(result, error):
                 if not self.running or self.stop_requested or self.preflight_id != generation:
                     return
                 self.running = False
                 if error:
-                    self.status.setText(f'Vérification impossible : {error}')
+                    self.status.setText(f'{ui('Vérification impossible : ')}{error}')
                     self.refresh()
                     return
                 self.begin_processing(*result)
@@ -476,7 +486,7 @@ class Application(CaptionWindow):
             self.jobs[index].completed.add(video.path)
         for job in self.jobs:
             if job.selected and all(v.path in job.completed for v in job.selected):
-                job.status = 'Terminé'
+                job.status = ui('Terminé')
         if not self.pending:
             self.position = 0
             self.durations = []
@@ -484,7 +494,7 @@ class Application(CaptionWindow):
             self.started_at = None
             self.active_key = None
             self.update_totals()
-            self.status.setText('Toutes les vidéos sont déjà terminées ; aucun traitement à lancer.')
+            self.status.setText(ui('Toutes les vidéos sont déjà terminées ; aucun traitement à lancer.'))
             self.refresh()
             return
         self.running = True
@@ -510,12 +520,12 @@ class Application(CaptionWindow):
             self.clock_timer.stop()
             self.update_totals()
             if self.stop_requested:
-                self.status.setText('Traitement arrêté. La vidéo interrompue reste à traiter.')
+                self.status.setText(ui('Traitement arrêté. La vidéo interrompue reste à traiter.'))
             else:
-                self.status.setText('Liste terminée avec des erreurs : consultez les vidéos signalées en erreur.' if self.failed_jobs else 'Tous les traitements sont terminés.')
+                self.status.setText(ui('Liste terminée avec des erreurs : consultez les vidéos signalées en erreur.') if self.failed_jobs else ui('Tous les traitements sont terminés.'))
             for job in self.jobs:
-                if job.status.startswith('En cours'):
-                    job.status = 'En attente'
+                if job.status.startswith(ui('En cours')):
+                    job.status = ui('En attente')
             self.refresh()
             return
         index, video, command = self.pending[self.position]
@@ -525,8 +535,8 @@ class Application(CaptionWindow):
         self.file_skipped = False
         self.output_buffer = ''
         self.log_lines.clear()
-        self.jobs[index].status = f'En cours - {Path(video.path).name}'
-        self.status.setText(f'Vidéo {self.position + 1} / {len(self.pending)} - {Path(video.path).name}')
+        self.jobs[index].status = f'{ui('En cours - ')}{Path(video.path).name}'
+        self.status.setText(f'{ui('Vidéo ')}{self.position + 1} / {len(self.pending)} - {Path(video.path).name}')
         self.log_lines.append(f'\n── {video.path} ──')
         self.decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
         self.file_finished = False
@@ -580,7 +590,7 @@ class Application(CaptionWindow):
 
     def process_error(self, error):
         if error == QProcess.ProcessError.FailedToStart:
-            self.log_lines.append('Lancement impossible : ' + self.process.errorString())
+            self.log_lines.append(ui('Lancement impossible : ') + self.process.errorString())
             self.finished_file(1, QProcess.ExitStatus.CrashExit)
 
     def finished_file(self, code, exit_status):
@@ -603,14 +613,14 @@ class Application(CaptionWindow):
                 self.run_files = None
         except (OSError, ValueError, RuntimeError) as exc:
             code = 1
-            self.log_lines.append(f'Erreur de finalisation : {exc}')
+            self.log_lines.append(f'{ui('Erreur de finalisation : ')}{exc}')
         if code == 0 and exit_status == QProcess.ExitStatus.NormalExit:
             job.completed.add(video.path)
         else:
             self.failed_jobs.add(index)
-            self.log_lines.append(f'Échec de {Path(video.path).name} (code {code}).')
+            self.log_lines.append(f'{ui('Échec de ')}{Path(video.path).name} (code {code}).')
             self.video_errors[(index, video.path)] = '\n'.join(list(self.log_lines)[-25:])
-        self.video_states[(index, video.path)] = 'Terminé' if video.path in job.completed else 'Erreur'
+        self.video_states[(index, video.path)] = ui('Terminé') if video.path in job.completed else ui('Erreur')
         if (code == 0 and exit_status == QProcess.ExitStatus.NormalExit
                 and not self.file_skipped and not getattr(job, 'dry_run', False)):
             self.durations.append(time.monotonic() - self.file_started_at)
@@ -618,7 +628,7 @@ class Application(CaptionWindow):
         self.active_key = None
         self.update_totals()
         more_for_job = any(i == index for i, _, _ in self.pending[self.position:])
-        job.status = 'En attente' if more_for_job else 'Erreur - relancer ou modifier' if index in self.failed_jobs else 'Terminé'
+        job.status = ui('En attente') if more_for_job else ui('Erreur - relancer ou modifier') if index in self.failed_jobs else ui('Terminé')
         self.refresh()
         QTimer.singleShot(0, self.next_file)
 
@@ -629,7 +639,7 @@ class Application(CaptionWindow):
         self.update_queue_info()
         self.cancel_cleanup_attempts = 0
         self.update_playback_button()
-        self.status.setText('Interruption et nettoyage des fichiers provisoires…')
+        self.status.setText(ui('Interruption et nettoyage des fichiers provisoires…'))
         self.process_started()
 
     def process_started(self):
@@ -656,7 +666,7 @@ class Application(CaptionWindow):
 
     def stopper_error(self, error):
         if error == QProcess.ProcessError.FailedToStart:
-            self.status.setText('Interruption impossible : ' + self.stopper.errorString())
+            self.status.setText(ui('Interruption impossible : ') + self.stopper.errorString())
             self.stop_requested = False
             self.update_playback_button()
 
@@ -671,7 +681,7 @@ class Application(CaptionWindow):
             if self.cancel_cleanup_attempts < 10:
                 QTimer.singleShot(100, self.process_started)
                 return
-            self.status.setText('Interruption impossible : réessayez Arrêter.')
+            self.status.setText(ui('Interruption impossible : réessayez Arrêter.'))
             self.stop_requested = False
             self.update_playback_button()
             return
@@ -691,13 +701,13 @@ class Application(CaptionWindow):
             if self.cancel_cleanup_attempts < 15:
                 QTimer.singleShot(200, self.finish_cancel)
                 return
-            self.status.setText(f'Traitement arrêté, nettoyage incomplet : {exc}')
+            self.status.setText(f'{ui('Traitement arrêté, nettoyage incomplet : ')}{exc}')
         else:
-            self.status.setText('Traitement arrêté. Fichiers provisoires supprimés ; la vidéo reste à traiter.')
+            self.status.setText(ui('Traitement arrêté. Fichiers provisoires supprimés ; la vidéo reste à traiter.'))
         if self.active_key:
             index, path = self.active_key
-            self.jobs[index].status = 'En attente'
-            self.video_states[self.active_key] = 'En attente'
+            self.jobs[index].status = ui('En attente')
+            self.video_states[self.active_key] = ui('En attente')
         self.file_finished = True
         self.update_totals()
         self.running = False
@@ -712,7 +722,7 @@ class Application(CaptionWindow):
 
     def closeEvent(self, event):
         if self.running:
-            QMessageBox.information(self, 'Traitement en cours', 'Utilisez « Arrêter », puis fermez la fenêtre lorsque le nettoyage est terminé.')
+            QMessageBox.information(self, ui('Traitement en cours'), ui('Utilisez « Arrêter », puis fermez la fenêtre lorsque le nettoyage est terminé.'))
             event.ignore()
         else:
             event.accept()

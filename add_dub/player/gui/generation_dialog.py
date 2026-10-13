@@ -1,4 +1,5 @@
 """Suivi du processus WAV avec la barre du GUI add_dub."""
+from add_dub.gui.translations import ui
 import json
 from pathlib import Path
 import shutil
@@ -14,7 +15,7 @@ from add_dub.progress import PREFIX
 class GenerationDialog(QDialog):
     def __init__(self, request, parent=None, auto_restart=False):
         super().__init__(parent)
-        self.setWindowTitle('Génération de la piste vocale')
+        self.setWindowTitle(ui('Génération de la piste vocale'))
         self.setMinimumWidth(560)
         self.output_path = None
         self.original_path = None
@@ -25,31 +26,31 @@ class GenerationDialog(QDialog):
         self.cancelled = False
         self.choice = None
         self.auto_restart = auto_restart
-        self.stage = 'Préparation'
+        self.stage = ui('Préparation')
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 22, 22, 22)
         layout.setSpacing(16)
-        self.label = QLabel('La vidéo est en pause.')
+        self.label = QLabel(ui('La vidéo est en pause.'))
         self.label.setWordWrap(True)
         layout.addWidget(self.label)
         self.bar = QProgressBar(self)
         self.bar.setRange(0, 1000)
         self.bar.setValue(0)
-        self.bar.setFormat('Préparation · 0,0 %')
+        self.bar.setFormat(ui('Préparation · 0,0 %'))
         self.bar.setStyleSheet('''
             QProgressBar { border: 1px solid #858585; border-radius: 0;
                 background-color: #191919; color: #ffffff; min-height: 26px;
-                text-align: center; padding: 2px; }
-            QProgressBar::chunk { background-color: #176b35; border-radius: 0; }
+                text-align: center; padding: 0; margin: 0; }
+            QProgressBar::chunk { background-color: #176b35; border-radius: 0; margin: 0; }
         ''')
         layout.addWidget(self.bar)
         self.actions = QHBoxLayout()
-        self.button = QPushButton('Annuler')
+        self.button = QPushButton(ui('Annuler'))
         self.button.clicked.connect(self.reject)
         self.actions.addWidget(self.button)
-        self.restart_button = QPushButton('Rejouer')
+        self.restart_button = QPushButton(ui('Rejouer'))
         self.restart_button.clicked.connect(lambda: self.choose_after_success('restart'))
-        self.continue_button = QPushButton('Continuer')
+        self.continue_button = QPushButton(ui('Continuer'))
         self.continue_button.clicked.connect(lambda: self.choose_after_success('continue'))
         self.restart_button.hide()
         self.continue_button.hide()
@@ -76,7 +77,8 @@ class GenerationDialog(QDialog):
         self.process.readyReadStandardOutput.connect(self.read_output)
         self.process.finished.connect(self.on_process_finished)
         self.process.errorOccurred.connect(self.process_error)
-        self.process.setProgram(sys.executable)
+        from add_dub.launch import worker_executable
+        self.process.setProgram(worker_executable())
         self.process.setArguments(([] if getattr(sys, 'frozen', False) else ['-u', '-m', 'add_dub'])
                                   + ['--player-generate', str(self.request_path)])
         QTimer.singleShot(0, self.start_process)
@@ -100,14 +102,14 @@ class GenerationDialog(QDialog):
                 continue
             kind = event.get('event')
             if kind == 'stage':
-                self.stage = event.get('text', 'En cours')
+                self.stage = ui(event.get('text', 'En cours'))
                 self.bar.setFormat(self.stage + ' · 0,0 %')
             elif kind == 'progress':
                 percent = max(0, min(99.9, float(event['value'])))
                 self.bar.setValue(round(percent * 10))
                 self.bar.setFormat(f'{self.stage} · {percent:.1f} %'.replace('.', ','))
             elif kind == 'finalizing':
-                self.bar.setFormat(self.stage + ' · Finalisation…')
+                self.bar.setFormat(self.stage + ui(' · Finalisation…'))
             elif kind == 'complete':
                 pass
             elif kind == 'message':
@@ -131,7 +133,7 @@ class GenerationDialog(QDialog):
         self.read_output()
         if self.cancelled:
             self.running = False
-            self.label.setText('Génération annulée. La vidéo reste en pause.')
+            self.label.setText(ui('Génération annulée. La vidéo reste en pause.'))
         elif (code == 0 and status == QProcess.ExitStatus.NormalExit
               and self.output_path and Path(self.output_path).is_file()
               and self.original_path and Path(self.original_path).is_file()):
@@ -140,12 +142,12 @@ class GenerationDialog(QDialog):
         else:
             self.running = False
             self.output_path = None
-            self.label.setText('Échec de la génération :\n' + (self.error_text or self.log_tail or 'Le processus TTS s’est arrêté.'))
+            self.label.setText(ui('Échec de la génération :\n') + (self.error_text or self.log_tail or ui('Le processus TTS s’est arrêté.')))
         # Only remove this job's directory under this project's tmp.
         if self.work.resolve().parent == WORK_ROOT.resolve():
             shutil.rmtree(self.work, ignore_errors=True)
         self.cleanup_failed_outputs()
-        self.button.setText('Fermer')
+        self.button.setText(ui('Fermer'))
         self.button.setEnabled(True)
 
     def finish_success(self):
@@ -153,8 +155,8 @@ class GenerationDialog(QDialog):
             return
         self.running = False
         self.bar.setValue(1000)
-        self.bar.setFormat('Vocalisation terminée')
-        self.label.setText('Vocalisation terminée')
+        self.bar.setFormat(ui('Vocalisation terminée'))
+        self.label.setText(ui('Vocalisation terminée'))
         if self.work.resolve().parent == WORK_ROOT.resolve():
             shutil.rmtree(self.work, ignore_errors=True)
         self.button.hide()
@@ -171,7 +173,7 @@ class GenerationDialog(QDialog):
             return
         self.cancelled = True
         self.button.setEnabled(False)
-        self.label.setText('Arrêt de la génération…')
+        self.label.setText(ui('Arrêt de la génération…'))
         # As in add_dub GUI: terminate the whole OneCore worker tree.
         self.stopper = QProcess(self)
         self.stopper.finished.connect(self.cancel_finished)
@@ -186,7 +188,7 @@ class GenerationDialog(QDialog):
         else:
             self.cancelled = False
             self.button.setEnabled(True)
-            self.label.setText('L’arrêt a échoué ; la génération continue.')
+            self.label.setText(ui('L’arrêt a échoué ; la génération continue.'))
 
     def cancel_timeout(self):
         if self.running and self.cancelled:
@@ -196,11 +198,11 @@ class GenerationDialog(QDialog):
     def finish_cancelled(self):
         self.running = False
         self.output_path = None
-        self.label.setText('Génération annulée. La vidéo reste en pause.')
+        self.label.setText(ui('Génération annulée. La vidéo reste en pause.'))
         if self.work.resolve().parent == WORK_ROOT.resolve():
             shutil.rmtree(self.work, ignore_errors=True)
         self.cleanup_failed_outputs()
-        self.button.setText('Fermer')
+        self.button.setText(ui('Fermer'))
         self.button.setEnabled(True)
 
     def choose_after_success(self, choice):

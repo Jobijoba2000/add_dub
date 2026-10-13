@@ -4,6 +4,7 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from add_dub.gui.translations import ui
 
 DEFAULTS = dict(input_dir='input', output_dir='output', tmp_dir='tmp', language='auto',
                 tts_engine='onecore', voice_id='', min_rate_tts=1.0, max_rate_tts=1.8,
@@ -94,12 +95,14 @@ def validate_settings(values):
             numbers[key] = number
         except (ValueError, TypeError):
             low, high = number_limits(key, values)
-            errors[key] = f'Valeur attendue : {low:g} à {high:g}' + (' (entier).' if key in INTS else ' (point décimal).')
+            text = ('Valeur attendue : {low:g} à {high:g} (entier).' if key in INTS
+                    else 'Valeur attendue : {low:g} à {high:g} (point décimal).')
+            errors[key] = ui(text).format(low=low, high=high)
     if values.get('audio_codec') == 'ac3' and 'audio_bitrate' in numbers:
         if numbers['audio_bitrate'] not in (32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 576, 640):
-            errors['audio_bitrate'] = 'Débit AC3 standard requis : 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 576 ou 640.'
+            errors['audio_bitrate'] = ui('Débit AC3 standard requis : 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 448, 512, 576 ou 640.')
     if numbers.get('min_rate_tts', 0) > numbers.get('max_rate_tts', 10):
-        errors['min_rate_tts'] = errors['max_rate_tts'] = 'La vitesse minimale doit être inférieure ou égale à la maximale.'
+        errors['min_rate_tts'] = errors['max_rate_tts'] = ui('La vitesse minimale doit être inférieure ou égale à la maximale.')
     choices = {'tts_engine': ('onecore', 'edge', 'gtts'), 'language': ('auto', 'fr', 'en', 'es', 'de', 'it'),
                'audio_codec': ('ac3', 'aac', 'mp3', 'opus', 'libopus', 'vorbis', 'libvorbis', 'flac', 'pcm_s16le'),
                'translation_engine': ('ctranslate2', 'google')}
@@ -107,21 +110,21 @@ def validate_settings(values):
         choices[key] = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
     for key, allowed in choices.items():
         if values.get(key) not in allowed:
-            errors[key] = 'Choisissez une valeur dans la liste.'
+            errors[key] = ui('Choisissez une valeur dans la liste.')
     if values.get('translate'):
         for key in ('translate_from', 'translate_to'):
             text = str(values.get(key, ''))
             if not re.fullmatch(r'[a-z]{2}', text) and not (key == 'translate_from' and text in ('auto', '')):
-                errors[key] = 'Code de langue à deux lettres : fr, en, es… (auto pour la source).'
+                errors[key] = ui('Code de langue à deux lettres : fr, en, es… (auto pour la source).')
     for key in ('input_dir', 'output_dir', 'tmp_dir', 'logging.dir', 'logging.file_name'):
         if not str(values.get(key, '')).strip():
-            errors[key] = 'Ce champ ne peut pas être vide.'
+            errors[key] = ui('Ce champ ne peut pas être vide.')
     name = str(values.get('logging.file_name', ''))
     if any(c in name for c in '<>:"/\\|?*') or name in ('.', '..'):
-        errors['logging.file_name'] = 'Indiquez un nom de fichier sans dossier ni caractère interdit.'
+        errors['logging.file_name'] = ui('Indiquez un nom de fichier sans dossier ni caractère interdit.')
     for key, value in values.items():
         if isinstance(value, str) and any(c in value for c in '\r\n\0'):
-            errors[key] = 'Les sauts de ligne ne sont pas autorisés.'
+            errors[key] = ui('Les sauts de ligne ne sont pas autorisés.')
     # These fields retain their values while their feature is disabled.
     disabled = []
     if not values.get('translate'):
@@ -156,7 +159,7 @@ def save_settings(values, path=None):
         text = str(value)
         quote = '"' if '"' not in text else "'"
         if quote in text:
-            raise ValueError(f'{key} : les deux types de guillemets ne peuvent pas être combinés.')
+            raise ValueError(ui('{key} : les deux types de guillemets ne peuvent pas être combinés.').format(key=key))
         return quote + text + quote
     written, section, output = set(), '', []
     # Add missing root keys before the first section, never inside [logging].

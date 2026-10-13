@@ -1,6 +1,7 @@
 import os
 import json
 from dataclasses import replace
+from pathlib import Path
 from typing import Optional
 
 from add_dub.io.fs import join_output, join_tmp
@@ -124,6 +125,15 @@ def _process_one_video(
             input_video_path, srt_path, audio_idx, start, end, preview_fs.get_tmp_dir(),
             progress_cb=lambda value: emit('preview_extract', value=value))
         limit_duration_sec = None
+
+    if limit_duration_sec is not None:
+        # FFmpeg's output -t does not shorten the duration of a subtitle packet
+        # that starts before the cut. Use clipped cues for translation and mux
+        # as well as TTS, without changing the persistent full-episode SRT.
+        from add_dub.core.translation import write_srt_file
+        limited_srt = join_tmp(Path(srt_path).stem + f'.limit-{limit_duration_sec}.srt')
+        write_srt_file(parse_srt_file(srt_path, duration_limit_sec=limit_duration_sec), limited_srt)
+        srt_path = limited_srt
 
     # --- TRADUCTION (si demandée) ---
     if opts.translate and opts.translate_to:

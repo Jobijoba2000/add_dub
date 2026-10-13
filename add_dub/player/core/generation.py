@@ -6,6 +6,7 @@ import traceback
 from add_dub.player.io import fs
 from add_dub.progress import emit
 from add_dub.player.io.settings import validated
+from add_dub.gui.translations import ui
 
 
 class ProgressUI:
@@ -38,36 +39,36 @@ def main(request_path):
     shared_fs.SRT_DIR = str(fs.TMP_DIR)
     try:
         request = json.loads(Path(request_path).read_text(encoding='utf-8'))
-        emit('stage', name='srt', text='Extraction SRT')
+        emit('stage', name='srt', text=ui('Extraction SRT'))
         choice = ('mkv', request['ordinal']) if Path(request['video']).suffix.lower() == '.mkv' else ('stream', request['ff_index'])
         srt = resolve_srt_for_video(request['video'], choice, ui=ProgressUI())
         if not srt:
-            raise ValueError('Impossible d’extraire les sous-titres sélectionnés.')
+            raise ValueError(ui('Impossible d’extraire les sous-titres sélectionnés.'))
         strip_subtitle_tags_inplace(str(srt))
         if not parse_srt_file(str(srt)):
-            raise ValueError('La piste sélectionnée ne contient aucun sous-titre vocalisable.')
+            raise ValueError(ui('La piste sélectionnée ne contient aucun sous-titre vocalisable.'))
         emit('complete', name='srt')
         duration_ms = request['duration_ms']
         if duration_ms <= 0:
-            raise ValueError('La durée de cette vidéo est indisponible.')
+            raise ValueError(ui('La durée de cette vidéo est indisponible.'))
         settings = validated(request['settings'])
         from add_dub.io.work import is_offline
         opts = DubOptions(offline=is_offline(), tts_engine=settings['engine'], voice_id=settings['voice'],
                           dubbed_language=settings['language'], dubbed_locale=settings['region'],
                           min_rate_tts=settings['min_rate_tts'], max_rate_tts=settings['max_rate_tts'],
                           db_reduct=settings['ducking_db'])
-        emit('stage', name='tts', text='Génération TTS')
+        emit('stage', name='tts', text=ui('Génération TTS'))
         temporary_wav = Path(fs.TMP_DIR) / 'dub.wav'
         generate_dub_audio(str(srt), str(temporary_wav), opts,
                            target_total_duration_ms=duration_ms, ui=ProgressUI())
         emit('complete', name='tts')
-        emit('stage', name='audio', text='Extraction audio')
+        emit('stage', name='audio', text=ui('Extraction audio'))
         original_wav = Path(fs.TMP_DIR) / 'original.wav'
         extract_audio_track(request['video'], request['audio_ff_index'], str(original_wav),
                             progress_cb=lambda value: emit('progress', value=value))
         emit('complete', name='audio')
         cues = parse_srt_file(str(srt))
-        emit('stage', name='ducking', text='Ducking audio')
+        emit('stage', name='ducking', text=ui('Atténuation audio'))
         lower_audio_during_subtitles(str(original_wav), cues, str(Path(fs.TMP_DIR) / 'ducked.wav'),
                                      reduction_db=opts.db_reduct, fade_duration=0, offset_ms=0)
         emit('complete', name='ducking')

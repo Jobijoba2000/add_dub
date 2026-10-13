@@ -3,6 +3,7 @@ import json
 import math
 import os
 from pathlib import Path
+from add_dub.gui.translations import ui
 from .fs import ROOT
 
 SETTINGS_PATH = ROOT / 'player-data' / 'settings.json'
@@ -12,14 +13,16 @@ DEFAULTS = {'ducking_db': -5.0, 'min_rate_tts': 1.0, 'max_rate_tts': 1.8,
 
 def validated(settings):
     result = {**DEFAULTS, **settings}
+    if 'engine' in result and result['engine'] not in ('onecore', 'edge', 'gtts'):
+        raise ValueError(ui('Choisissez une voix puis cliquez sur « Enregistrer les réglages » dans Vocaliser les sous-titres.'))
     for key, low, high in [('ducking_db', -100, 0), ('min_rate_tts', .1, 10),
                            ('max_rate_tts', .1, 10), ('tts_mix', 0, 10), ('bg_mix', 0, 10)]:
         value = float(result[key])
         if not math.isfinite(value) or not low <= value <= high:
-            raise ValueError('Valeur invalide : ' + key)
+            raise ValueError(ui('Valeur invalide : {key}').format(key=key))
         result[key] = value
     if result['min_rate_tts'] > result['max_rate_tts']:
-        raise ValueError('La vitesse minimale doit être inférieure ou égale à la vitesse maximale.')
+        raise ValueError(ui('La vitesse minimale doit être inférieure ou égale à la vitesse maximale.'))
     return result
 
 

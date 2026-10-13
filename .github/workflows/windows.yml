@@ -42,7 +42,11 @@ jobs:
       - name: Check packaged entry point
         if: matrix.os == 'windows-2022'
         run: |
-          ./dist/add_dub/add_dub.exe --help
+          foreach ($launcher in @('add_dub.exe', 'add_dub_console.exe', 'add_dub_player.exe')) {
+            & "./dist/add_dub/$launcher" --version
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+          ./dist/add_dub/add_dub_console.exe --help
           exit $LASTEXITCODE
       - name: Save inventory
         if: matrix.os == 'windows-2022'

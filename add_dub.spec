@@ -1,7 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('models.lock.json', '.'), ('docs/favicon.png', 'docs'), ('docs/add_dub.ico', 'docs'), ('docs/icons8', 'docs/icons8')]
+datas = [('models.lock.json', '.'), ('assets/icons/add_dub.ico', 'assets/icons'),
+         ('assets/icons/add_dub_console.ico', 'assets/icons'),
+         ('assets/icons/add_dub_player.ico', 'assets/icons'),
+         ('assets/icons/papirus', 'assets/icons/papirus')]
 binaries = []
 hiddenimports = []
 
@@ -34,26 +37,18 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='add_dub',
-    icon='docs/add_dub.ico',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=True,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
+launchers = []
+for name, console in [('add_dub', False), ('add_dub_console', True), ('add_dub_player', False)]:
+    launchers.append(EXE(
+        pyz, a.scripts, [], exclude_binaries=True,
+        name=name, icon=f'assets/icons/{name}.ico', version='scripts/windows_version.txt',
+        debug=False, bootloader_ignore_signals=False,
+        strip=False, upx=True, console=console,
+        disable_windowed_traceback=False, argv_emulation=False,
+        target_arch=None, codesign_identity=None, entitlements_file=None,
+    ))
 coll = COLLECT(
-    exe,
+    *launchers,
     a.binaries,
     a.datas,
     strip=False,

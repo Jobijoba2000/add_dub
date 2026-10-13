@@ -1,4 +1,5 @@
 """Contrôles de paramètres avec validation explicite et interrupteur animé."""
+from add_dub.gui.translations import ui
 import math
 import re
 from PySide6.QtCore import Qt, Property, QPropertyAnimation, QEasingCurve, Signal, QSize, QRectF
@@ -92,13 +93,13 @@ class NumberField(QWidget):
     def errorText(self):
         raw = self.text()
         if ',' in raw:
-            return 'Utilisez un point décimal, par exemple 1.5.'
+            return ui('Utilisez un point décimal, par exemple 1.5.')
         pattern = r'[+-]?\d+' if self.integer else r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)'
         if not re.fullmatch(pattern, raw):
-            return 'Entrez un nombre entier.' if self.integer else 'Entrez un nombre avec un point décimal.'
+            return ui('Entrez un nombre entier.') if self.integer else ui('Entrez un nombre avec un point décimal.')
         number = float(raw)
         if not math.isfinite(number) or not self.minimum <= number <= self.maximum:
-            return f'Hors plage : {self.minimum:g} à {self.maximum:g}{self.suffix}.'
+            return f'{ui('Hors plage : ')}{self.minimum:g}{ui(' à ')}{self.maximum:g}{self.suffix}.'
         return self._external_error
 
     def isValid(self):
@@ -136,7 +137,7 @@ class NumberField(QWidget):
         self.editor.style().unpolish(self.editor)
         self.editor.style().polish(self.editor)
         fmt = '.0f' if self.integer else '.1f'
-        bounds = f'{format(self.minimum, fmt)} à {format(self.maximum, fmt)}{self.suffix}'
+        bounds = f'{format(self.minimum, fmt)}{ui(' à ')}{format(self.maximum, fmt)}{self.suffix}'
         self.hint.setText(('! ' + error) if error else bounds)
         self.hint.setStyleSheet('color: #ff8b8b;' if error and self.isEnabled() else 'color: #999999;')
         self.editor.setAccessibleDescription(error or bounds)

@@ -1,6 +1,7 @@
 import json
 import tempfile
 import unittest
+from add_dub.gui.translations import ui
 from pathlib import Path
 from add_dub.gui.run import VideoRunFiles, partition_existing
 
@@ -39,7 +40,7 @@ class RunFilesTests(unittest.TestCase):
                 self.assertEqual(len(job.completed), 42)
                 self.assertEqual(window.progress.value(), 0)
                 self.assertEqual(window.durations, [])
-                self.assertIn('Restant estimé : -', window.time_label.text())
+                self.assertIn(ui('\nRestant estimé : ') + '-', window.time_label.text())
                 window.position = 10
                 window.update_totals()
                 self.assertGreater(window.progress.value(), 0)
@@ -119,7 +120,7 @@ time.sleep(60)
                 self.assertEqual(window.position, 0)
                 self.assertFalse(window.jobs[0].completed)
                 self.assertEqual(window.progress.value(), 0)
-                self.assertEqual(window.queue.topLevelItem(0).text(2), 'En attente')
+                self.assertEqual(window.queue.topLevelItem(0).text(2), ui('En attente'))
             finally:
                 window.process.kill()
                 window.process.waitForFinished(1000)

@@ -1,4 +1,5 @@
 """Widgets Qt accessibles et chargement asynchrone des catalogues de voix."""
+from add_dub.gui.translations import ui
 from copy import deepcopy
 import threading
 
@@ -74,7 +75,7 @@ class QueueTabBar(QTabBar):
 class SpacedMenu(QMenu):
     """Garde un espace avec le bouton, y compris près du bord de l’écran."""
     def showEvent(self, event):
-        self.setMinimumWidth(max(260, self.fontMetrics().horizontalAdvance('Ouvrir des vidéos…') + 110))
+        self.setMinimumWidth(max(260, self.fontMetrics().horizontalAdvance(ui('Ouvrir des vidéos…')) + 110))
         super().showEvent(event)
         bounds = self.screen().availableGeometry()
         y = self.y() + 8
@@ -209,11 +210,11 @@ class VoicePicker(QWidget):
             form.setContentsMargins(0, 0, 0, 0)
             form.setVerticalSpacing(14)
             form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
-        self.engine = combo([('Windows OneCore · hors ligne', 'onecore'), ('Edge · en ligne', 'edge'), ('Google TTS · en ligne', 'gtts')], 'Moteur vocal')
-        self.language = combo(name='Langue de la voix')
-        self.region = combo(name='Variante régionale')
-        self.voice = combo(name='Voix disponible')
-        for label, widget in (('Moteur', self.engine), ('Langue', self.language), ('Région', self.region), ('Voix', self.voice)):
+        self.engine = combo([(ui('Windows OneCore · hors ligne'), 'onecore'), (ui('Edge · en ligne'), 'edge'), (ui('Google TTS · en ligne'), 'gtts')], ui('Moteur vocal'))
+        self.language = combo(name=ui('Langue de la voix'))
+        self.region = combo(name=ui('Variante régionale'))
+        self.voice = combo(name=ui('Voix disponible'))
+        for label, widget in ((ui('Moteur'), self.engine), (ui('Langue'), self.language), (ui('Région'), self.region), (ui('Voix'), self.voice)):
             form.addRow(label, widget)
         self.notice = QLabel()
         self.notice.setWordWrap(True)
@@ -249,7 +250,7 @@ class VoicePicker(QWidget):
             box.clear()
             box.setEnabled(False)
             box.blockSignals(False)
-        self.notice.setText('Recherche des langues et des voix…')
+        self.notice.setText(ui('Recherche des langues et des voix…'))
         def finish(voices, error):
             if generation != self.generation:
                 return
@@ -272,7 +273,7 @@ class VoicePicker(QWidget):
         for code in languages:
             locale = QLocale(code)
             english = QLocale.languageToString(locale.language()).lower()
-            native = locale.nativeLanguageName() or code or 'Langue inconnue'
+            native = locale.nativeLanguageName() or code or ui('Langue inconnue')
             # Qt associe « en » aux États-Unis et renvoie « American English ».
             # Le pays est choisi séparément dans la liste des régions.
             if code == 'en':
@@ -285,13 +286,13 @@ class VoicePicker(QWidget):
         self.language.blockSignals(False)
         self.language_changed()
         if error or not self.voices:
-            self.notice.setText(error or 'Aucune voix disponible. Choisissez un autre moteur ou installez une voix Windows.')
+            self.notice.setText(error or ui('Aucune voix disponible. Choisissez un autre moteur ou installez une voix Windows.'))
         elif self.engine.currentData() == 'gtts':
-            self.notice.setText('gTTS propose une voix par langue, sans choix de timbre.')
+            self.notice.setText(ui('gTTS propose une voix par langue, sans choix de timbre.'))
         elif self.engine.currentData() == 'edge' and len(self.voices) == 1:
-            self.notice.setText('Catalogue Edge limité : connexion indisponible, voix de secours proposée.')
+            self.notice.setText(ui('Catalogue Edge limité : connexion indisponible, voix de secours proposée.'))
         else:
-            self.notice.setText(f'{len(self.voices)} voix détectées pour ce moteur.')
+            self.notice.setText(f'{len(self.voices)}{ui(' voix détectées pour ce moteur.')}')
 
     def language_changed(self):
         code = self.language.currentData()
@@ -303,7 +304,7 @@ class VoicePicker(QWidget):
             locale = QLocale(locale_code)
             has_region = '-' in locale_code or '_' in locale_code
             english = QLocale.territoryToString(locale.territory()) if has_region else 'Single variant'
-            native = locale.nativeTerritoryName() if has_region else 'Variante unique'
+            native = locale.nativeTerritoryName() if has_region else ui('Variante unique')
             self.region.addItem(f'{locale_code.replace("_", "-")} - {english} - {native or locale_code}', locale_code)
         desired = next((v for v in self.voices if v['id'] == self.desired), None)
         if desired:
@@ -417,44 +418,44 @@ class SettingsEditor(QTabWidget):
         self.loading = False
         self.base = None
         self.video = None
-        self.setAccessibleName('Réglages du doublage')
+        self.setAccessibleName(ui('Réglages du doublage'))
         self.setObjectName('settingsTabs')
         tab_bar = QueueTabBar(self)
         tab_bar.setObjectName('queueTabs')
         tab_bar.setExpanding(False)
         tab_bar.setDrawBase(False)
         self.setTabBar(tab_bar)
-        sources = page_form(self, 'Pistes')
+        sources = page_form(self, ui('Pistes'))
         sources.setVerticalSpacing(32)
         sources.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
         sources.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         sources.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        self.audio = TrackPicker('Piste audio originale')
-        self.sub = TrackPicker('Source des sous-titres')
-        sources.addRow('Audio original', self.audio)
-        sources.addRow('Sous-titres', self.sub)
-        voices = page_form(self, 'Voix')
+        self.audio = TrackPicker(ui('Piste audio originale'))
+        self.sub = TrackPicker(ui('Source des sous-titres'))
+        sources.addRow(ui('Audio original'), self.audio)
+        sources.addRow(ui('Sous-titres'), self.sub)
+        voices = page_form(self, ui('Voix'))
         voices.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
         self.voice = VoicePicker(tasks, self, form=voices)
         self.voice.hide()
-        trans = page_form(self, 'Traduction')
-        self.translate = QCheckBox('Traduire les sous-titres avant le doublage')
-        self.translation_engine = combo([('Traduction locale · CTranslate2', 'ctranslate2'), ('Google · en ligne', 'google')], 'Moteur de traduction')
+        trans = page_form(self, ui('Traduction'))
+        self.translate = QCheckBox(ui('Traduire les sous-titres avant le doublage'))
+        self.translation_engine = combo([(ui('Traduction locale · CTranslate2'), 'ctranslate2'), (ui('Google · en ligne'), 'google')], ui('Moteur de traduction'))
         self.translate_to = QLineEdit()
-        self.translate_to.setAccessibleName('Langue cible de traduction')
+        self.translate_to.setAccessibleName(ui('Langue cible de traduction'))
         self.translate_to.setMaximumWidth(160)
         self.translate_from = QLineEdit()
-        self.translate_from.setAccessibleName('Langue source de traduction')
-        self.translate_from.setPlaceholderText('Automatique')
+        self.translate_from.setAccessibleName(ui('Langue source de traduction'))
+        self.translate_from.setPlaceholderText(ui('Automatique'))
         self.translate_from.setMaximumWidth(160)
         trans.addRow(self.translate)
-        trans.addRow('Moteur', self.translation_engine)
-        trans.addRow('Langue cible (fr, en…)', self.translate_to)
-        trans.addRow('Langue source', self.translate_from)
-        privacy = QLabel('CTranslate2 garde le texte sur cet ordinateur ; les modèles peuvent être téléchargés. Google reçoit le texte des sous-titres. Un échec interrompt la vidéo.')
+        trans.addRow(ui('Moteur'), self.translation_engine)
+        trans.addRow(ui('Langue cible (fr, en…)'), self.translate_to)
+        trans.addRow(ui('Langue source'), self.translate_from)
+        privacy = QLabel(ui('CTranslate2 garde le texte sur cet ordinateur ; les modèles peuvent être téléchargés. Google reçoit le texte des sous-titres. Un échec interrompt la vidéo.'))
         privacy.setWordWrap(True)
         trans.addRow(privacy)
-        advanced = page_form(self, 'Audio et temps')
+        advanced = page_form(self, ui('Audio et temps'))
         self.fields = {}
         for key, label, choices in FIELDS[7:]:
             if key == 'limit_duration_sec':
@@ -469,7 +470,7 @@ class SettingsEditor(QTabWidget):
                 widget = QSpinBox()
                 widget.setRange(-3600000 if key.startswith('offset') else 0, 3600000)
                 if key == 'limit_duration_sec':
-                    widget.setSpecialValueText('Vidéo entière')
+                    widget.setSpecialValueText(ui('Vidéo entière'))
             else:
                 widget = QDoubleSpinBox()
                 widget.setDecimals(1)
@@ -488,10 +489,10 @@ class SettingsEditor(QTabWidget):
                 layout.setContentsMargins(0, 0, 0, 0)
                 layout.setSpacing(6)
                 layout.addWidget(widget, 1)
-                bounds = f'{widget.minimum():g} à {widget.maximum():g}'
+                bounds = f'{widget.minimum():g}{ui(' à ')}{widget.maximum():g}'
                 unit = ' ms' if key.startswith('offset') else ' dB' if key == 'ducking_db' else ''
                 hint = QLabel(f'({bounds}{unit})')
-                widget.setAccessibleDescription(f'Valeurs autorisées : {bounds}{unit}')
+                widget.setAccessibleDescription(f'{ui('Valeurs autorisées : ')}{bounds}{unit}')
                 layout.addWidget(hint)
                 advanced.addRow(label.split(' ;')[0], row)
             else:
@@ -544,7 +545,7 @@ class SettingsEditor(QTabWidget):
     def settings(self):
         result = deepcopy(self.base)
         if result is None:
-            raise ValueError('Attendez la détection des pistes.')
+            raise ValueError(ui('Attendez la détection des pistes.'))
         result.translate = self.translate.isChecked()
         result.values['limit_duration_sec'] = ''
         for key, box in (('audio_index', self.audio), ('sub', self.sub), ('translation_engine', self.translation_engine)):

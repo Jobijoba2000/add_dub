@@ -1,12 +1,23 @@
 # Icône add_dub
 
 Visuel original généré avec l'outil ImageGen intégré le 12 septembre 2026.
-Source transparente : `add_dub.png`. Icône Windows : `add_dub.ico`.
+Source transparente : `assets/icons/add_dub.png`.
+Icône Windows : `assets/icons/add_dub.ico`.
 
 L'ICO contient 16, 20, 24, 32, 40, 48, 64, 96, 128 et 256 pixels.
 Reconstruction : `.venv\Scripts\python.exe scripts\build_app_icon.py`.
 La fenêtre utilise cet ICO ; PyInstaller l'embarque comme ressource de l'EXE
-via `icon='docs/add_dub.ico'`. Recompiler pour mettre à jour un EXE existant.
+via `icon='assets/icons/add_dub.ico'`. Recompiler pour mettre à jour un EXE existant.
+
+La v2 ajoute deux dessins SVG originaux sous la licence du projet :
+`assets/icons/add_dub_console.svg` (bulle cyan et invite de terminal) et
+`assets/icons/add_dub_player.svg` (bulle orange, lecture et audio). Le script construit
+leurs ICO dans les mêmes dix tailles. Le GUI conserve l’icône principale ;
+la console et le player utilisent chacun leur variante.
+
+Les pictogrammes d’interface sont dans `assets/icons/papirus/`, avec leur
+[attribution](papirus/README.md). Les ressources nécessaires sont embarquées
+sous `_internal/assets/icons/` dans la distribution.
 
 Tailles de référence : https://learn.microsoft.com/windows/apps/design/style/iconography/app-icon-construction
 

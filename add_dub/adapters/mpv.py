@@ -3,6 +3,7 @@ import ctypes as c
 import os
 from pathlib import Path
 from add_dub.io.fs import ROOT
+from add_dub.gui.translations import ui
 
 
 class Event(c.Structure):
@@ -22,7 +23,7 @@ class Player:
         directory = Path(ROOT) / 'tools' / 'mpv'
         library = directory / 'libmpv-2.dll'
         if not library.is_file():
-            raise RuntimeError('Moteur vidéo absent : tools/mpv/libmpv-2.dll est nécessaire.')
+            raise RuntimeError(ui('Moteur vidéo absent : tools/mpv/libmpv-2.dll est nécessaire.'))
         self.dll_directory = os.add_dll_directory(str(directory))
         self.lib = c.CDLL(str(library))
         signatures = {
@@ -45,7 +46,7 @@ class Player:
         self.error = None
         self.loaded = False
         if not self.handle:
-            raise RuntimeError('Création du lecteur mpv impossible.')
+            raise RuntimeError(ui('Création du lecteur mpv impossible.'))
         try:
             options = {'wid': str(hwnd & 0xffffffff), 'config': 'no',
                        'load-scripts': 'no', 'osc': 'no', 'osd-level': '0',
@@ -229,7 +230,7 @@ class Player:
         self._command('audio-add', str(tts_wav), 'select')
         tracks = [t for t in self._tracks('audio') if t['external']]
         if len(tracks) < 2:
-            raise RuntimeError('Les deux WAV préparés n’ont pas été ajoutés à mpv.')
+            raise RuntimeError(ui('Les deux WAV préparés n’ont pas été ajoutés à mpv.'))
         original_id, tts_id = tracks[-2]['id'], tracks[-1]['id']
         self._set('lavfi-complex',
                   f"[aid{original_id}] [aid{tts_id}] amix=inputs=2:duration=longest:normalize=0:weights='{float(bg_mix):.6f} {float(tts_mix):.6f}',alimiter=limit=0.95:level=0:latency=1 [ao]")

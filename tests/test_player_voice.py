@@ -5,7 +5,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-from add_dub.player.io.settings import DEFAULTS, save_settings, load_settings
+from add_dub.player.io.settings import DEFAULTS, save_settings, load_settings, validated
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
 from add_dub.player.gui.voice_dialog import VoiceDialog
 
@@ -46,6 +46,13 @@ class VoiceDialogTests(unittest.TestCase):
         self.assertEqual(picker.voice.currentData(), 'canada')
         picker.language.setCurrentIndex(picker.language.findData('en'))
         self.assertEqual(picker.voice.currentData(), 'english')
+
+    def test_supported_engines_and_stale_saved_selection(self):
+        picker = self.dialog.picker
+        self.assertEqual([picker.engine.itemData(i) for i in range(picker.engine.count())],
+                         ['onecore', 'edge', 'gtts'])
+        with self.assertRaises(ValueError):
+            validated({'engine': 'unsupported', 'voice': 'old-voice'})
 
     def test_loading_and_empty_catalog(self):
         button = self.dialog.buttons.button(QDialogButtonBox.StandardButton.Ok)

@@ -1,4 +1,5 @@
 import unittest
+from add_dub.gui.translations import ui
 from add_dub.progress import VideoProgress, aggregate, remaining_seconds
 
 
@@ -68,7 +69,7 @@ class ProgressTests(unittest.TestCase):
             window.active_key = (0, videos[1].path)
             window.refresh()
             self.assertIs(window.queue.topLevelItem(0), window.rows[window.active_key])
-            self.assertEqual(item.text(2), 'Terminé')
+            self.assertEqual(item.text(2), ui('Terminé'))
             self.assertIs(item.treeWidget(), window.finished_queue)
             window.remove_entries('all')
             self.assertEqual(len(window.rows), 3)  # Liste verrouillée pendant le traitement.
@@ -111,7 +112,7 @@ class ProgressTests(unittest.TestCase):
             self.assertFalse(window.running)
             self.assertEqual(window.jobs[0].completed, {video.path})
             self.assertEqual(window.progress.value(), 1000)
-            self.assertEqual(window.finished_queue.topLevelItem(0).text(2), 'Terminé')
+            self.assertEqual(window.finished_queue.topLevelItem(0).text(2), ui('Terminé'))
             self.assertEqual(window.queue.topLevelItemCount(), 0)
             self.assertFalse(window.start_button.isEnabled())
             self.assertNotIn('@@ADD_DUB_PROGRESS@@', '\n'.join(window.log_lines))
@@ -191,7 +192,7 @@ class ProgressTests(unittest.TestCase):
         progress.update({'event': 'include', 'name': 'ocr'})
         progress.update({'event': 'stage', 'name': 'subtitles'})
         progress.update({'event': 'stage', 'name': 'ocr'})
-        self.assertIn('OCR : en cours', progress.text)
+        self.assertIn('OCR : ' + ui('en cours'), progress.text)
         progress.update({'event': 'progress', 'value': 42})
         self.assertIn('OCR : 42 %', progress.text)
         self.assertLess(progress.percent, 42)
@@ -203,7 +204,7 @@ class ProgressTests(unittest.TestCase):
         progress.update({'event': 'stage', 'name': 'translation'})
         self.assertIsNone(progress.within)
         progress.update({'event': 'progress', 'value': 10})
-        self.assertIn('Traduction : 10 %', progress.text)
+        self.assertIn(ui('Traduction') + ' : 10 %', progress.text)
 
     def test_total_and_eta(self):
         self.assertEqual(aggregate(0, 100, 50), .5)
@@ -243,10 +244,10 @@ class ProgressTests(unittest.TestCase):
             window.refresh()
             line = PREFIX + json.dumps({'event': 'stage', 'name': 'tts'}) + '\n'
             window.consume_output(line[:9])
-            self.assertEqual(window.video_progress.label, 'Préparation')
+            self.assertEqual(window.video_progress.label, ui('Préparation'))
             window.consume_output(line[9:])
             window.consume_output(PREFIX + json.dumps({'event': 'progress', 'value': 50}) + '\n')
-            self.assertIn('Génération vocale', window.active_bar.format())
+            self.assertIn(ui('Génération vocale'), window.active_bar.format())
             self.assertGreater(window.progress.value(), 0)
             self.assertNotIn(PREFIX, '\n'.join(window.log_lines))
             window.consume_output('journal sans saut de ligne', final=True)

@@ -12,6 +12,17 @@ from add_dub.core.options import DubOptions
 
 
 class LegacyTtsExecutionTests(unittest.TestCase):
+    def test_cli_rejects_unsupported_engine_and_keeps_offline_onecore(self):
+        import contextlib
+        import io
+        from add_dub.cli.args import parse_args
+        args, _ = parse_args(['--batch', '--tts-engine', 'onecore', '--offline', '--no-translate'])
+        self.assertEqual(args.tts_engine, 'onecore')
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            parse_args(['--batch', '--tts-engine', 'unsupported'])
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            parse_args(['--batch', '--tts-engine', 'edge', '--offline', '--no-translate'])
+
     def test_engine_executors_memory_assembly_and_progress(self):
         for engine in ('edge', 'gtts', 'onecore'):
             with self.subTest(engine=engine), tempfile.TemporaryDirectory() as folder:

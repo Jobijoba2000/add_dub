@@ -1,4 +1,5 @@
 """Édition des valeurs par défaut persistantes, indépendante des lots existants."""
+from add_dub.gui.translations import ui
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -18,10 +19,10 @@ class DefaultVoicePicker(VoicePicker):
         super().populate(error)
         if self.desired and not any(v['id'] == self.desired for v in self.voices):
             self.voice.blockSignals(True)
-            self.voice.addItem('Voix enregistrée (actuellement indisponible)', self.desired)
+            self.voice.addItem(ui('Voix enregistrée (actuellement indisponible)'), self.desired)
             self.voice.setCurrentIndex(self.voice.count() - 1)
             self.voice.blockSignals(False)
-            self.notice.setText('La voix enregistrée est conservée. Vous pouvez choisir une autre voix ou le choix automatique.')
+            self.notice.setText(ui('La voix enregistrée est conservée. Vous pouvez choisir une autre voix ou le choix automatique.'))
             self.changed.emit()
 
 
@@ -39,7 +40,7 @@ class GeneralSettingsDialog(QDialog):
         self.saved_values = None
         self._closed = False
         self.finished.connect(self._finish)
-        self.setWindowTitle('Paramètres généraux — add_dub')
+        self.setWindowTitle(ui('Paramètres généraux — add_dub'))
         self.resize(860, 740)
         self.setMinimumSize(700, 530)
         self.setStyleSheet('''
@@ -52,11 +53,11 @@ class GeneralSettingsDialog(QDialog):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(22, 20, 22, 20)
         outer.setSpacing(14)
-        title = QLabel('Paramètres généraux')
+        title = QLabel(ui('Paramètres généraux'))
         title.setStyleSheet('font-size: 22px; font-weight: bold;')
         outer.addWidget(title)
-        description = QLabel('Ces valeurs seront proposées pour les prochains ajouts de vidéos. '
-                             'Les réglages propres aux lots déjà configurés sont conservés.')
+        description = QLabel(ui('Ces valeurs seront proposées pour les prochains ajouts de vidéos. '
+                             'Les réglages propres aux lots déjà configurés sont conservés.'))
         description.setWordWrap(True)
         outer.addWidget(description)
         self.tabs = QTabWidget()
@@ -68,18 +69,18 @@ class GeneralSettingsDialog(QDialog):
         self.tabs.setTabBar(bar)
         outer.addWidget(self.tabs, 1)
 
-        general = self._page('Général')
-        for key, label in (('input_dir', 'Dossier d’entrée'), ('output_dir', 'Dossier de sortie'), ('tmp_dir', 'Fichiers temporaires')):
+        general = self._page(ui('Général'))
+        for key, label in (('input_dir', ui('Dossier d’entrée')), ('output_dir', ui('Dossier de sortie')), ('tmp_dir', ui('Fichiers temporaires'))):
             self._path(general, key, label)
-        self._choice(general, 'language', 'Langue des messages', [
-            ('Automatique', 'auto'), ('Français', 'fr'), ('English', 'en'),
+        self._choice(general, 'language', ui('Langue des messages'), [
+            (ui('Automatique'), 'auto'), ('Français', 'fr'), ('English', 'en'),
             ('Español', 'es'), ('Deutsch', 'de'), ('Italiano', 'it')])
-        self._note(general, 'La langue concerne les messages du moteur et la console. Les libellés du GUI restent en français.')
-        self._toggle(general, 'ask_test_before_cleanup', 'Proposer un essai avant nettoyage')
-        self._note(general, 'Cette demande concerne le mode console interactif. Dans le GUI, utilisez l’onglet Essai du configurateur.')
+        self._note(general, ui('La langue concerne l’interface et les messages du moteur. Redémarrez l’application pour l’appliquer partout.'))
+        self._toggle(general, 'ask_test_before_cleanup', ui('Proposer un essai avant nettoyage'))
+        self._note(general, ui('Cette demande concerne le mode console interactif. Dans le GUI, utilisez l’onglet Essai du configurateur.'))
 
-        voices = self._page('Voix')
-        self.automatic_voice = AnimatedToggle('Choisir automatiquement la voix')
+        voices = self._page(ui('Voix'))
+        self.automatic_voice = AnimatedToggle(ui('Choisir automatiquement la voix'))
         self.automatic_voice.setChecked(not self.initial.get('voice_id'))
         voices.addRow(self.automatic_voice)
         self.voice = DefaultVoicePicker(tasks)
@@ -89,48 +90,48 @@ class GeneralSettingsDialog(QDialog):
         self.voice_error.setProperty('validationError', True)
         voices.addRow(self.voice_error)
         self.field_tabs.update(tts_engine=1, voice_id=1)
-        self._note(voices, 'Le même catalogue de voix est utilisé lors de l’ajout d’une vidéo.')
-        for key, label in (('min_rate_tts', 'Vitesse minimale'), ('max_rate_tts', 'Vitesse maximale')):
+        self._note(voices, ui('Le même catalogue de voix est utilisé lors de l’ajout d’une vidéo.'))
+        for key, label in (('min_rate_tts', ui('Vitesse minimale')), ('max_rate_tts', ui('Vitesse maximale'))):
             self._number(voices, key, label, suffix=' ×')
-        self._note(voices, '1.0 = vitesse normale. OneCore accepte 0.5 à 6.0 ; les autres moteurs sont limités ici à 0.1–10.0. '
-                           'La vitesse minimale doit rester inférieure ou égale à la maximale.')
+        self._note(voices, ui('1.0 = vitesse normale. OneCore accepte 0.5 à 6.0 ; les autres moteurs sont limités ici à 0.1–10.0. '
+                           'La vitesse minimale doit rester inférieure ou égale à la maximale.'))
 
-        audio = self._page('Audio et temps')
-        self._choice(audio, 'audio_codec', 'Codec audio', [(label, value) for label, value in (
+        audio = self._page(ui('Audio et temps'))
+        self._choice(audio, 'audio_codec', ui('Codec audio'), [(label, value) for label, value in (
             ('AC3', 'ac3'), ('AAC', 'aac'), ('MP3', 'mp3'), ('Opus', 'opus'),
-            ('Vorbis', 'vorbis'), ('FLAC · sans perte', 'flac'), ('PCM 16 bits · sans perte', 'pcm_s16le'))])
-        self._number(audio, 'audio_bitrate', 'Débit audio', integer=True, suffix=' kbit/s')
-        self._number(audio, 'db', 'Atténuation du fond', suffix=' dB')
-        self._number(audio, 'bg', 'Volume original', suffix=' ×')
-        self._number(audio, 'tts', 'Volume des voix', suffix=' ×')
-        self._number(audio, 'offset', 'Décalage des sous-titres', integer=True, suffix=' ms')
-        self._number(audio, 'offset_video', 'Décalage vidéo', integer=True, suffix=' ms')
-        self._text(audio, 'orig_audio_lang', 'Libellé audio original')
-        self._note(audio, 'Les décalages et le débit utilisent des entiers. Les volumes, vitesses et dB utilisent une décimale avec un point. '
-                          'Les plages affichées limitent les valeurs saisies ; les volumes supérieurs à 1.0 amplifient le son.')
+            ('Vorbis', 'vorbis'), (ui('FLAC · sans perte'), 'flac'), (ui('PCM 16 bits · sans perte'), 'pcm_s16le'))])
+        self._number(audio, 'audio_bitrate', ui('Débit audio'), integer=True, suffix=' kbit/s')
+        self._number(audio, 'db', ui('Atténuation du fond'), suffix=' dB')
+        self._number(audio, 'bg', ui('Volume original'), suffix=' ×')
+        self._number(audio, 'tts', ui('Volume des voix'), suffix=' ×')
+        self._number(audio, 'offset', ui('Décalage des sous-titres'), integer=True, suffix=' ms')
+        self._number(audio, 'offset_video', ui('Décalage vidéo'), integer=True, suffix=' ms')
+        self._text(audio, 'orig_audio_lang', ui('Libellé audio original'))
+        self._note(audio, ui('Les décalages et le débit utilisent des entiers. Les volumes, vitesses et dB utilisent une décimale avec un point. '
+                          'Les plages affichées limitent les valeurs saisies ; les volumes supérieurs à 1.0 amplifient le son.'))
 
-        translation = self._page('Traduction')
-        self._toggle(translation, 'translate', 'Traduire avant le doublage')
-        self._choice(translation, 'translation_engine', 'Moteur de traduction', [
-            ('CTranslate2 · local', 'ctranslate2'), ('Google · en ligne', 'google')])
-        self._text(translation, 'translate_from', 'Langue source', 'auto, fr, en…')
-        self._text(translation, 'translate_to', 'Langue cible', 'fr, en, es…')
-        self._toggle(translation, 'reuse_translated_subs', 'Réutiliser les traductions existantes')
-        self._note(translation, 'La désactivation conserve les réglages pour la prochaine activation. '
-                                'CTranslate2 traduit localement ; Google reçoit le texte à traduire.')
+        translation = self._page(ui('Traduction'))
+        self._toggle(translation, 'translate', ui('Traduire avant le doublage'))
+        self._choice(translation, 'translation_engine', ui('Moteur de traduction'), [
+            (ui('CTranslate2 · local'), 'ctranslate2'), (ui('Google · en ligne'), 'google')])
+        self._text(translation, 'translate_from', ui('Langue source'), 'auto, fr, en…')
+        self._text(translation, 'translate_to', ui('Langue cible'), 'fr, en, es…')
+        self._toggle(translation, 'reuse_translated_subs', ui('Réutiliser les traductions existantes'))
+        self._note(translation, ui('La désactivation conserve les réglages pour la prochaine activation. '
+                                'CTranslate2 traduit localement ; Google reçoit le texte à traduire.'))
 
-        logs = self._page('Journal')
-        self._toggle(logs, 'logging.console_enable', 'Afficher les messages en console')
+        logs = self._page(ui('Journal'))
+        self._toggle(logs, 'logging.console_enable', ui('Afficher les messages en console'))
         levels = [(name, name) for name in ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')]
-        self._choice(logs, 'logging.console_level', 'Niveau console', levels)
-        self._toggle(logs, 'logging.file_enable', 'Enregistrer un journal dans un fichier')
-        self._choice(logs, 'logging.file_level', 'Niveau du fichier', levels)
-        self._path(logs, 'logging.dir', 'Dossier du journal')
-        self._text(logs, 'logging.file_name', 'Nom du fichier journal')
+        self._choice(logs, 'logging.console_level', ui('Niveau console'), levels)
+        self._toggle(logs, 'logging.file_enable', ui('Enregistrer un journal dans un fichier'))
+        self._choice(logs, 'logging.file_level', ui('Niveau du fichier'), levels)
+        self._path(logs, 'logging.dir', ui('Dossier du journal'))
+        self._text(logs, 'logging.file_name', ui('Nom du fichier journal'))
 
         self.status = QLabel()
         self.status.setWordWrap(True)
-        self.status.setAccessibleName('Validation des paramètres')
+        self.status.setAccessibleName(ui('Validation des paramètres'))
         outer.addWidget(self.status)
         footer = QHBoxLayout()
         location = QLabel(str(self.path))
@@ -138,9 +139,9 @@ class GeneralSettingsDialog(QDialog):
         location.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         location.setStyleSheet('color: #aaa; font-size: 11px;')
         footer.addWidget(location, 1)
-        self.cancel_button = QPushButton('Annuler')
+        self.cancel_button = QPushButton(ui('Annuler'))
         self.cancel_button.clicked.connect(self.reject)
-        self.save_button = QPushButton('Enregistrer')
+        self.save_button = QPushButton(ui('Enregistrer'))
         self.save_button.setObjectName('primary')
         self.save_button.clicked.connect(self.save)
         footer.addWidget(self.cancel_button)
@@ -198,7 +199,7 @@ class GeneralSettingsDialog(QDialog):
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(field, 1)
-        browse = QPushButton('Parcourir…')
+        browse = QPushButton(ui('Parcourir…'))
         browse.setAutoDefault(False)
         def select():
             directory = QFileDialog.getExistingDirectory(self, label, field.text())
@@ -268,7 +269,7 @@ class GeneralSettingsDialog(QDialog):
                 field.setEnabled(not self.automatic_voice.isChecked() and not self.voice.loading and field.count() > minimum)
             errors = validate_settings(values)
             if not self.automatic_voice.isChecked() and not values['voice_id']:
-                errors['voice_id'] = 'Chargement des voix…' if self.voice.loading else 'Choisissez une voix disponible ou activez le choix automatique.'
+                errors['voice_id'] = ui('Chargement des voix…') if self.voice.loading else ui('Choisissez une voix disponible ou activez le choix automatique.')
             message = errors.get('voice_id', '') or errors.get('tts_engine', '')
             self.voice_error.setText(message)
             self.voice_error.setVisible(bool(message))
@@ -290,8 +291,8 @@ class GeneralSettingsDialog(QDialog):
                 invalid = any(self.field_tabs.get(key) == index for key in errors)
                 self.tabs.setTabText(index, ('! ' if invalid else '') + base)
             self.save_button.setEnabled(not errors)
-            self.status.setText('Corrigez les champs signalés en rouge avant d’enregistrer.' if errors else
-                                'Les modifications seront enregistrées dans options.conf.')
+            self.status.setText(ui('Corrigez les champs signalés en rouge avant d’enregistrer.') if errors else
+                                ui('Les modifications seront enregistrées dans options.conf.'))
             self.status.setStyleSheet('color: #ff8b8b;' if errors else 'color: #b5b5b5;')
             return not errors
         finally:
@@ -304,7 +305,7 @@ class GeneralSettingsDialog(QDialog):
             values = self.values()
             save_settings(values, self.path)
         except (ValueError, OSError) as exc:
-            QMessageBox.warning(self, 'Enregistrement impossible', str(exc))
+            QMessageBox.warning(self, ui('Enregistrement impossible'), str(exc))
             return
         self.saved_values = read_settings(self.path)
         self.accept()

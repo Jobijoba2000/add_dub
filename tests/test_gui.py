@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from add_dub.gui.translations import ui
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 
@@ -94,7 +95,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                 window.start_button.click()
             self.assertTrue(window.running)
             self.assertTrue(window.start_button.property('processing'))
-            self.assertEqual(window.start_button.text(), 'Arrêter')
+            self.assertEqual(window.start_button.text(), ui('Arrêter'))
             with patch.object(window, 'process_started'):
                 window.start_button.click()
             self.assertTrue(window.stop_requested)
@@ -256,7 +257,7 @@ class ConfigurationWindowTests(unittest.TestCase):
                 self.assertTrue(dialog.resume.isChecked())
                 self.assertFalse(dialog.overwrite.isChecked())
                 self.assertEqual(dialog.tree.topLevelItemCount(), 0)
-                self.assertIn('Aucune vidéo admissible', dialog.scope.text())
+                self.assertIn(ui('Aucune vidéo admissible. Vérifiez les pistes audio et les sous-titres.'), dialog.scope.text())
                 tasks.run.assert_called_once()
                 dialog.reject()
                 self.assertFalse(dialog.isVisible())

@@ -135,3 +135,31 @@ class MediaIntegrationTests(unittest.TestCase):
             generate_dub_audio(str(cues), str(output), DubOptions(tts_engine='edge'), target_total_duration_ms=1000)
         with wave.open(str(output)) as audio:
             self.assertAlmostEqual(audio.getnframes() / audio.getframerate(), 1, places=3)
+
+    def test_pipeline_duration_limit_clips_subtitle_crossing_the_end(self):
+        from add_dub.core.pipeline import process_one_video
+        from add_dub.core.subtitles import resolve_srt_for_video, parse_srt_file
+        source = self.root / 'crossing.srt'
+        source.write_text('1\n00:00:00,100 --> 00:00:03,700\nBonjour\n', encoding='utf-8')
+        before = source.read_bytes()
+        observed = []
+        def synth(**kwargs):
+            observed.extend(parse_srt_file(kwargs['srt_file']))
+            write_wav(kwargs['output_wav'], 200, seconds=1)
+        services = Services(resolve_srt_for_video=resolve_srt_for_video, generate_dub_audio=synth,
+                            choose_files=lambda items: items, choose_audio_track=lambda _: 1,
+                            choose_subtitle_source=lambda _: ('srt', str(source)), ui=Mock())
+        options = DubOptions(audio_ffmpeg_index=1, sub_choice=('srt', str(source)),
+                             audio_codec='pcm_s16le', voice_id='fr', batch_mode=True)
+        work, central = self.root / 'limit-work', self.root / 'limit-central'
+        work.mkdir(exist_ok=True)
+        central.mkdir(exist_ok=True)
+        with patch.object(fs, 'TMP_DIR', str(work)), patch.object(fs, 'SRT_DIR', str(central)), \
+             patch('add_dub.core.pipeline.list_available_voices', return_value=[]):
+            output = process_one_video(input_video_path=str(self.video), input_video_name=self.video.name,
+                                       output_dir_path=str(self.root / 'limited-pipeline'),
+                                       opts=options, svcs=services, limit_duration_sec=1)
+        self.assertEqual(observed, [(0.1, 1.0, 'Bonjour')])
+        self.assertLessEqual(float(probe_media(output)['format']['duration']), 1.15)
+        self.assertEqual(source.read_bytes(), before)
+        self.assertEqual(list(work.iterdir()), [])

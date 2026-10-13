@@ -1,4 +1,5 @@
 """Sélection d’une plage, essai isolé et lecture intégrée."""
+from add_dub.gui.translations import ui
 import json
 import math
 import os
@@ -24,7 +25,7 @@ def time_text(seconds):
 def time_seconds(text):
     import re
     if not re.fullmatch(r'\d+:[0-5]\d', text.strip()):
-        raise ValueError('Utilisez mm:ss, par exemple 02:30.')
+        raise ValueError(ui('Utilisez mm:ss, par exemple 02:30.'))
     minutes, seconds = map(int, text.split(':'))
     return minutes * 60 + seconds
 
@@ -87,12 +88,12 @@ class PreviewPane(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(8)
-        self.name = QLabel('Sélectionnez une vidéo dans la liste.')
+        self.name = QLabel(ui('Sélectionnez une vidéo dans la liste.'))
         self.name.setWordWrap(True)
         self.name.setMinimumHeight(30)
         header = QHBoxLayout()
         header.addWidget(self.name, 1)
-        self.new_test = QPushButton('Nouvel essai')
+        self.new_test = QPushButton(ui('Nouvel essai'))
         self.new_test.setAutoDefault(False)
         self.new_test.clicked.connect(self.clear_result)
         self.new_test.hide()
@@ -106,22 +107,22 @@ class PreviewPane(QWidget):
         row.addWidget(self.bar, 1)
         self.begin = QLineEdit('00:00')
         self.end = QLineEdit('00:30')
-        for label, widget in [('Début', self.begin), ('Fin', self.end)]:
+        for label, widget in [(ui('Début'), self.begin), (ui('Fin'), self.end)]:
             widget.setMaximumWidth(85)
-            widget.setAccessibleName(label + ' de l’essai (mm:ss)')
+            widget.setAccessibleName(label + ui(' de l’essai (mm:ss)'))
             widget.editingFinished.connect(self.input_range)
-        row.addWidget(QLabel('Début'))
+        row.addWidget(QLabel(ui('Début')))
         row.addWidget(self.begin)
-        row.addWidget(QLabel('Fin'))
+        row.addWidget(QLabel(ui('Fin')))
         row.addWidget(self.end)
-        self.duration_label = QLabel('Durée : --:--')
+        self.duration_label = QLabel(ui('Durée : --:--'))
         row.addWidget(self.duration_label)
-        self.test = QPushButton('Tester')
+        self.test = QPushButton(ui('Tester'))
         self.test.setMinimumWidth(120)
         self.test.setEnabled(False)
         self.test.clicked.connect(self.run_test)
         row.addWidget(self.test)
-        self.cancel = QPushButton('Arrêter l’essai')
+        self.cancel = QPushButton(ui('Arrêter l’essai'))
         self.cancel.hide()
         self.cancel.clicked.connect(self.stop)
         row.addWidget(self.cancel)
@@ -144,8 +145,8 @@ class PreviewPane(QWidget):
         self.screen.setStyleSheet('background: black;')
         self.screen.hide()
         screen_layout.addWidget(self.screen, 0, 0)
-        self.progress_extract = QLabel('Extraction de l’extrait : 0 %')
-        self.progress_process = QLabel('Traitement du doublage : 0 %')
+        self.progress_extract = QLabel(ui('Extraction de l’extrait : 0 %'))
+        self.progress_process = QLabel(ui('Traitement du doublage : 0 %'))
         for progress in (self.progress_extract, self.progress_process):
             progress.setAlignment(Qt.AlignmentFlag.AlignCenter)
             progress.setStyleSheet('font-size: 24px; font-weight: bold; color: white; background: transparent;')
@@ -175,7 +176,7 @@ class PreviewPane(QWidget):
         self.seek = QSlider(Qt.Orientation.Horizontal)
         self.seek.setRange(0, 1000)
         self.seek.setFixedHeight(18)
-        self.seek.setAccessibleName('Position dans l’extrait')
+        self.seek.setAccessibleName(ui('Position dans l’extrait'))
         self.seek.sliderReleased.connect(self.seek_to)
         playback_layout.addWidget(self.seek)
         playback = QHBoxLayout()
@@ -189,22 +190,22 @@ class PreviewPane(QWidget):
             widget.clicked.connect(action)
             playback.addWidget(widget)
             return widget
-        self.pause = button(QStyle.StandardPixmap.SP_MediaPlay, 'Lecture / pause (Espace)', self.toggle_playback)
-        button(QStyle.StandardPixmap.SP_MediaSeekBackward, 'Reculer de 5 secondes (gauche)', lambda: self.skip_seconds(-5))
-        button(QStyle.StandardPixmap.SP_MediaSeekForward, 'Avancer de 5 secondes (droite)', lambda: self.skip_seconds(5))
+        self.pause = button(QStyle.StandardPixmap.SP_MediaPlay, ui('Lecture / pause (Espace)'), self.toggle_playback)
+        button(QStyle.StandardPixmap.SP_MediaSeekBackward, ui('Reculer de 5 secondes (gauche)'), lambda: self.skip_seconds(-5))
+        button(QStyle.StandardPixmap.SP_MediaSeekForward, ui('Avancer de 5 secondes (droite)'), lambda: self.skip_seconds(5))
         self.position = QLabel('00:00 / 00:00')
         playback.addWidget(self.position)
         playback.addStretch()
         self.subtitles = QToolButton()
         self.subtitles.setText('CC')
-        self.subtitles.setAccessibleName('Sous-titres')
+        self.subtitles.setAccessibleName(ui('Sous-titres'))
         self.subtitles.setCheckable(True)
         self.subtitles.setEnabled(False)
         self.subtitles.setStyleSheet('QToolButton { color: #eeeeee; font-weight: bold; } QToolButton:checked { border-bottom: 2px solid #3bba72; }')
-        self.subtitles.setToolTip('Sous-titres indisponibles')
+        self.subtitles.setToolTip(ui('Sous-titres indisponibles'))
         self.subtitles.clicked.connect(self.toggle_subtitles)
         playback.addWidget(self.subtitles)
-        self.mute = button(QStyle.StandardPixmap.SP_MediaVolume, 'Couper / rétablir le son (M)', lambda: None)
+        self.mute = button(QStyle.StandardPixmap.SP_MediaVolume, ui('Couper / rétablir le son (M)'), lambda: None)
         self.mute.setCheckable(True)
         self.mute.toggled.connect(self.set_muted)
         self.volume = QSlider(Qt.Orientation.Horizontal)
@@ -212,7 +213,7 @@ class PreviewPane(QWidget):
         self.volume.setFixedHeight(18)
         self.volume.setValue(100)
         self.volume.setFixedWidth(90)
-        self.volume.setAccessibleName('Volume')
+        self.volume.setAccessibleName(ui('Volume'))
         self.volume.valueChanged.connect(lambda value: self.player.set_volume(value) if self.player else None)
         playback.addWidget(self.volume)
         playback_layout.addLayout(playback)
@@ -244,31 +245,31 @@ class PreviewPane(QWidget):
         self.test.setEnabled(False)
         self.bar.setEnabled(False)
         if not video:
-            self.name.setText('Sélectionnez une vidéo dans la liste.')
+            self.name.setText(ui('Sélectionnez une vidéo dans la liste.'))
             return
         self.clear_result()
         self.name.setText(Path(video.path).name)
         self.name.setToolTip(video.path)
-        self.status.setText('Lecture de la durée…')
+        self.status.setText(ui('Lecture de la durée…'))
         def work():
             result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'json', video.path],
                                     capture_output=True, text=True, timeout=30,
                                     creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
             duration = float(json.loads(result.stdout)['format']['duration'])
             if not math.isfinite(duration) or duration < 1:
-                raise ValueError('Durée vidéo indisponible.')
+                raise ValueError(ui('Durée vidéo indisponible.'))
             return int(duration)
         def done(duration, error):
             if generation != self.generation:
                 return
             if error:
-                self.status.setText(f'Durée indisponible : {error}')
+                self.status.setText(f'{ui('Durée indisponible : ')}{error}')
                 return
             self.bar.duration = duration
             self.set_range(0, min(30, duration))
             self.bar.setEnabled(True)
             self.test.setEnabled(True)
-            self.duration_label.setText('Durée : ' + time_text(duration))
+            self.duration_label.setText(ui('Durée : ') + time_text(duration))
         self.tasks.run(self, work, done)
 
     def set_range(self, start, end):
@@ -281,7 +282,7 @@ class PreviewPane(QWidget):
         try:
             start, end = time_seconds(self.begin.text()), time_seconds(self.end.text())
             if not 0 <= start < end <= self.bar.duration:
-                raise ValueError('La fin doit être après le début et dans la durée de la vidéo.')
+                raise ValueError(ui('La fin doit être après le début et dans la durée de la vidéo.'))
             self.set_range(start, end)
             return True
         except ValueError as error:
@@ -295,7 +296,7 @@ class PreviewPane(QWidget):
             self.dialog.save_current()
             settings = self.dialog.job.settings_for(self.video)
             if not settings.values.get('voice'):
-                raise ValueError('Choisissez une voix pour cette configuration.')
+                raise ValueError(ui('Choisissez une voix pour cette configuration.'))
             self.clear_result()
             from add_dub.adapters.mpv import Player
             self.player = Player(self.screen.winId())
@@ -317,8 +318,8 @@ class PreviewPane(QWidget):
             self.output_buffer = self.log = ''
             self.tracker = VideoProgress()
             self.stopping = False
-            self.progress_extract.setText('Extraction de l’extrait : 0 %')
-            self.progress_process.setText('Traitement du doublage : 0 %')
+            self.progress_extract.setText(ui('Extraction de l’extrait : 0 %'))
+            self.progress_process.setText(ui('Traitement du doublage : 0 %'))
             self.progress_extract.show()
             self.progress_process.show()
             self.screen.show()
@@ -327,7 +328,7 @@ class PreviewPane(QWidget):
             self.bar.setEnabled(False)
             self.begin.setEnabled(False)
             self.end.setEnabled(False)
-            self.status.setText('Préparation de l’extrait…')
+            self.status.setText(ui('Préparation de l’extrait…'))
             self.process.start(command[0], command[1:])
             self.process.closeWriteChannel()
         except Exception as error:
@@ -345,7 +346,7 @@ class PreviewPane(QWidget):
                 try:
                     event = json.loads(line.split(PREFIX, 1)[1])
                     if event.get('event') == 'preview_extract':
-                        self.progress_extract.setText(f"Extraction de l’extrait : {float(event.get('value', 0)):.1f} %")
+                        self.progress_extract.setText(f'{ui('Extraction de l’extrait : ')}{float(event.get('value', 0)):.1f} %')
                         continue
                     self.tracker.update(event)
                     self.progress_process.setText(self.tracker.text)
@@ -366,7 +367,7 @@ class PreviewPane(QWidget):
         self.test.show()
         output = self.directory / 'result.mkv' if self.directory else None
         if not self.stopping and code == 0 and output and output.is_file():
-            self.progress_process.setText('Traitement du doublage : 100 %')
+            self.progress_process.setText(ui('Traitement du doublage : 100 %'))
             self.screen.show()
             self.playback.show()
             try:
@@ -387,7 +388,7 @@ class PreviewPane(QWidget):
         else:
             self.progress_extract.hide()
             self.progress_process.hide()
-            self.status.setText('Essai arrêté.' if self.stopping else 'Échec de l’essai. ' + self.log[-1500:])
+            self.status.setText(ui('Essai arrêté.') if self.stopping else ui('Échec de l’essai. ') + self.log[-1500:])
             self.clear_result()
 
     def stop(self):
@@ -425,8 +426,8 @@ class PreviewPane(QWidget):
         enabled = bool(available and self.player.subtitles_enabled())
         self.subtitles.setEnabled(available)
         self.subtitles.setChecked(enabled)
-        self.subtitles.setToolTip(('Masquer les sous-titres' if enabled else 'Afficher les sous-titres')
-                                 if available else 'Sous-titres indisponibles')
+        self.subtitles.setToolTip((ui('Masquer les sous-titres') if enabled else ui('Afficher les sous-titres'))
+                                 if available else ui('Sous-titres indisponibles'))
 
     def toggle_subtitles(self, enabled):
         if self.player:
@@ -471,7 +472,7 @@ class PreviewPane(QWidget):
         self.subtitles.setEnabled(False)
         self.range_controls.show()
         self.new_test.hide()
-        self.test.setText('Tester')
+        self.test.setText(ui('Tester'))
         for shortcut in self.shortcuts:
             shortcut.setEnabled(False)
         if self.player:

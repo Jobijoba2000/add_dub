@@ -21,13 +21,15 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
         prog="add_dub",
         description=t("help_desc")
     )
+    from add_dub.version import __version__
+    parser.add_argument('--version', action='version', version=f'add_dub {__version__}')
 
     # Modes
     g_mode = parser.add_mutually_exclusive_group()
     g_mode.add_argument("--interactive", action="store_true", help=t("help_interactive"))
     g_mode.add_argument("--batch", action="store_true", help=t("help_batch"))
-    g_mode.add_argument("--gui", action="store_true", help="Ouvrir l'interface graphique")
-    g_mode.add_argument("--player", action="store_true", help="Ouvrir le lecteur vidéo avec vocalisation")
+    g_mode.add_argument("--gui", action="store_true", help=t("help_gui"))
+    g_mode.add_argument("--player", action="store_true", help=t("help_player"))
     g_mode.add_argument("--player-generate", metavar="REQUEST", help=argparse.SUPPRESS)
 
     # --- Groupes d'arguments pour plus de clarté ---
@@ -75,7 +77,7 @@ def parse_args(argv: List[str]) -> Tuple[argparse.Namespace, List[str]]:
     g_mix.add_argument("--max-rate-tts", type=float, metavar="RATE", default=fused["max_rate_tts"], help=t("help_max_rate_tts"))
     g_mix.add_argument("--limit-duration-sec", type=int, metavar="SEC", default=None, help=t("help_limit_duration"))
 
-    parser.add_argument('--offline', action='store_true', help='Aucun service distant ni téléchargement de modèle')
+    parser.add_argument('--offline', action='store_true', help=t('help_offline'))
     args = parser.parse_args(argv)
     unknown = []
     from add_dub.core.validation import validate_numbers

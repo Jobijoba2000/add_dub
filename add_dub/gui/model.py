@@ -1,5 +1,6 @@
 """Modèles de lots et commandes du moteur, indépendants de Qt."""
 from __future__ import annotations
+from add_dub.gui.translations import ui
 import os
 import sys
 import math
@@ -12,23 +13,23 @@ from add_dub.io import fs
 
 # Valeurs sérialisées explicitement : aucune commande shell construite.
 FIELDS = (
-    ('tts_engine', 'Moteur vocal', ('onecore', 'edge', 'gtts')),
-    ('voice', 'Voix (identifiant ; vide = automatique)', None),
-    ('audio_index', 'Piste audio (index FFmpeg ; vide = première)', None),
-    ('sub', 'Sous-titres (auto, srt ou mkv:index)', None),
-    ('translation_engine', 'Moteur de traduction', ('ctranslate2', 'google')),
-    ('translate_to', 'Langue cible (fr, en, es…)', None),
-    ('translate_from', 'Langue source (vide = automatique)', None),
-    ('audio_codec', 'Codec audio', ('ac3', 'aac', 'mp3', 'flac', 'pcm_s16le')),
-    ('audio_bitrate', 'Débit audio (kbit/s)', None),
-    ('ducking_db', 'Atténuation du fond (dB)', None),
-    ('bg_mix', 'Volume original', None),
-    ('tts_mix', 'Volume des voix', None),
-    ('offset_ms', 'Décalage des sous-titres (ms)', None),
-    ('offset_video_ms', 'Décalage vidéo (ms)', None),
-    ('min_rate_tts', 'Vitesse minimale TTS', None),
-    ('max_rate_tts', 'Vitesse maximale TTS', None),
-    ('limit_duration_sec', 'Extrait de test (secondes ; vide = entier)', None),
+    ('tts_engine', ui('Moteur vocal'), ('onecore', 'edge', 'gtts')),
+    ('voice', ui('Voix (identifiant ; vide = automatique)'), None),
+    ('audio_index', ui('Piste audio (index FFmpeg ; vide = première)'), None),
+    ('sub', ui('Sous-titres (auto, srt ou mkv:index)'), None),
+    ('translation_engine', ui('Moteur de traduction'), ('ctranslate2', 'google')),
+    ('translate_to', ui('Langue cible (fr, en, es…)'), None),
+    ('translate_from', ui('Langue source (vide = automatique)'), None),
+    ('audio_codec', ui('Codec audio'), ('ac3', 'aac', 'mp3', 'flac', 'pcm_s16le')),
+    ('audio_bitrate', ui('Débit audio (kbit/s)'), None),
+    ('ducking_db', ui('Atténuation du fond (dB)'), None),
+    ('bg_mix', ui('Volume original'), None),
+    ('tts_mix', ui('Volume des voix'), None),
+    ('offset_ms', ui('Décalage des sous-titres (ms)'), None),
+    ('offset_video_ms', ui('Décalage vidéo (ms)'), None),
+    ('min_rate_tts', ui('Vitesse minimale TTS'), None),
+    ('max_rate_tts', ui('Vitesse maximale TTS'), None),
+    ('limit_duration_sec', ui('Extrait de test (secondes ; vide = entier)'), None),
 )
 INTS = {'audio_index', 'audio_bitrate', 'offset_ms', 'offset_video_ms', 'limit_duration_sec'}
 FLOATS = {'ducking_db', 'bg_mix', 'tts_mix', 'min_rate_tts', 'max_rate_tts'}
@@ -38,12 +39,12 @@ BOOLS = ('translate', 'recursive', 'preserve_tree', 'overwrite', 'skip_existing'
 def batch_command(values, flags, paths, output):
     """Valide le formulaire et crée les arguments, en sources comme en EXE."""
     if not paths:
-        raise ValueError('Ajoutez au moins une vidéo ou un dossier.')
+        raise ValueError(ui('Ajoutez au moins une vidéo ou un dossier.'))
     for path in paths:
         if not os.path.exists(path):
-            raise ValueError(f'Chemin introuvable : {path}')
+            raise ValueError(f'{ui('Chemin introuvable : ')}{path}')
     if not output.strip():
-        raise ValueError('Choisissez un dossier de sortie.')
+        raise ValueError(ui('Choisissez un dossier de sortie.'))
     numbers = {}
     for name in INTS | FLOATS:
         raw = values[name].strip()
@@ -55,27 +56,28 @@ def batch_command(values, flags, paths, output):
                 raise ValueError()
         except ValueError:
             label = next(label for key, label, _ in FIELDS if key == name)
-            raise ValueError(f'Valeur numérique invalide : {label}') from None
+            raise ValueError(f'{ui('Valeur numérique invalide : ')}{label}') from None
     from add_dub.core.validation import validate_numbers
     validate_numbers({**numbers, **flags})
     for name in ('audio_bitrate', 'min_rate_tts', 'max_rate_tts', 'limit_duration_sec'):
         if name in numbers and numbers[name] <= 0:
-            raise ValueError(f'{name} doit être strictement positif.')
+            raise ValueError(f'{name}{ui(' doit être strictement positif.')}')
     if any(numbers.get(n, 0) < 0 for n in ('audio_index', 'bg_mix', 'tts_mix')):
-        raise ValueError('Les index et les volumes doivent être positifs ou nuls.')
+        raise ValueError(ui('Les index et les volumes doivent être positifs ou nuls.'))
     if numbers['min_rate_tts'] > numbers['max_rate_tts']:
-        raise ValueError('La vitesse minimale dépasse la vitesse maximale.')
+        raise ValueError(ui('La vitesse minimale dépasse la vitesse maximale.'))
     import re
     if not re.fullmatch(r'auto|srt|(?:mkv|stream)(?::\d+)?', values['sub'].strip()):
-        raise ValueError('Sous-titres : utilisez auto, srt ou mkv:0, mkv:1…')
+        raise ValueError(ui('Sous-titres : utilisez auto, srt ou mkv:0, mkv:1…'))
     if flags['translate']:
         for name in ('translate_to', 'translate_from'):
             raw = values[name].strip()
             if (raw or name == 'translate_to') and not re.fullmatch('[a-zA-Z]{2}', raw):
-                raise ValueError('Utilisez un code langue de deux lettres (fr, en…).')
+                raise ValueError(ui('Utilisez un code langue de deux lettres (fr, en…).'))
     if flags['overwrite'] and flags['skip_existing']:
-        raise ValueError('Choisissez soit remplacer, soit ignorer les sorties existantes.')
-    command = [sys.executable] if getattr(sys, 'frozen', False) else [sys.executable, '-u', '-m', 'add_dub']
+        raise ValueError(ui('Choisissez soit remplacer, soit ignorer les sorties existantes.'))
+    from add_dub.launch import worker_executable
+    command = [worker_executable()] if getattr(sys, 'frozen', False) else [sys.executable, '-u', '-m', 'add_dub']
     command += ['--batch', '--input', *paths, '--output-dir', os.path.abspath(output)]
     for name, _, _ in FIELDS:
         raw = values[name].strip()
@@ -116,8 +118,8 @@ class Video:
 
     @property
     def reason(self):
-        return self.error or ('Aucun sous-titre détecté' if not self.subtitles else
-                              'Aucune piste audio' if not self.audio else 'Prêt')
+        return self.error or (ui('Aucun sous-titre détecté') if not self.subtitles else
+                              ui('Aucune piste audio') if not self.audio else ui('Prêt'))
 
 
 @dataclass
@@ -181,7 +183,7 @@ class Job:
     folder_configs: dict[str, Settings] = field(default_factory=dict)
     config_numbers: dict[str, int] = field(default_factory=dict)
     next_config_number: int = 1
-    status: str = 'En attente'
+    status: str = ui('En attente')
     completed: set[str] = field(default_factory=set)
 
     @property
@@ -211,18 +213,18 @@ class Job:
         for video in self.selected:
             settings = self.settings_for(video)
             if not settings.values.get('voice'):
-                raise ValueError(f'Choisissez une voix pour {Path(video.path).name}.')
+                raise ValueError(f'{ui('Choisissez une voix pour ')}{Path(video.path).name}.')
             output = self.output_for(video)
             collision_key = os.path.normcase(os.path.abspath(os.path.join(output, Path(video.path).stem)))
             if collision_key in outputs:
-                raise ValueError('Deux vidéos portent le même nom dans la même sortie. Activez la conservation de l’arborescence ou créez des lots séparés.')
+                raise ValueError(ui('Deux vidéos portent le même nom dans la même sortie. Activez la conservation de l’arborescence ou créez des lots séparés.'))
             outputs[collision_key] = video.path
             flags = dict.fromkeys(BOOLS, False)
             flags.update(translate=settings.translate, offline=settings.offline, skip_existing=self.resume,
                          overwrite=not self.resume, dry_run=self.dry_run)
             result.append((video, batch_command(settings.values, flags, [video.path], output)))
         if not result:
-            raise ValueError('Sélectionnez au moins une vidéo avec des sous-titres et une piste audio.')
+            raise ValueError(ui('Sélectionnez au moins une vidéo avec des sous-titres et une piste audio.'))
         return result
 
 
@@ -243,7 +245,7 @@ def discover(sources, recursive):
                     if Path(name).suffix.lower() in VIDEO_EXTENSIONS:
                         candidates.append((os.path.join(folder, name), source))
         else:
-            raise ValueError(f'Chemin introuvable : {source}')
+            raise ValueError(f'{ui('Chemin introuvable : ')}{source}')
         for path, root in candidates:
             key = os.path.normcase(path)
             if key not in seen:
@@ -262,11 +264,11 @@ def inspect_video(video):
                                  capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=30,
                                  creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         if process.returncode:
-            raise ValueError(process.stderr.strip() or 'Vidéo illisible')
+            raise ValueError(process.stderr.strip() or ui('Vidéo illisible'))
         streams = json.loads(process.stdout).get('streams', [])
         sidecar = _srt_in_srt_dir_for_video(video.path) or find_sidecar_srt(video.path)
         if sidecar:
-            result.subtitles.append(Track('srt', f'SRT externe - {Path(sidecar).name}', kind='srt'))
+            result.subtitles.append(Track('srt', f'{ui('SRT externe - ')}{Path(sidecar).name}', kind='srt'))
         sub_index = 0
         for stream in streams:
             kind = stream.get('codec_type')
@@ -275,16 +277,16 @@ def inspect_video(video):
             tags = stream.get('tags') or {}
             language, title = tags.get('language', ''), tags.get('title', '')
             codec = stream.get('codec_name', '?')
-            description = ' · '.join(x for x in (language or 'Langue inconnue', title, codec) if x)
+            description = ' · '.join(x for x in (language or ui('Langue inconnue'), title, codec) if x)
             if kind == 'audio':
-                result.audio.append(Track(str(stream['index']), f'Piste {len(result.audio) + 1} - {description}', language, title, 'audio', len(result.audio)))
+                result.audio.append(Track(str(stream['index']), f'{ui('Piste ')}{len(result.audio) + 1} - {description}', language, title, 'audio', len(result.audio)))
             else:
                 # MKV conserve l'extraction et l'OCR existants ; les autres conteneurs passent par FFmpeg.
                 mode = 'mkv' if Path(video.path).suffix.lower() == '.mkv' else 'stream'
                 value = f'{mode}:{sub_index if mode == "mkv" else stream["index"]}'
-                result.subtitles.append(Track(value, f'Piste {sub_index + 1} - {description}', language, title, mode, sub_index))
+                result.subtitles.append(Track(value, f'{ui('Piste ')}{sub_index + 1} - {description}', language, title, mode, sub_index))
                 sub_index += 1
     except Exception as exc:
-        result.error = f'Détection impossible : {exc}'
+        result.error = f'{ui('Détection impossible : ')}{exc}'
     result.selected = video.selected and result.eligible
     return result

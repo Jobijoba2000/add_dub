@@ -1,4 +1,5 @@
 """Événements GUI et estimation pondérée, sans dépendance Qt."""
+from add_dub.gui.translations import ui
 import json
 import os
 import math
@@ -33,12 +34,12 @@ class VideoProgress:
         self.current = None
         self.done = set()
         self.percent = 0.0
-        self.label = 'Préparation'
+        self.label = ui('Préparation')
         self.within = None
 
     @property
     def text(self):
-        detail = 'en cours' if self.within is None else f'{self.within:.0f} %'
+        detail = ui('en cours') if self.within is None else f'{self.within:.0f} %'
         return f'{self.label} : {detail} · Total ≈ {int(self.percent)} %'
 
     def update(self, event):
@@ -63,7 +64,7 @@ class VideoProgress:
                 self.done.add(self.current)
             self.weights.setdefault(name, WEIGHTS[name])
             self.current = name
-            self.label = LABELS[name]
+            self.label = ui(LABELS[name])
             self.within = None
             self._advance(0)
         elif kind == 'progress' and self.current:

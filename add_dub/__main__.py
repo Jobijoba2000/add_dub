@@ -24,6 +24,7 @@ if sys.platform == "win32":
         pass
 
 from add_dub.cli.args import parse_args, want_interactive
+from add_dub.launch import launcher_arguments, forward_console
 
 
 def main(argv=None) -> int:
@@ -34,6 +35,11 @@ def main(argv=None) -> int:
 
     if getattr(sys, "frozen", False):
         os.environ.setdefault("ADD_DUB_OPTIONS", os.path.join(os.path.dirname(sys.executable), "options.conf"))
+
+    forwarded = forward_console(argv)
+    if forwarded is not None:
+        return forwarded
+    argv = launcher_arguments(argv)
 
     args, _unknown = parse_args(argv)
     if args.offline:

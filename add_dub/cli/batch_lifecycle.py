@@ -114,7 +114,8 @@ def run(batch_main, args, argv):
     directory = os.environ.get(CHILD_ENV)
     if directory:
         return run_child(batch_main, args, directory)
-    command = [sys.executable]
+    from add_dub.launch import worker_executable
+    command = [worker_executable()]
     if not getattr(sys, 'frozen', False):
         command += ['-m', 'add_dub']
     return supervise(command + list(argv))

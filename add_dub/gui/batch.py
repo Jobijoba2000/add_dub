@@ -1,4 +1,5 @@
 """Commandes batch copiables et lancement dans un terminal Windows."""
+from add_dub.gui.translations import ui
 import os
 from pathlib import Path
 import subprocess
@@ -7,7 +8,8 @@ import tempfile
 
 
 def launcher_command(command):
-    prefix = [sys.executable] if getattr(sys, 'frozen', False) else [
+    from add_dub.launch import worker_executable
+    prefix = [worker_executable()] if getattr(sys, 'frozen', False) else [
         str(Path(__file__).resolve().parents[2] / 'start_add_dub.bat')]
     return prefix + command[command.index('--batch'):]
 
@@ -21,7 +23,7 @@ def export_commands(job):
                     os.path.normcase(os.path.abspath(job.sources[0])) for v in job.videos)):
         from add_dub.gui.model import BOOLS, batch_command
         if not job.common.values.get('voice'):
-            raise ValueError('Choisissez une voix.')
+            raise ValueError(ui('Choisissez une voix.'))
         flags = dict.fromkeys(BOOLS, False)
         flags.update(translate=job.common.translate, offline=job.common.offline, recursive=job.recursive,
                      preserve_tree=job.preserve_tree, skip_existing=job.resume,
@@ -33,7 +35,7 @@ def export_commands(job):
 def command_text(command):
     # Toujours citer les arguments : CMD interprète notamment & et les espaces.
     if any(any(c in arg for c in '\"\r\n\0') for arg in command):
-        raise ValueError('La commande contient un caractère incompatible avec CMD.')
+        raise ValueError(ui('La commande contient un caractère incompatible avec CMD.'))
     return ' '.join('"' + arg + '"' for arg in command)
 
 

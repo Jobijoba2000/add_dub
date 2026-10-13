@@ -8,7 +8,7 @@ import tempfile
 
 root = Path(__file__).resolve().parents[1]
 dist = root / 'dist' / 'add_dub'
-exe = dist / 'add_dub.exe'
+exe = dist / 'add_dub_console.exe'
 ffmpeg = dist / 'tools' / 'ffmpeg' / 'bin' / 'ffmpeg.exe'
 ffprobe = ffmpeg.with_name('ffprobe.exe')
 with ExitStack() as cleanup, tempfile.TemporaryDirectory(prefix='adddub-distribution-') as directory:

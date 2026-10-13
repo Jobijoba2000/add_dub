@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import uuid
 from pathlib import Path
+from add_dub.gui.translations import ui
 
 
 def partition_existing(pending):
@@ -60,20 +61,20 @@ class VideoRunFiles:
         manifest = self.work / 'result.json'
         if not manifest.exists():
             if self.partial.exists():
-                raise RuntimeError('Mixage incomplet : la sortie ne sera pas publiée.')
+                raise RuntimeError(ui('Mixage incomplet : la sortie ne sera pas publiée.'))
             return  # Sortie existante ignorée ou vérification seule.
         result = json.loads(manifest.read_text(encoding='utf-8'))
         destination = Path(result['destination']).resolve()
         if destination.parent != self.output_dir or destination.suffix.lower() != '.mkv':
-            raise RuntimeError('Destination inattendue pour la vidéo terminée.')
+            raise RuntimeError(ui('Destination inattendue pour la vidéo terminée.'))
         from add_dub.io.work import publish
         publish(self.partial, destination, overwrite=result.get('overwrite', False))
 
     def cleanup(self):
         if self.work.parent != self.root or not self.work.name.startswith('gui-video-'):
-            raise RuntimeError('Dossier temporaire inattendu : nettoyage refusé.')
+            raise RuntimeError(ui('Dossier temporaire inattendu : nettoyage refusé.'))
         if self.partial.parent != self.output_dir or not self.partial.name.startswith('.add_dub-'):
-            raise RuntimeError('Sortie temporaire inattendue : nettoyage refusé.')
+            raise RuntimeError(ui('Sortie temporaire inattendue : nettoyage refusé.'))
         self.partial.unlink(missing_ok=True)
         if self.work.exists():
             shutil.rmtree(self.work)

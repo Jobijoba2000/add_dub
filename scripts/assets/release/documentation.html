@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation Officielle — AddDub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0d1117;
+            --bg-card: #161b22;
+            --accent-blue: #58a6ff;
+            --accent-green: #238636;
+            --accent-green-hover: #2ea043;
+            --text-heading: #f0f6fc;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --border-color: #30363d;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 48px 40px;
+            max-width: 640px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .logo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(88, 166, 255, 0.1);
+            color: var(--accent-blue);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 16px;
+            line-height: 1.25;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 32px;
+        }
+
+        .btn-doc {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background-color: var(--accent-green);
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 18px 36px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(35, 134, 54, 0.4);
+            width: 100%;
+        }
+
+        .btn-doc:hover {
+            background-color: var(--accent-green-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 160, 67, 0.5);
+        }
+
+        .btn-doc svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        .note {
+            margin-top: 28px;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="logo-badge">
+            AddDub • Documentation Officielle
+        </div>
+
+        <h1>Manuel & Guide d'Utilisation</h1>
+
+        <p>
+            Pour consulter le manuel complet, le guide de démarrage rapide et la référence de toutes les options toujours à jour, cliquez sur le bouton ci-dessous :
+        </p>
+
+        <a href="https://jobijoba2000.github.io/add_dub/" class="btn-doc" target="_blank">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/>
+            </svg>
+            📖 Accéder à la Documentation en Ligne
+        </a>
+
+        <div class="note">
+            La documentation est hébergée sur GitHub Pages afin de vous garantir des explications toujours à jour avec les dernières fonctionnalités du logiciel.
+        </div>
+    </div>
+
+</body>
+
+</html>

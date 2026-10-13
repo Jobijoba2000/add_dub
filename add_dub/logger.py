@@ -220,7 +220,7 @@ def want_progress() -> bool:
     Indique si on peut afficher des barres de progression (tty + console active).
     Utile pour décider d'afficher tqdm ou un pourcentage.
     """
-    return sys.stdout.isatty() and is_console_enabled()
+    return sys.stdout is not None and sys.stdout.isatty() and is_console_enabled()
 
 
 # ------------------------------------------------------------

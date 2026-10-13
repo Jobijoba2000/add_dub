@@ -1,4 +1,5 @@
 """Configuration d'un lot : détection, sélection et exceptions par vidéo."""
+from add_dub.gui.translations import ui
 from copy import deepcopy
 import os
 from pathlib import Path
@@ -14,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 from add_dub.gui.model import discover, inspect_video, adapt_settings
 from add_dub.gui.widgets import SettingsEditor, SmoothTreeWidget, ConfigButton
-from add_dub.gui.theme import icons8_icon
+from add_dub.gui.theme import ui_icon
 from add_dub.gui.batch import export_commands, batch_text, open_batch_terminal
 
 ROLE = Qt.ItemDataRole.UserRole
@@ -24,11 +25,11 @@ COMMON = '__common__'
 @lru_cache(maxsize=2)
 def yellow_folder_icon(opened):
     """Icône SVG Icons8 en couleur, nette à toutes les tailles."""
-    icon = icons8_icon('folder-open' if opened else 'folder')
+    icon = ui_icon('folder-open' if opened else 'folder')
     if not icon.isNull():
         return icon
     # Repli natif si une distribution ne contient pas les ressources.
-    style = QStyleFactory.create('Fusion')
+    style = QStyleFactory.create(ui('Fusion'))
     kind = QStyle.StandardPixmap.SP_DirOpenIcon if opened else QStyle.StandardPixmap.SP_DirClosedIcon
     source = style.standardIcon(kind)
     icon = QIcon()
@@ -64,7 +65,7 @@ class ConfigureDialog(QDialog):
         self.known = {v.path: v for v in self.job.videos}
         self.file_items = {}
         self.icon_provider = QFileIconProvider()
-        self.setWindowTitle('Configurer le doublage - add_dub')
+        self.setWindowTitle(ui('Configurer le doublage - add_dub'))
         # La configuration est une vraie fenêtre de travail : elle reste
         # redimensionnable et s’ouvre agrandie comme la fenêtre principale.
         self.setWindowFlags(
@@ -83,7 +84,7 @@ class ConfigureDialog(QDialog):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(22, 20, 22, 20)
         outer.setSpacing(14)
-        self.summary = QLabel('Recherche des vidéos…')
+        self.summary = QLabel(ui('Recherche des vidéos…'))
         self.summary.setWordWrap(True)
         splitter = QSplitter(Qt.Orientation.Horizontal)
         self.columns = splitter
@@ -102,7 +103,7 @@ class ConfigureDialog(QDialog):
         self.has_folders = any(os.path.isdir(p) for p in self.job.sources)
         self.scan_progress = QProgressBar()
         self.scan_progress.setObjectName('scanProgress')
-        self.scan_progress.setAccessibleName('Progression de l’analyse des vidéos')
+        self.scan_progress.setAccessibleName(ui('Progression de l’analyse des vidéos'))
         self.scan_progress.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.scan_progress.setFormat('%v/%m')
         header_layout.addWidget(self.scan_progress, alignment=Qt.AlignmentFlag.AlignVCenter)
@@ -110,7 +111,7 @@ class ConfigureDialog(QDialog):
         header_layout.addWidget(self.summary)
         self.summary.hide()
         self.tree = SmoothTreeWidget()
-        self.tree.setHeaderLabels(['Fichiers', 'État', 'Configuration'])
+        self.tree.setHeaderLabels([ui('Fichiers'), ui('État'), ui('Configuration')])
         self.tree.setTreePosition(0)
         self.tree.header().moveSection(2, 0)
         self.tree.header().setStretchLastSection(False)
@@ -121,13 +122,13 @@ class ConfigureDialog(QDialog):
         self.tree.setColumnHidden(1, True)
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self.folder_menu)
-        self.tree.setAccessibleName('Sélection des vidéos et des dossiers')
+        self.tree.setAccessibleName(ui('Sélection des vidéos et des dossiers'))
         self.tree.setObjectName('configurationFiles')
         self.tree.setColumnWidth(0, 220)
         self.tree.setIconSize(QPixmap(28, 28).size())
         self.tree.setMinimumWidth(270)
         left_layout.addWidget(self.tree, 1)
-        left_hint = QLabel('Cochez les vidéos à traiter. Un dossier partiellement sélectionné porte une coche intermédiaire. Les vidéos sans sous-titres sont désactivées.')
+        left_hint = QLabel(ui('Cochez les vidéos à traiter. Un dossier partiellement sélectionné porte une coche intermédiaire. Les vidéos sans sous-titres sont désactivées.'))
         left_hint.setWordWrap(True)
         self.tree.setToolTip(left_hint.text())
         left_hint.deleteLater()
@@ -167,15 +168,15 @@ class ConfigureDialog(QDialog):
         self.reference_label.setMinimumWidth(0)
         self.reference_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         reference_layout.addWidget(self.reference_label, 1)
-        self.reset = QPushButton('Revenir aux réglages communs')
+        self.reset = QPushButton(ui('Revenir aux réglages communs'))
         self.reset.hide()
-        self.reset.setAccessibleName('Supprimer les réglages personnalisés de cette vidéo')
+        self.reset.setAccessibleName(ui('Supprimer les réglages personnalisés de cette vidéo'))
         self.reset.clicked.connect(self.reset_file)
         reference_layout.addWidget(self.reset, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.editor = SettingsEditor(tasks)
         from add_dub.gui.preview import PreviewPane
         self.preview = PreviewPane(self, tasks)
-        self.editor.addTab(self.preview, 'Essai')
+        self.editor.addTab(self.preview, ui('Essai'))
         self.editor.currentChanged.connect(self.refresh_preview)
         self.editor.setEnabled(False)
         right_layout.addWidget(self.editor, 1)
@@ -194,12 +195,12 @@ class ConfigureDialog(QDialog):
         output_icon = QLabel()
         output_icon.setPixmap(yellow_folder_icon(False).pixmap(22, 22))
         output_row.addWidget(output_icon)
-        output_title = QLabel('Sorti')
+        output_title = QLabel(ui('Sorti'))
         output_row.addWidget(output_title)
         self.output = QLineEdit(self.job.output)
-        self.output.setAccessibleName('Dossier de sortie du lot')
+        self.output.setAccessibleName(ui('Dossier de sortie du lot'))
         output_row.addWidget(self.output, 1)
-        browse = QPushButton('Parcourir…')
+        browse = QPushButton(ui('Parcourir…'))
         browse.clicked.connect(self.choose_output)
         output_row.addWidget(browse)
         output_layout.addLayout(output_row)
@@ -215,8 +216,8 @@ class ConfigureDialog(QDialog):
         options.setContentsMargins(0, 0, 0, 0)
         options.setSpacing(8)
         policy_row = QVBoxLayout()
-        self.resume = QRadioButton('Reprendre : ignorer les sorties existantes')
-        self.overwrite = QRadioButton('Remplacer les sorties existantes')
+        self.resume = QRadioButton(ui('Reprendre : ignorer les sorties existantes'))
+        self.overwrite = QRadioButton(ui('Remplacer les sorties existantes'))
         self.policy = QButtonGroup(self)
         self.policy.addButton(self.resume)
         self.policy.addButton(self.overwrite)
@@ -238,13 +239,13 @@ class ConfigureDialog(QDialog):
         footer.setContentsMargins(0, 0, 0, 0)
         footer.setSpacing(12)
         footer.addStretch()
-        self.batch_open = QPushButton('Commandes Batch…')
+        self.batch_open = QPushButton(ui('Commandes Batch…'))
         self.batch_open.clicked.connect(self.show_batch)
         footer.addWidget(self.batch_open)
-        cancel = QPushButton('Annuler')
+        cancel = QPushButton(ui('Annuler'))
         cancel.clicked.connect(self.reject)
         footer.addWidget(cancel)
-        self.add = QPushButton('Enregistrer les modifications' if job.videos else 'Ajouter à la liste d’attente')
+        self.add = QPushButton(ui('Enregistrer les modifications') if job.videos else ui('Ajouter à la liste d’attente'))
         self.add.setObjectName('primary')
         self.add.setMinimumHeight(46)
         self.add.setEnabled(False)
@@ -257,7 +258,7 @@ class ConfigureDialog(QDialog):
         self.tree.itemCollapsed.connect(lambda item: self.set_folder_icon(item, False))
         self.editor.changed.connect(self.edited)
         self.batch_page = QDialog(self)
-        self.batch_page.setWindowTitle('Commandes Batch du lot')
+        self.batch_page.setWindowTitle(ui('Commandes Batch du lot'))
         self.batch_page.setModal(True)
         self.batch_page.resize(min(1050, available.width() - 60), min(620, available.height() - 80))
         batch_layout = QVBoxLayout(self.batch_page)
@@ -266,21 +267,21 @@ class ConfigureDialog(QDialog):
         self.batch_summary = QLabel()
         self.batch_summary.setWordWrap(True)
         batch_layout.addWidget(self.batch_summary)
-        explanation = QLabel('Commandes pour toutes les vidéos cochées, avec leurs réglages et dossiers de sortie. '
-                             'L’exécution dans CMD traite le lot à la suite, hors de la file d’attente.')
+        explanation = QLabel(ui('Commandes pour toutes les vidéos cochées, avec leurs réglages et dossiers de sortie. '
+                             'L’exécution dans CMD traite le lot à la suite, hors de la file d’attente.'))
         explanation.setWordWrap(True)
         batch_layout.addWidget(explanation)
         self.batch_text = QPlainTextEdit()
         self.batch_text.setReadOnly(True)
-        self.batch_text.setAccessibleName('Commande batch')
+        self.batch_text.setAccessibleName(ui('Commande batch'))
         batch_layout.addWidget(self.batch_text, 1)
         batch_buttons = QHBoxLayout()
-        self.batch_copy = QPushButton('Copier les commandes')
-        self.batch_execute = QPushButton('Exécuter dans CMD')
+        self.batch_copy = QPushButton(ui('Copier les commandes'))
+        self.batch_execute = QPushButton(ui('Exécuter dans CMD'))
         batch_buttons.addWidget(self.batch_copy)
         batch_buttons.addWidget(self.batch_execute)
         batch_buttons.addStretch()
-        close_batch = QPushButton('Fermer')
+        close_batch = QPushButton(ui('Fermer'))
         close_batch.clicked.connect(self.batch_page.reject)
         batch_buttons.addWidget(close_batch)
         for button in (self.batch_copy, self.batch_execute, close_batch):
@@ -302,13 +303,13 @@ class ConfigureDialog(QDialog):
         if not self.batch_page.isVisible():
             return
         self.batch_command = None
-        self.batch_summary.setText('Analyse des fichiers en cours… Toutes les configurations seront prises en compte.')
+        self.batch_summary.setText(ui('Analyse des fichiers en cours… Toutes les configurations seront prises en compte.'))
         try:
             if not self.loaded or self.editor.video is None:
-                raise ValueError('Attendez la détection des pistes.')
+                raise ValueError(ui('Attendez la détection des pistes.'))
             self.save_current()
             self.sync_selection()
-            self.batch_summary.setText(f'{len(self.job.selected)} vidéo(s) cochée(s), toutes configurations comprises.')
+            self.batch_summary.setText(f'{len(self.job.selected)}{ui(' vidéo(s) cochée(s), toutes configurations comprises.')}')
             job = deepcopy(self.job)
             job.output = self.output.text().strip()
             job.preserve_tree = True
@@ -317,7 +318,7 @@ class ConfigureDialog(QDialog):
             commands = export_commands(job)
             self.batch_text.setPlainText(batch_text(commands))
             self.batch_command = commands
-            self.batch_execute.setText(f'Exécuter {len(job.selected)} vidéo(s) dans CMD')
+            self.batch_execute.setText(f'{ui('Exécuter ')}{len(job.selected)}{ui(' vidéo(s) dans CMD')}')
         except ValueError as exc:
             self.batch_text.setPlainText(str(exc))
         self.batch_copy.setEnabled(self.batch_command is not None)
@@ -334,7 +335,7 @@ class ConfigureDialog(QDialog):
             try:
                 open_batch_terminal(self.batch_command)
             except (OSError, ValueError) as exc:
-                QMessageBox.warning(self, 'Impossible d’ouvrir CMD', str(exc))
+                QMessageBox.warning(self, ui('Impossible d’ouvrir CMD'), str(exc))
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -372,7 +373,7 @@ class ConfigureDialog(QDialog):
         self.detect_generation += 1
 
     def choose_output(self):
-        path = QFileDialog.getExistingDirectory(self, 'Dossier de sortie', self.output.text())
+        path = QFileDialog.getExistingDirectory(self, ui('Dossier de sortie'), self.output.text())
         if path:
             self.output.setText(path)
 
@@ -401,8 +402,8 @@ class ConfigureDialog(QDialog):
 
     def scope_text(self):
         folder = self.current_path if self.current_path in self.job.folder_configs else None
-        text = (f'Config. n°{self.job.config_numbers[folder]} - {folder} et ses sous-dossiers'
-                if folder else 'Général - vidéos sans configuration de dossier')
+        text = (f'{ui('Config. n°')}{self.job.config_numbers[folder]} - {folder}{ui(' et ses sous-dossiers')}'
+                if folder else ui('Général - vidéos sans configuration de dossier'))
         self.scope.setText(text)
         self.reset.hide()
         self.tree.active_config_scope = folder
@@ -425,14 +426,14 @@ class ConfigureDialog(QDialog):
                 item.widget().deleteLater()
         self.config_buttons = {}
         for path in [COMMON, *self.job.folder_configs]:
-            label = 'Général' if path == COMMON else f'Config. n°{self.job.config_numbers[path]}'
+            label = ui('Général') if path == COMMON else f'{ui('Config. n°')}{self.job.config_numbers[path]}'
             button = ConfigButton(label)
             button.setObjectName('configSelector')
             button.setStyleSheet('min-height: 36px; max-height: 36px; padding: 0; border: none;')
             button.setFixedHeight(36)
             button.setMinimumWidth(130)
             button.setCheckable(True)
-            button.setToolTip('Réglages généraux' if path == COMMON else path)
+            button.setToolTip(ui('Réglages généraux') if path == COMMON else path)
             button.clicked.connect(lambda checked=False, p=path: self.open_config(p))
             self.config_bar.addWidget(button, alignment=Qt.AlignmentFlag.AlignTop)
             self.config_buttons[path] = button
@@ -479,10 +480,10 @@ class ConfigureDialog(QDialog):
             return
         menu = QMenu(self)
         if folder in self.job.folder_configs:
-            menu.addAction('Modifier les réglages de ce dossier', lambda: self.open_config(folder))
-            menu.addAction('Supprimer la configuration de ce dossier', lambda: self.remove_folder_config(folder))
+            menu.addAction(ui('Modifier les réglages de ce dossier'), lambda: self.open_config(folder))
+            menu.addAction(ui('Supprimer la configuration de ce dossier'), lambda: self.remove_folder_config(folder))
         else:
-            menu.addAction('Personnaliser les réglages de ce dossier', lambda: self.create_folder_config(folder))
+            menu.addAction(ui('Personnaliser les réglages de ce dossier'), lambda: self.create_folder_config(folder))
         menu.exec(self.tree.viewport().mapToGlobal(position))
 
     def update_config_markers(self):
@@ -502,10 +503,10 @@ class ConfigureDialog(QDialog):
             if number:
                 button = QPushButton(f'⚙ {number}')
                 button.setStyleSheet('padding: 0; border: none; min-height: 24px;')
-                button.setToolTip(f'Ouvrir Config. n°{number} - {folder}')
+                button.setToolTip(f'{ui('Ouvrir Config. n°')}{number} - {folder}')
                 button.clicked.connect(lambda checked=False, p=folder: self.open_config(p))
                 self.tree.setItemWidget(item, 2, button)
-            item.setToolTip(0, folder + (f' - Config. n°{number}' if number else ''))
+            item.setToolTip(0, folder + (f'{ui(' - Config. n°')}{number}' if number else ''))
 
     def scan(self):
         self.save_current()
@@ -516,7 +517,7 @@ class ConfigureDialog(QDialog):
         self.editor.setEnabled(False)
         self.add.setEnabled(False)
         self.tree.setEnabled(False)
-        self.summary.setText('Détection des vidéos, des pistes audio et des sous-titres…')
+        self.summary.setText(ui('Détection des vidéos, des pistes audio et des sous-titres…'))
         sources = list(self.job.sources)
         self.scan_progress.setRange(0, 0)
         self.scan_progress.show()
@@ -548,7 +549,7 @@ class ConfigureDialog(QDialog):
             self.summary.show()
             if error:
                 self.scan_progress.hide()
-                self.summary.setText(f'Détection impossible : {error}')
+                self.summary.setText(f'{ui('Détection impossible : ')}{error}')
                 return
             progress((len(videos), len(videos)))
             self.job.videos = videos
@@ -567,7 +568,7 @@ class ConfigureDialog(QDialog):
             if self.reference:
                 self.load_scope(COMMON, self.reference)
             else:
-                self.scope.setText('Aucune vidéo admissible. Vérifiez les pistes audio et les sous-titres.')
+                self.scope.setText(ui('Aucune vidéo admissible. Vérifiez les pistes audio et les sous-titres.'))
                 self.reset.hide()
         self.tasks.run(self, work, done, progress=progress)
 
@@ -588,7 +589,7 @@ class ConfigureDialog(QDialog):
                 for directory in directories:
                     key = str(directory)
                     if key not in folders:
-                        item = QTreeWidgetItem(parent, [directory.name or key, 'Dossier'])
+                        item = QTreeWidgetItem(parent, [directory.name or key, ui('Dossier')])
                         item.setIcon(0, self.folder_icon(False))
                         item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                         item.setCheckState(0, Qt.CheckState.Unchecked)
@@ -596,7 +597,7 @@ class ConfigureDialog(QDialog):
                         item.setData(0, ROLE + 1, key)
                         folders[key] = item
                     parent = folders[key]
-            item = QTreeWidgetItem(parent, [Path(video.path).name, 'Commun' if video.eligible else video.reason])
+            item = QTreeWidgetItem(parent, [Path(video.path).name, ui('Commun') if video.eligible else video.reason])
             item.setIcon(0, self.video_icon(video.path))
             item.setData(0, ROLE, video.path)
             item.setToolTip(0, video.path)
@@ -686,7 +687,7 @@ class ConfigureDialog(QDialog):
             video.selected = bool(video.eligible and item and item.checkState(0) == Qt.CheckState.Checked)
 
     def update_summary(self):
-        self.summary.setText(f'{len(self.job.selected)} vidéo(s) sélectionnée(s) sur {len(self.job.videos)} · {len(self.job.folder_configs)} configuration(s)')
+        self.summary.setText(f'{len(self.job.selected)}{ui(' vidéo(s) sélectionnée(s) sur ')}{len(self.job.videos)} · {len(self.job.folder_configs)}{ui(' configuration(s)')}')
         if hasattr(self, 'batch_page'):
             self.refresh_batch()
 
@@ -714,7 +715,7 @@ class ConfigureDialog(QDialog):
         self.editor.setEnabled(True)
         self.loaded = True
         self.add.setEnabled(True)
-        self.reference_label.setText(('Fichier de référence : ' if common else 'Fichier : ') + Path(video.path).name)
+        self.reference_label.setText((ui('Fichier de référence : ') if common else ui('Fichier : ')) + Path(video.path).name)
         self.scope_text()
         self.refresh_batch()
 
@@ -735,8 +736,8 @@ class ConfigureDialog(QDialog):
         try:
             self.job.commands()
         except ValueError as exc:
-            QMessageBox.warning(self, 'Réglages à compléter', str(exc))
+            QMessageBox.warning(self, ui('Réglages à compléter'), str(exc))
             return
-        self.job.status = 'En attente'
+        self.job.status = ui('En attente')
         self.job.completed.clear()
         self.accept()
