@@ -10,7 +10,7 @@ pour essayer le GUI, le lecteur ou le traitement console.
 
 ## Produire un MKV avec le GUI
 
-Lancez `start_add_dub.bat --gui`. **Ouvrir** permet d’ajouter des vidéos ou un
+Ouvrez `add_dub.exe` (ou `start_add_dub.bat --gui` depuis les sources). **Ouvrir** permet d’ajouter des vidéos ou un
 dossier, avec ses sous-dossiers. La configuration détecte les pistes et indique
 les fichiers sans sous-titres utilisables. Les réglages communs partent de la
 première vidéo admissible ; sélectionner une autre vidéo permet de les adapter.
@@ -81,9 +81,7 @@ start_add_dub.bat --batch -i "film.mkv" --tts-engine edge --voice fr-FR-DeniseNe
 `--audio-index` est l’index global FFmpeg de l’audio, visible avec FFprobe.
 `--sub mkv:N` choisit le **numéro parmi les pistes de sous-titres**, à partir de
 zéro ; `--sub stream:N` utilise l’index global FFmpeg. Ces nombres ne sont pas
-interchangeables. Pour le fichier Naruto utilisé lors de l’audit : audio japonais
-à l’index 1, français à 2 ; ASS à `mkv:0`, PGS complet à `mkv:1`, PGS
-signes/chansons à `mkv:2`. Ces index dépendent du fichier.
+interchangeables. Ces index dépendent du fichier.
 
 `--sub srt` choisit un SRT ; un fichier homonyme dans `srt/` peut prendre la
 priorité sur le sidecar. `auto` recherche le sidecar, puis la première piste
@@ -91,11 +89,10 @@ intégrée. Avec des épisodes homonymes dans plusieurs dossiers, vérifiez les
 copies persistantes et les traductions réutilisées.
 
 `--limit-duration-sec 180` limite l’essai aux trois premières minutes.
-Le code actuel coupe aussi les répliques qui chevauchent la fin, avant leur
-traduction et vocalisation. La vidéo copiée et ses timestamps peuvent conserver
+Les répliques qui chevauchent la fin sont coupées avant leur traduction et
+vocalisation. La vidéo copiée et ses timestamps peuvent conserver
 une légère marge liée aux paquets et images clés ; cette commande ne garantit
-pas une coupe à l’image près. Dans la v1 publiée, le muxage garde toute la durée
-vidéo malgré la limite de traitement.
+pas une coupe à l’image près.
 
 ## Traduire les sous-titres
 

@@ -37,13 +37,11 @@ Chaque exécutable possède sa propre icône et partage les dépendances de la d
 1. Téléchargez `add_dub_v2.0.0_win64.zip`.
 2. Décompressez entièrement l’archive.
 3. Lancez `add_dub.exe`.
-4. Cliquez sur **Ouvrir** et sélectionnez la vidéo d’exemple `input/extrait.mkv`.
+4. Cliquez sur **Ouvrir** et choisissez une vidéo ou un dossier sur votre ordinateur.
 5. Choisissez les pistes et la voix, ajoutez la vidéo à la file puis cliquez sur **Démarrer**.
 
 ## Compatibilité
 
 - Windows 10/11 x64.
-- L’OCR nécessite .NET Framework 4.8.
-- Visual C++ x64 peut également être nécessaire.
 
 📖 [Consulter la documentation en ligne](https://jobijoba2000.github.io/add_dub/)

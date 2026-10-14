@@ -1,159 +1,127 @@
-# add_dub — écouter les sous-titres de ses vidéos
+# add_dub : Vocalisation de Sous-titres & Doublage Automatisé pour Windows 10 / 11
 
-add_dub transforme les sous-titres en **voix synchronisée**, atténue le son
-d’origine pendant les répliques et produit un MKV. Il vise l’accessibilité et
-le confort d’écoute : la voix originale reste en fond, sans clonage vocal.
-Le traitement utilise le CPU, sans carte graphique dédiée.
+📖 **[Consulter la Documentation Officielle & le Manuel d'Utilisation](https://jobijoba2000.github.io/add_dub/)**
 
-[Manuel](https://jobijoba2000.github.io/add_dub/) ·
-[Guide du code actuel](docs/usage.md) ·
-[Licences et composants tiers](THIRD_PARTY_NOTICES.md) ·
-[Préparation de la v2](docs/release-v2.md)
+**add_dub** transforme automatiquement les sous-titres de vos vidéos en **doublage vocal synchronisé (TTS)** avec atténuation intelligente du fond sonore (*audio ducking*).
 
-> **Version 2.0.0 : interface graphique, lecteur et assistant console.**
-> [Télécharger la dernière release Windows x64](https://github.com/Jobijoba2000/add_dub/releases/latest).
+Conçu pour l'**accessibilité** (fatigue visuelle, malvoyance, dyslexie) et le **confort d'écoute** (regarder des vidéos étrangères sans fixer l'écran), il intègre également un moteur de **traduction neuronale (IA)** pour doubler vos vidéos dans votre langue natale.
 
-## Choisir son mode
+## ✨ Fonctionnalités clés
 
-| Mode du code actuel | Lancement depuis les sources | Résultat |
-|---|---|---|
-| Assistant console | `start_add_dub.bat --interactive` ou sans argument | Choix guidés et export MKV |
-| Interface de production | `start_add_dub.bat --gui` | Configuration par vidéo, aperçu, file d’attente, export MKV |
-| Lecteur | `start_add_dub.bat --player` | Lecture mpv et vocalisation avec deux WAV, sans export MKV |
-| Automatisation | `start_add_dub.bat --batch -i "C:\Videos\film.mkv"` | Traitement sans questions |
+* 🪟 **Compatibilité Windows** : Conçu spécifiquement pour **Windows 10** et **Windows 11** (64 bits).
+* 🎙️ **Doublage synchronisé** : Convertit les sous-titres (intégrés aux MKV ou fichiers `.srt` externes) en voix-off synchronisée avec les sous-titres.
+* 🌐 **Traduction IA intégrée** : Traduit automatiquement les sous-titres vers votre langue avant vocalisation (via CTranslate2).
+* 🔊 **Audio Ducking intelligent** : Baisse automatiquement le volume de la piste originale pendant les dialogues pour une clarté parfaite.
+* 🗣️ **Moteurs TTS au choix** :
+  * **Edge TTS** : Voix Microsoft en ligne (connexion Internet nécessaire).
+  * **OneCore (Windows)** : Rapide, 100% hors-ligne avec les voix de votre système.
+  * **gTTS** : Voix Google en ligne (connexion Internet nécessaire).
+* 📦 **Distribution portable** : Décompressez l’archive et lancez l’application ; Python et les outils sont fournis.
+* 💻 **100% CPU** : Fonctionne sans carte graphique dédiée.
+* 🖥️ **Interface graphique** : Ouvrez des vidéos ou des dossiers, réglez le doublage et écoutez un extrait avant de lancer la file d’attente.
+* ▶️ **Lecteur intégré** : Préparez la voix et écoutez les sous-titres sans exporter une nouvelle vidéo.
+* ⚡ **Traitement par lot (Batch)** : Traitez des saisons entières ou des dossiers récursivement.
 
-La distribution v2 partage ses outils et dépendances entre trois lanceurs :
+## 📥 Formats pris en charge (Entrée & Sortie)
 
-- **`add_dub.exe`** ouvre le GUI par défaut.
-- **`add_dub_console.exe`** ouvre l’assistant et fournit la CLI/batch.
-- **`add_dub_player.exe`** ouvre le lecteur.
+### 🎬 Formats de sous-titres acceptés :
+* **Fichiers externes (*sidecar*) :** `.srt` (placé à côté de la vidéo avec le même nom, ou dans le dossier `srt/`).
+* **Pistes intégrées aux conteneurs MKV (`.mkv`) :**
+  * **Formats texte** (conversion directe) : `SRT`, `ASS` / `SSA`, `WebVTT`.
+  * **Formats images** (conversion automatique par **OCR**) : `PGS` (Blu-ray), `VobSub` (DVD).
+* ℹ️ *Note sur les fichiers `.mp4` et `.avi`* : L'application n'extrait pas les pistes internes de ces conteneurs ; ils doivent être accompagnés d'un fichier `.srt` externe portant le même nom.
 
-Chacun possède son icône. Les flags explicites restent disponibles ;
-`--version` affiche la version. Depuis les sources, le lancement sans argument
-conserve l’assistant console.
+### 📦 Structure du flux :
+```
+[ Vidéo (MKV/MP4/AVI) + Sous-titres ]
+                  ⬇️  (add_dub)
+[ Nouveau fichier MKV multi-pistes ]
+  ├── Piste 0 : Vidéo copiée (AVI : réencodage)
+  ├── Piste 1 : Audio Mixé (Voix TTS + Fond atténué) [Par défaut]
+  ├── Piste 2 : Audio Original (séparé, réencodé en stéréo)
+  └── Piste 3 : Sous-titres synchronisés
+```
 
-## Première utilisation
+## 🚀 Démarrage Rapide (Version Portable)
 
-**Avec la v1 portable :** décompressez l’archive, ajoutez une vidéo dans
-`input/`, puis double-cliquez sur `add_dub.exe`. Choisissez la piste audio,
-les sous-titres et la voix dans l’assistant. Les exports vont dans `output/`.
+1. **[Télécharger add_dub pour Windows 10/11 (Dernière version)](https://github.com/Jobijoba2000/add_dub/releases/latest)** et dézippez l'archive où vous le souhaitez.
+2. Double-cliquez sur **`add_dub.exe`** pour ouvrir l’interface graphique.
+3. Cliquez sur **Ouvrir** et choisissez vos vidéos ou un dossier sur votre ordinateur.
+4. Choisissez la piste audio, les sous-titres et la voix. Activez la traduction si nécessaire.
+5. Vous pouvez écouter un extrait dans l’onglet **Essai** pour ajuster les réglages.
+6. Cliquez sur **Ajouter à la liste d’attente**, puis sur **Démarrer**.
+7. Récupérez vos vidéos doublées dans le dossier **`output/`** par défaut !
 
-**Avec le code actuel :**
+Vos vidéos restent à leur emplacement habituel : vous n’avez pas à les déplacer dans `input/`.
+
+La distribution propose aussi **`add_dub_console.exe`** pour l’assistant console et les commandes batch, et **`add_dub_player.exe`** pour le lecteur.
+
+## ⚡ Mode Batch & Ligne de Commande (CLI)
+
+Pour automatiser le traitement ou intégrer `add_dub` dans des scripts, utilisez les options en ligne de commande :
+
+* **Traiter une vidéo spécifique :**
+  ```cmd
+  add_dub_console.exe --batch -i "C:\Videos\film.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural"
+  ```
+
+* **Traiter tout un dossier récursivement :**
+  ```cmd
+  add_dub_console.exe --batch -i "C:\Videos\Series" --recursive
+  ```
+
+* **Traduire et doubler (ex : Anglais vers Français) :**
+  ```cmd
+  add_dub_console.exe --batch -i "C:\Videos\film.mkv" --translate --translate-from en --translate-to fr --translation-engine ctranslate2 --tts-engine edge --voice "fr-FR-DeniseNeural"
+  ```
+
+* **Ajuster les volumes et l'atténuation (*ducking*) :**
+  ```cmd
+  add_dub_console.exe --batch -i "C:\Videos\film.mkv" --bg-mix 0.8 --tts-mix 1.2 --ducking-db -5.0
+  ```
+
+## ⚙️ Configuration (`options.conf`)
+
+Le fichier `options.conf` permet de définir vos préférences par défaut. Vous pouvez aussi les modifier avec le bouton **Paramètres** de l’interface graphique.
+
+> 💡 **Astuce sur le modificateur `d`** :
+> Ajoutez la lettre `d` après une valeur (ex: `translate_to = fr d`) pour que l’assistant console vous pose la question au lancement. Sans la lettre `d`, la valeur est appliquée automatiquement.
+
+**Options principales :**
+* `tts_engine` : `edge`, `onecore`, ou `gtts`.
+* `voice_id` : Identifiant de la voix (ex: `fr-FR-DeniseNeural`, `fr-FR-HenriNeural`).
+* `translate` : `true` ou `false` (activer la traduction automatique).
+* `translate_to` : Code langue cible (ex: `fr`, `en`, `es`, `de`, `ja`...).
+* `db` : Niveau d'atténuation du fond sonore en dB (ex: `-5.0`).
+* `bg` / `tts` : Multiplicateurs de volume pour l'audio d'origine et la voix TTS.
+
+## 🛠️ Exécution depuis les sources (Développeurs)
+
+Si vous souhaitez exécuter ou modifier le code source Python :
 
 ```cmd
 git clone https://github.com/Jobijoba2000/add_dub.git
 cd add_dub
-start_add_dub.bat --gui
+start_add_dub.bat
 ```
+*Le script prépare automatiquement Python, les outils et les dépendances nécessaires. Une connexion Internet est nécessaire au premier lancement. Ajoutez `--gui` pour ouvrir l’interface graphique ou `--player` pour le lecteur ; sans argument, le script ouvre l’assistant console.*
 
-Le lanceur prépare Python, l’environnement virtuel et les outils portables.
-Les premières préparations nécessitent Internet. Il vérifie Visual C++ x64
-et peut lancer son installeur officiel, avec une demande administrateur Windows.
-Subtitle Edit nécessite .NET Framework 4.8. Les composants standards ciblent
-Windows 10/11 x64.
+## 📄 Licence
 
-Dans le GUI, ouvrez des vidéos ou un dossier, choisissez les pistes et la voix,
-utilisez l’aperçu pour régler les niveaux, puis ajoutez le lot à la file et
-cliquez sur **Démarrer**. Les sous-dossiers sont inclus. Les réglages peuvent
-être adaptés par vidéo ; l’arborescence est conservée en sortie.
+Ce projet est sous licence **GNU General Public License v3.0 (GPLv3)**. Les outils et modèles tiers restent soumis à leurs licences respectives : voir les [notices des composants tiers](THIRD_PARTY_NOTICES.md).
 
-## Moteurs vocaux et traduction
+## Lecteur vidéo séparé (`--player`)
 
-| Moteur | Connexion | Voix |
-|---|---|---|
-| OneCore | Synthèse locale | Voix installées dans Windows |
-| Edge TTS | Internet à chaque synthèse | Catalogue de voix Microsoft en ligne |
-| gTTS | Internet à chaque synthèse | Voix Google par langue |
+Ouvrez **`add_dub_player.exe`**, puis votre vidéo avec le bouton dossier ou **Ctrl+O**. Le clic droit permet de choisir les pistes audio et sous-titres, puis de lancer **Vocaliser les sous-titres**.
 
-Edge et gTTS envoient le texte des sous-titres à leur service. OneCore utilise
-les voix installées dans Windows et effectue la synthèse sur le PC.
+Choisissez la voix, sa vitesse, les volumes et l’atténuation du fond sonore. La voix est préparée avant l’écoute ; aucune nouvelle vidéo n’est exportée. **Enregistrer les réglages** permet de les retrouver, puis **Ctrl+Maj+D** lance la préparation avec ces réglages.
 
-La traduction propose **CTranslate2** (modèles locaux Opus-MT, pivot anglais,
-NLLB) et **Google Traduction** (en ligne). CTranslate2 télécharge ses modèles
-à la première utilisation ; son choix ne provoque pas de secours Google.
-Google peut se replier sur les modèles locaux. Certaines paires exigent NLLB
-ou l’ajout d’une révision de modèle dans `models.lock.json`.
-Le modèle NLLB d’origine comporte une restriction d’usage commercial.
+La vocalisation du lecteur utilise les sous-titres intégrés à la vidéo. Pour un SRT externe ou pour traduire les sous-titres, utilisez l’interface de doublage.
 
-```cmd
-start_add_dub.bat --batch -i "C:\Videos\film.mkv" --tts-engine edge --voice fr-FR-DeniseNeural
-start_add_dub.bat --batch -i "C:\Videos\Series" --recursive --preserve-tree --skip-existing
-start_add_dub.bat --batch -i "C:\Videos\film.mkv" --translate --translate-from en --translate-to fr --translation-engine ctranslate2
-start_add_dub.bat --batch -i "C:\Videos\film.mkv" --offline --tts-engine onecore --no-translate
-```
+## Interface de production (`--gui`)
 
-`--offline` interdit les services distants et les téléchargements de modèles.
-Une voix ou un modèle local manquant doit être préparé auparavant.
+**`add_dub.exe`** ouvre directement l’interface graphique. Le menu **Ouvrir** permet d’ajouter des vidéos ou un dossier avec ses sous-dossiers. Choisissez les pistes, la voix et les réglages communs ; vous pouvez ensuite les adapter à un dossier ou à une vidéo.
 
-## Entrées, sorties et conservation des fichiers
+L’onglet **Essai** permet d’écouter un passage avant de lancer le doublage complet. Ajoutez les vidéos à la liste d’attente, puis cliquez sur **Démarrer**. Les fichiers traités passent dans **Terminé**. Vous pouvez choisir le dossier de sortie et ignorer les exports existants ou les remplacer.
 
-Les MKV acceptent les sous-titres texte ASS/SSA, SRT et WebVTT, ainsi que PGS
-et VobSub via OCR. Pour les MP4/AVI, fournissez un SRT portant le même nom à
-côté de la vidéo. Un SRT peut aussi être fourni dans `srt/`.
-
-L’export contient la vidéo copiée (AVI : transcodage), le mix voix + fond
-atténué par défaut, l’audio source **réencodé en stéréo** au codec choisi et
-les sous-titres. Les pistes ont leurs langues dans le code actuel. Les vidéos
-d’entrée ne sont pas modifiées. Les exports du code actuel sont publiés après
-réussite du muxage ; une interruption conserve une sortie précédente.
-
-La sélection d’un sous-titre intégré crée une copie persistante dans `srt/`.
-Les fichiers homonymes de dossiers différents et la réutilisation des
-traductions restent des points à valider avant la v2.
-
-## Réglages et langues de l’interface
-
-`options.conf` fixe les valeurs par défaut. Dans la console, le suffixe `d`
-demande le réglage au lancement : `tts_engine = onecore d`.
-Le bouton **Paramètres** du GUI édite ce fichier en conservant commentaires
-et options inconnues. Les réglages d’un lot n’écrasent pas ces préférences.
-Le lecteur conserve ses réglages séparément dans `player-data/settings.json`.
-
-La console et les messages traduits proposent **français, anglais, espagnol,
-allemand et italien**, selon `language = auto` ou un code explicite.
-Les commandes, explications et messages d’état du GUI et du player sont
-disponibles dans ces cinq langues.
-Redémarrez après un changement de langue. La traduction des sous-titres,
-la langue des voix et la langue de l’interface sont des choix différents.
-
-## Développement et vérification
-
-```cmd
-.venv\Scripts\python.exe -m unittest discover -s tests -v
-.venv\Scripts\python.exe -m pip check
-.venv\Scripts\python.exe scripts\audit_i18n.py
-compil.bat
-compil.bat --zip --tag v2.0.0
-```
-
-Sans option, `compil.bat` prépare le dossier portable. `--zip` crée aussi
-l’archive Windows dans `dist/` ; `--tag v2.0.0` la nomme
-`add_dub_v2.0.0_win64.zip`. Un tag comme `v2.0.0-rc1` permet de nommer un essai.
-Sans `--tag`, le nom utilise la version actuelle du projet. Le tag sert au nom
-de l’archive ; la version des EXE reste celle définie dans le projet.
-`compil.bat --help` affiche les options sans compiler.
-
-La compilation produit `dist/add_dub/`, avec ses outils, accès à la documentation,
-notices trouvées et inventaire `THIRD_PARTY.json`. Les EXE/DLL/PYD de tout
-le dossier sont empreintés, y compris Qt et CTranslate2 sous `_internal`.
-La vidéo d’exemple de la v1 est fournie dans `input/extrait.mkv` pour un premier
-essai. Les autres vidéos, caches et données personnelles sont exclus du ZIP.
-Le dossier `docs/` de la distribution contient uniquement `documentation.html`,
-avec un bouton vers le manuel en ligne. Le manuel complet et les fichiers des
-icônes ne sont pas copiés dans ce dossier ; les ressources de l’application
-sont embarquées sous `_internal/assets/icons/`. Dans le projet, ces icônes
-sont dans `assets/icons/` ; `docs/assets/` contient uniquement les images du site.
-
-[Résultats de comparaison v1/code actuel](docs/release-v2.md),
-[guide détaillé](docs/usage.md), [aperçu vidéo](docs/preview.md),
-[revue des dépendances](docs/security-review.md).
-
-## Licence
-
-Le projet est sous **GNU GPLv3**, voir [LICENSE](LICENSE).
-Les composants et modèles tiers conservent leurs propres conditions.
-Le bouton **À propos et licences** du GUI et le menu du player affichent
-les notices livrées et la licence du projet.
-Les questions de redistribution encore ouvertes, notamment pour mpv
-et les notices Qt, sont exposées dans
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Le bouton **Paramètres** modifie les préférences générales pour les prochains ajouts. Les réglages d’un lot et ceux du lecteur restent indépendants. L’interface est disponible en français, anglais, espagnol, allemand et italien.

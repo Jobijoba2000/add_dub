@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manuel & Documentation Officielle — add_dub</title>
+    <title>Manuel & Documentation Officielle : add_dub</title>
     <meta name="description"
-        content="add_dub — Outil gratuit et portable de vocalisation de sous-titres en voix-off et de traduction IA pour Windows. Idéal pour l'accessibilité (malvoyance, fatigue visuelle) et le confort d'écoute.">
+        content="add_dub : Outil gratuit et portable de vocalisation de sous-titres en voix-off et de traduction IA pour Windows. Idéal pour l'accessibilité (malvoyance, fatigue visuelle) et le confort d'écoute.">
     <meta name="keywords"
         content="add_dub, vocalisation sous-titres, voix-off, TTS, text to speech, accessibilité, malvoyance, audio ducking, traduction sous-titres, MKV, SRT, Edge TTS, CTranslate2, Windows">
     <meta name="author" content="Jobijoba2000">
@@ -17,7 +17,7 @@
     <!-- Open Graph / Réseaux Sociaux (X.com, Discord, Reddit, Facebook) -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://jobijoba2000.github.io/add_dub/">
-    <meta property="og:title" content="add_dub — Vocalisation de Sous-titres en Voix-Off & Traduction IA">
+    <meta property="og:title" content="add_dub : Vocalisation de Sous-titres en Voix-Off & Traduction IA">
     <meta property="og:description"
         content="Transformez automatiquement les sous-titres de vos vidéos en voix-off parlée avec atténuation intelligente du fond sonore (audio ducking). 100% portable pour Windows.">
     <meta property="og:image" content="https://jobijoba2000.github.io/add_dub/assets/og-image.png">
@@ -28,7 +28,7 @@
 
     <!-- Twitter Card (X.com) -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="add_dub — Vocalisation de Sous-titres en Voix-Off & Traduction IA">
+    <meta name="twitter:title" content="add_dub : Vocalisation de Sous-titres en Voix-Off & Traduction IA">
     <meta name="twitter:description"
         content="Transformez automatiquement les sous-titres de vos vidéos en voix-off parlée avec atténuation intelligente du fond sonore (audio ducking). 100% portable pour Windows.">
     <meta name="twitter:image" content="https://jobijoba2000.github.io/add_dub/assets/og-image.png">
@@ -112,9 +112,8 @@
 
         .sidebar-brand {
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
+            align-items: center;
+            gap: 10px;
             font-size: 18px;
             font-weight: 800;
             color: var(--text-heading);
@@ -123,34 +122,13 @@
             border-bottom: 1px solid var(--border-color);
         }
 
-        .sidebar-brand-title {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .version-badge {
+        .sidebar-brand span {
             background: var(--accent-blue);
             color: #000;
             padding: 2px 8px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: 800;
-            line-height: 1.6;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
-        .repository-link {
-            color: var(--accent-blue);
-            font-size: 12px;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .repository-link:hover {
-            text-decoration: underline;
         }
 
         .nav-group-title {
@@ -564,10 +542,12 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
         <div class="sidebar-brand">
-            <div class="sidebar-brand-title">
-                add_dub <span class="version-badge">v2.0.0</span>
+            add_dub <span>v2.0.0</span>
+            <div style="margin-top: 6px;">
+                <a href="https://github.com/Jobijoba2000/add_dub" target="_blank" style="font-size: 12px; color: var(--accent-blue); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
+                    Dépôt GitHub
+                </a>
             </div>
-            <a href="https://github.com/Jobijoba2000/add_dub" class="repository-link" target="_blank" rel="noopener noreferrer">Dépôt GitHub</a>
         </div>
 
         <div class="nav-group-title">1. Présentation</div>
@@ -588,9 +568,8 @@
             <li><a href="#mode-interactif">🎮 Mode Interactif</a></li>
             <li><a href="#options-conf">⚙️ Fichier options.conf</a></li>
             <li><a href="#mode-batch">⚡ Mode Batch</a></li>
-            <li><a href="#mode-gui">🪟 Interface graphique</a></li>
-            <li><a href="#mode-player">▶ Lecteur mpv</a></li>
-            <li><a href="#licences">📄 Licences & langues</a></li>
+            <li><a href="#mode-gui">🪟 Interface de production</a></li>
+            <li><a href="#mode-player">▶ Lecteur vidéo séparé</a></li>
         </ul>
 
         <div class="nav-group-title">4. Pour les Développeurs</div>
@@ -624,18 +603,14 @@
         <p>add_dub adopte le principe éprouvé de la <strong>voix-off</strong> :</p>
         <ul>
             <li><strong>On conserve l'émotion et la voix originale en fond</strong>, simplement atténuée lorsque la voix-off lit le sous-titre.</li>
-            <li><strong>Lecture des sous-titres :</strong> la voix est générée à partir du texte fourni. L’OCR et la traduction peuvent introduire des erreurs ; vérifiez le résultat.</li>
-            <li><strong>Traitement CPU :</strong> aucune carte graphique dédiée n’est nécessaire. La vitesse dépend du moteur, de la durée et des ressources du PC.</li>
+            <li><strong>Lecture du texte des sous-titres :</strong> la voix-off est générée à partir du texte fourni. L’OCR et la traduction peuvent introduire des erreurs ; vérifiez le résultat.</li>
+            <li><strong>100% CPU :</strong> Fonctionne sous <strong>Windows 10 ou 11</strong> sans carte graphique dédiée.</li>
         </ul>
 
         <!-- Section 2 : Démarrage Rapide -->
         <h2 id="demarrage-rapide">🚀 Démarrage Rapide</h2>
-        <div class="callout callout-info">
-            <div class="callout-title">Version 2.0.0</div>
-            <p>La distribution propose trois lanceurs : <code>add_dub.exe</code> pour l’interface graphique, <code>add_dub_console.exe</code> pour l’assistant/CLI et <code>add_dub_player.exe</code> pour le lecteur.</p>
-        </div>
         <p>La version officielle de add_dub est distribuée sous forme d'une <strong>application portable
-                pour Windows 10/11 64-bit</strong>. Python et les outils sont embarqués ; Visual C++ x64 peut être nécessaire. L’OCR Subtitle Edit nécessite .NET Framework 4.8.</p>
+                autonome pour Windows 10/11 64-bit</strong> : Python et les outils sont fournis dans l’archive.</p>
 
         <a href="https://github.com/Jobijoba2000/add_dub/releases/latest" class="btn-download" target="_blank" rel="noopener noreferrer">
             <div class="btn-download-icon">
@@ -644,24 +619,24 @@
                 </svg>
             </div>
             <div class="btn-download-text">
-                <strong>Télécharger la dernière version pour Windows</strong>
-                <span>Windows 10/11 · 64 bits</span>
+                <strong>Télécharger pour Windows 10/11</strong>
+                <span>add_dub_v2.0.0_win64.zip</span>
             </div>
         </a>
 
         <h3>Étapes d'installation et premier test :</h3>
         <ol>
-            <li>Téléchargez l’archive Windows depuis la page de la dernière release.</li>
+            <li>Téléchargez l'archive <code>add_dub_v2.0.0_win64.zip</code> depuis la page des releases.</li>
             <li>Décompressez l'archive dans le dossier de votre choix.</li>
-            <li><strong>Faire un premier test immédiat :</strong> Un fichier d'exemple <code>extrait.mkv</code> est déjà
-                présent dans le dossier <code>input/</code> pour vous permettre de tester l'outil en quelques secondes !
-            </li>
             <li>Double-cliquez sur <strong><code>add_dub.exe</code></strong>.</li>
-            <li>Dans l’interface graphique, cliquez sur <strong>Ouvrir</strong>, choisissez <code>input/extrait.mkv</code>, les pistes et la voix, puis ajoutez la vidéo à la file et cliquez sur <strong>Démarrer</strong>.</li>
+            <li>Cliquez sur <strong>Ouvrir</strong> et choisissez vos vidéos ou un dossier sur votre ordinateur.</li>
+            <li>Choisissez la piste audio, les sous-titres et la voix. Activez la traduction si nécessaire.</li>
+            <li>Vous pouvez écouter un extrait dans l’onglet <strong>Essai</strong> pour ajuster les réglages.</li>
+            <li>Cliquez sur <strong>Ajouter à la liste d’attente</strong>, puis sur <strong>Démarrer</strong>.</li>
             <li>Votre vidéo doublée est générée dans le dossier <strong><code>output/</code></strong> !</li>
         </ol>
-
-
+        <p>Vous ouvrez les vidéos directement à leur emplacement habituel, sans les copier dans <code>input/</code>. Pour un premier test avec l’exemple fourni, choisissez <code>input/extrait.mkv</code>.</p>
+        <p><code>add_dub.exe</code> ouvre l’interface graphique, <code>add_dub_console.exe</code> l’assistant console et <code>add_dub_player.exe</code> le lecteur.</p>
 
         <!-- Section 3 : Pour Aller Plus Loin -->
         <h2 id="aller-plus-loin">💡 Pour Aller Plus Loin</h2>
@@ -683,13 +658,13 @@
             </li>
             <li><strong>1. Extraction :</strong> Récupération de l'audio et des sous-titres (avec OCR automatique pour PGS/VobSub si nécessaire).</li>
             <li><strong>2. Traduction IA (optionnelle) :</strong> Traduction automatique du texte vers votre langue cible.</li>
-            <li><strong>3. Synthèse vocale (TTS) :</strong> Génération de la voix-off synchronisée à la milliseconde.</li>
+            <li><strong>3. Synthèse vocale (TTS) :</strong> Génération de la voix-off synchronisée avec les sous-titres.</li>
             <li><strong>4. Atténuation sonore (Audio Ducking) :</strong> Baisse automatique du fond sonore sous les paroles.</li>
             <li><strong>5. Multiplexage & Sortie :</strong> Assemblage final dans un fichier MKV multi-pistes :
                 <ul>
-                    <li>Vidéo originale (sans perte de qualité)</li>
+                    <li>Vidéo copiée sans réencodage, sauf pour les fichiers AVI</li>
                     <li>Audio doublé (voix-off + fond sonore atténué)</li>
-                    <li>Audio source réencodé en stéréo au codec choisi, séparé du mix</li>
+                    <li>Audio original séparé, réencodé en stéréo</li>
                     <li>Sous-titres synchronisés</li>
                 </ul>
             </li>
@@ -698,29 +673,11 @@
         <div class="callout callout-info">
             <div class="callout-title">👁️ Support OCR & Traduction IA intégrés</div>
             <p><strong>Sous-titres d'images (Blu-ray & DVD) :</strong> Si vos sous-titres dans un conteneur MKV ne sont pas au format texte (SRT / ASS / WebVTT) mais au format image (<strong>PGS</strong> sur Blu-ray ou <strong>VobSub / SUB-IDX</strong> sur DVD), add_dub lance automatiquement une reconnaissance optique de caractères (OCR via Subtitle Edit & Tesseract 5) en arrière-plan pour les convertir en texte.</p>
-            <p style="margin-bottom: 0;"><strong>Traduction locale (CTranslate2) :</strong> les modèles sont téléchargés au premier usage, puis la traduction s’effectue sur le CPU. Dans le code actuel, choisir CTranslate2 ne provoque pas de secours Google. Le moteur Google Traduction envoie le texte en ligne et peut se replier sur les modèles locaux. <code>--offline</code> interdit services distants et téléchargements, si les modèles sont déjà prêts.</p>
+            <p style="margin-bottom: 0;"><strong>Traduction locale (CTranslate2) :</strong> Les modèles sont téléchargés à la première utilisation, puis <strong>CTranslate2</strong> traduit sur votre ordinateur, sans clé API payante. Le moteur <strong>Google Traduction</strong> utilise Internet. La voix doit être choisie dans la langue du texte à lire.</p>
         </div>
 
-        <h3 id="mode-gui">🪟 Interface graphique de production — code actuel</h3>
-        <pre><code>start_add_dub.bat --gui</code></pre>
-        <p>Ouvrez des vidéos ou un dossier, choisissez les pistes et la voix, vérifiez un extrait dans l’onglet Essai puis ajoutez le lot à la file d’attente. Les sous-dossiers sont inclus et les réglages peuvent être personnalisés par vidéo. Les sorties conservent l’arborescence du dossier ajouté.</p>
-        <p>La file distingue En attente et Terminé. Les barres affichent l’étape mesurée et un total estimé. Démarrer devient Arrêter pendant le traitement ; une interruption nettoie le travail de la vidéo courante, qui pourra être repris depuis le début. Une sortie précédente est remplacée après réussite. Paramètres édite <code>options.conf</code> ; les réglages d’un lot restent propres à la session.</p>
-        <p>Dans la distribution v2, double-cliquez sur <code>add_dub.exe</code>. <a href="usage.md">Consulter le guide détaillé</a> et <a href="preview.md">le fonctionnement de l’aperçu</a>.</p>
-
-        <h3 id="mode-player">▶ Lecteur mpv et vocalisation — code actuel</h3>
-        <pre><code>start_add_dub.bat --player -i "C:\Videos\film.mkv"</code></pre>
-        <p>Le lecteur utilise le mpv embarqué. Ctrl+O ouvre une vidéo, Espace met en pause, M coupe le son et F bascule le plein écran. Le clic droit choisit les pistes et propose Vocaliser les sous-titres. Vérifiez que la piste contient bien les dialogues complets.</p>
-        <p>La vocalisation prépare deux WAV, voix et audio atténué, sans exporter de MKV. Ils restent dans <code>player-data/wav/</code>. Enregistrer les réglages conserve la voix et les niveaux dans <code>player-data/settings.json</code> ; Ctrl+Maj+D prépare ensuite directement et relance la lecture depuis le début. En lancement manuel, Rejouer et Continuer sont proposés.</p>
-        <p>Le lecteur ne réutilise pas encore automatiquement ses WAV et les sous-titres externes chargés directement dans mpv ne sont pas raccordés à la vocalisation. Il ne propose pas actuellement les réglages de traduction du GUI de production.</p>
-
-        <h3 id="licences">📄 Licences et langues</h3>
-        <p>Le code d’add_dub est sous GPLv3. Les outils, DLL et modèles conservent leurs propres licences. NLLB-200 d’origine comporte une restriction d’usage commercial. Qt et les outils natifs doivent être accompagnés des notices et sources correspondantes applicables.</p>
-        <p>La console, le GUI et le player suivent la langue configurée : français, anglais, espagnol, allemand ou italien. Les commandes, explications, erreurs et messages d’état du GUI et du player sont traduits dans ces cinq langues. Redémarrez l’application après un changement de langue. La langue de l’interface, celle de la voix et la traduction des sous-titres sont indépendantes.</p>
-        <p>Le bouton À propos et licences du GUI et le menu du player affichent la version, la licence du projet et les notices des composants.</p>
-        <p><a href="https://github.com/Jobijoba2000/add_dub/blob/main/THIRD_PARTY_NOTICES.md">Composants et licences</a> · <a href="https://github.com/Jobijoba2000/add_dub/blob/main/CHANGELOG.md">Historique des versions</a> · <a href="usage.md">Guide détaillé</a></p>
-
-        <h3 id="mode-interactif">🎮 Mode Interactif</h3>
-        <p>Dans la v2, ouvrez <code>add_dub_console.exe</code>. Depuis les sources, lancez sans argument ou avec <code>--interactive</code>. L’assistant analyse le dossier <code>input/</code> et vous pose des questions numérotées.</p>
+        <h3 id="mode-interactif">🎮 Mode Interactif (Par défaut)</h3>
+        <p>Ouvrez <strong><code>add_dub_console.exe</code></strong> pour utiliser l’assistant. Ce lanceur démarre par défaut en mode interactif. Il analyse automatiquement le dossier <code>input/</code> et vous pose une série de questions numérotées simples.</p>
 
         <h4>Déroulement pas-à-pas :</h4>
         <ol>
@@ -753,13 +710,13 @@
             proposera d'écouter la vidéo finale avant de nettoyer les fichiers temporaires.</p>
         <p>Si le volume de la musique vous paraît trop fort ou la voix trop faible, vous pouvez simplement entrer de
             nouveaux niveaux de volume (ex: <code>bg = 1.5</code> et <code>tts = 2.5</code>). add_dub ré-exécute alors
-            <strong>uniquement le multiplexage instantané</strong> (quelques secondes) sans devoir recalculer tout le
+            <strong>uniquement le mixage et l’export</strong> sans devoir recalculer tout le
             TTS !</p>
 
         <!-- Sous-section : Configuration options.conf -->
         <h3 id="options-conf">⚙️ Configuration Avancée (<code>options.conf</code>)</h3>
         <p>Le fichier <code>options.conf</code> situé à la racine vous permet de définir vos préférences par défaut et
-            de personnaliser complètement le comportement du mode interactif.</p>
+            de personnaliser complètement le comportement du mode interactif. Le bouton <strong>Paramètres</strong> de l’interface graphique permet aussi de modifier ces préférences.</p>
 
         <h4>Le rôle de la lettre <span class="badge-d">d</span> (Display)</h4>
         <p>Chaque ligne du fichier suit le format : <code>clé = valeur [d]</code></p>
@@ -778,7 +735,7 @@
             <thead>
                 <tr>
                     <th>Option</th>
-                    <th>Valeur par défaut</th>
+                    <th>Valeur du fichier modèle</th>
                     <th>Description</th>
                 </tr>
             </thead>
@@ -801,12 +758,12 @@
                 <tr>
                     <td><code>language</code> <span class="badge-d">d</span></td>
                     <td><code>auto</code></td>
-                    <td>Langue de l'interface du programme (<code>auto</code> pour détection automatique système, <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>...).</td>
+                    <td>Langue de l'interface du programme (<code>auto</code> pour détection automatique système, <code>fr</code>, <code>en</code>, <code>es</code>, <code>de</code>, <code>it</code>).</td>
                 </tr>
                 <tr>
                     <td><code>tts_engine</code> <span class="badge-d">d</span></td>
                     <td><code>"onecore"</code></td>
-                    <td>Moteur de synthèse vocale : <code>"onecore"</code> (Windows hors-ligne), <code>"edge"</code> (Microsoft Neural), <code>"gtts"</code> (Google).</td>
+                    <td>Moteur de synthèse vocale : <code>"onecore"</code> (Windows hors-ligne), <code>"edge"</code> (Microsoft en ligne), <code>"gtts"</code> (Google).</td>
                 </tr>
                 <tr>
                     <td><code>voice_id</code></td>
@@ -861,7 +818,7 @@
                 <tr>
                     <td><code>orig_audio_lang</code></td>
                     <td><code>Original</code></td>
-                    <td>Libellé affiché dans les métadonnées du fichier MKV pour la piste d'origine.</td>
+                    <td>Ancienne préférence : le libellé est désormais déterminé à partir de la langue détectée pour la piste audio.</td>
                 </tr>
                 <tr>
                     <td><code>ask_test_before_cleanup</code></td>
@@ -888,6 +845,11 @@
                     <td><code>true</code></td>
                     <td>Si un fichier de sous-titre déjà traduit existe dans <code>srt/</code>, le réutilise sans recalculer.</td>
                 </tr>
+                <tr>
+                    <td><code>translation_engine</code> <span class="badge-d">d</span></td>
+                    <td><code>ctranslate2</code></td>
+                    <td>Moteur de traduction : <code>ctranslate2</code> pour traduire localement après téléchargement des modèles, ou <code>google</code> pour traduire en ligne.</td>
+                </tr>
             </tbody>
         </table>
 
@@ -906,27 +868,26 @@
         <h4 id="exemples-batch">💡 Exemples de Commandes Représentatives</h4>
 
         <h4>1. Traiter une vidéo unique avec Edge TTS et une voix française</h4>
-        <pre><code>add_dub.exe --batch -i "C:\Videos\film.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural"</code></pre>
-        <p><em>Explication :</em> Traite directement le fichier <code>film.mkv</code> avec la voix neuronale Denise et
+        <pre><code>add_dub_console.exe --batch -i "C:\Videos\film.mkv" --tts-engine edge --voice "fr-FR-DeniseNeural"</code></pre>
+        <p><em>Explication :</em> Traite directement le fichier <code>film.mkv</code> avec la voix Microsoft Denise et
             place le résultat dans <code>output/</code>.</p>
 
         <h4>2. Traiter récursivement tout un dossier de séries</h4>
-        <pre><code>add_dub.exe --batch -i "C:\Videos\Anime_Saison_1" --recursive --preserve-tree</code></pre>
+        <pre><code>add_dub_console.exe --batch -i "C:\Videos\Anime_Saison_1" --recursive --preserve-tree</code></pre>
         <p><em>Explication :</em> Parcourt tous les sous-dossiers, traite chaque vidéo trouvée et recrée la même
             arborescence de dossiers dans <code>output/</code>.</p>
 
         <h4>3. Traduire automatiquement de l'anglais vers le français avant doublage</h4>
-        <pre><code>add_dub.exe --batch -i "C:\Videos\doc.mp4" --translate --translate-to fr --tts-engine edge --voice "fr-FR-HenriNeural"</code></pre>
-        <p><em>Explication :</em> Extrait les sous-titres anglais, les traduit en français via CTranslate2, génère la
-            voix-off française et remuxe le tout.</p>
+        <pre><code>add_dub_console.exe --batch -i "C:\Videos\doc.mp4" --sub srt --translate --translate-from en --translate-to fr --translation-engine ctranslate2 --tts-engine edge --voice "fr-FR-HenriNeural"</code></pre>
+        <p><em>Explication :</em> Lit les sous-titres anglais du fichier <code>doc.srt</code> placé à côté de <code>doc.mp4</code>, les traduit en français via CTranslate2, puis génère la voix-off française et assemble le résultat.</p>
 
         <h4>4. Ajuster précisément le mixage sonore</h4>
-        <pre><code>add_dub.exe --batch -i "C:\Videos\film.mkv" --bg-mix 0.7 --tts-mix 1.4 --ducking-db -6.0</code></pre>
+        <pre><code>add_dub_console.exe --batch -i "C:\Videos\film.mkv" --bg-mix 0.7 --tts-mix 1.4 --ducking-db -6.0</code></pre>
         <p><em>Explication :</em> Règle le volume de fond à 70%, la voix à 140% et applique une atténuation plus forte
             de -6 dB pendant les paroles.</p>
 
         <h4>5. Reprise de traitement sans écraser l'existant</h4>
-        <pre><code>add_dub.exe --batch -i "C:\Videos\Series" --recursive --skip-existing</code></pre>
+        <pre><code>add_dub_console.exe --batch -i "C:\Videos\Series" --recursive --skip-existing</code></pre>
         <p><em>Explication :</em> Vérifie si la vidéo de sortie finale existe déjà dans <code>output/</code> et l'ignore immédiatement si c'est le cas (très utile en cas d'interruption).</p>
 
         <h4 id="reference-options">📋 Référence Complète des Options CLI (Batch)</h4>
@@ -992,7 +953,7 @@
                 <tr>
                     <td><code>--audio-index</code></td>
                     <td><code>IDX</code></td>
-                    <td>Index de la piste audio à extraire (ex: 0 pour la 1ère piste audio).</td>
+                    <td>Index global FFmpeg de la piste audio, visible avec FFprobe ; ce n’est pas son numéro parmi les seules pistes audio.</td>
                 </tr>
                 <tr>
                     <td><code>--audio-codec</code></td>
@@ -1007,14 +968,13 @@
                 </tr>
                 <tr>
                     <td><code>--sub</code></td>
-                    <td><code>auto|srt|mkv[:idx]</code></td>
-                    <td>Source des sous-titres : <code>auto</code>, <code>srt</code>, ou piste MKV spécifique (ex:
-                        <code>mkv:0</code>).</td>
+                    <td><code>auto|srt|mkv:N|stream:N</code></td>
+                    <td>Source des sous-titres : <code>auto</code>, <code>srt</code>, numéro parmi les pistes de sous-titres avec <code>mkv:N</code> (à partir de zéro), ou index global FFmpeg avec <code>stream:N</code>.</td>
                 </tr>
                 <tr>
-                    <td><code>--translate</code></td>
+                    <td><code>--translate</code> / <code>--no-translate</code></td>
                     <td><em>(flag)</em></td>
-                    <td>Active la traduction automatique des sous-titres avant synthèse.</td>
+                    <td>Active ou désactive la traduction automatique des sous-titres avant synthèse.</td>
                 </tr>
                 <tr>
                     <td><code>--translate-to</code></td>
@@ -1025,6 +985,11 @@
                     <td><code>--translate-from</code></td>
                     <td><code>LANG</code></td>
                     <td>Langue source (<code>auto</code> par défaut).</td>
+                </tr>
+                <tr>
+                    <td><code>--translation-engine</code></td>
+                    <td><code>ctranslate2|google</code></td>
+                    <td>Choisit le moteur de traduction local ou en ligne.</td>
                 </tr>
                 <tr>
                     <td><code>--ducking-db</code></td>
@@ -1064,10 +1029,28 @@
                 <tr>
                     <td><code>--limit-duration-sec</code></td>
                     <td><code>SEC</code></td>
-                    <td>Limite le traitement aux N premières secondes de la vidéo (idéal pour tester rapidement).</td>
+                    <td>Limite le traitement aux N premières secondes de la vidéo. La coupe peut varier légèrement selon la vidéo.</td>
+                </tr>
+                <tr>
+                    <td><code>--offline</code></td>
+                    <td><em>(flag)</em></td>
+                    <td>Interdit services distants et téléchargements. Exige OneCore et, si vous traduisez, des modèles locaux déjà téléchargés.</td>
                 </tr>
             </tbody>
         </table>
+
+        <h3 id="mode-gui">🪟 Interface de production (<code>--gui</code>)</h3>
+        <p>Ouvrez <code>add_dub.exe</code>, puis utilisez <strong>Ouvrir</strong> pour choisir des vidéos ou un dossier. Les sous-dossiers sont inclus. Choisissez les pistes, la voix et les réglages ; ils peuvent être adaptés à un dossier ou à une vidéo.</p>
+        <p>L’onglet <strong>Essai</strong> permet de sélectionner et d’écouter un passage avant de traiter la vidéo entière. Cliquez sur <strong>Tester</strong> pour le préparer. Les réglages de voix, de traduction et de volumes sont ceux de la vidéo sélectionnée.</p>
+        <p>Cliquez sur <strong>Ajouter à la liste d’attente</strong>, puis sur <strong>Démarrer</strong>. La file distingue <strong>En attente</strong> et <strong>Terminé</strong>. Choisissez le dossier de sortie et le remplacement ou l’ignorance des exports existants. Pour un dossier, l’arborescence est conservée en sortie.</p>
+        <p><strong>Arrêter</strong> interrompt la vidéo en cours, qui sera retraitée depuis le début au prochain démarrage. Une sortie précédente est remplacée après réussite du nouvel export. Les barres et le temps restant donnent une estimation de la progression.</p>
+        <p><strong>Paramètres</strong> modifie les préférences pour les prochains ajouts ; les lots déjà configurés conservent leurs réglages. L’interface est disponible en français, anglais, espagnol, allemand et italien. Redémarrez après un changement de langue.</p>
+
+        <h3 id="mode-player">▶ Lecteur vidéo séparé (<code>--player</code>)</h3>
+        <p>Ouvrez <code>add_dub_player.exe</code>, puis une vidéo avec le bouton dossier ou <strong>Ctrl+O</strong>. Le clic droit permet de choisir les pistes audio et sous-titres et de lancer <strong>Vocaliser les sous-titres</strong>.</p>
+        <p>Choisissez la voix, sa vitesse, l’atténuation et les volumes. Le lecteur prépare l’audio avant l’écoute, sans exporter de nouvelle vidéo. <strong>Enregistrer les réglages</strong> les conserve séparément de ceux de l’interface de doublage. <strong>Ctrl+Maj+D</strong> prépare ensuite la voix avec ces réglages et relance la lecture depuis le début.</p>
+        <p>La vocalisation utilise les sous-titres intégrés à la vidéo. Pour un SRT externe ou pour traduire les sous-titres, utilisez l’interface de doublage. Les fichiers audio préparés sont conservés, mais ne sont pas réutilisés automatiquement lors d’une nouvelle préparation.</p>
+        <p><strong>Espace</strong> met en pause, les flèches déplacent de cinq secondes, <strong>M</strong> coupe le son et <strong>F</strong> bascule le plein écran.</p>
 
         <!-- Section 4 : Pour les Développeurs -->
         <h2 id="developpeurs">🛠️ Pour les Développeurs (Code Source)</h2>
@@ -1082,7 +1065,7 @@ start_add_dub.bat</code></pre>
         <h3>⚙️ Ce qui se passe au premier lancement (<code>start_add_dub.bat</code>)</h3>
         <p>Le script <code>start_add_dub.bat</code> est conçu pour automatiser l'intégralité de la configuration de votre environnement de développement :</p>
         <ol>
-            <li><strong>Environnement virtuel Python :</strong> Il crée automatiquement un environnement virtuel (venv) et installe l'ensemble des bibliothèques nécessaires à partir de <code>requirements.txt</code>.</li>
+            <li><strong>Environnement virtuel Python :</strong> Il crée automatiquement un environnement virtuel (venv) et installe l'ensemble des bibliothèques nécessaires à partir de <code>requirements.lock.txt</code>.</li>
             <li><strong>Téléchargements individuels dans <code>tools/</code> :</strong>
                 <p style="margin-top: 6px;">Le lanceur prépare Python avec <code>scripts/prepare_python.ps1</code>, puis <code>scripts/prepare_tools.py</code> prépare FFmpeg, MKVToolNix, Subtitle Edit, Tesseract et mpv. Les archives sont contrôlées par SHA-256 et conservées dans <code>.cache/</code>. Les modèles OCR sont téléchargés par add_dub à la demande. Subtitle Edit utilise .NET Framework 4.8.</p>
             </li>
@@ -1099,7 +1082,7 @@ start_add_dub.bat</code></pre>
 
         <div
             style="margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border-color); text-align: center; color: var(--text-muted); font-size: 13px;">
-            add_dub — Projet Open-Source sous licence GNU GPLv3 • Créé pour rendre le contenu accessible à tous.
+            add_dub : Projet Open-Source sous licence GNU GPLv3 • Créé pour rendre le contenu accessible à tous.
         </div>
 
     </main>
